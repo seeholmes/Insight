@@ -334,14 +334,14 @@ function getPercentile(salary,year){
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let salaries={
+const DEFAULT_SALARIES={
   1993:15000,1994:21618,1995:33683,1996:35531,1997:35448,1998:39944,1999:40918,
   2000:63249,2001:72213,2002:63202,2003:62000,2004:61037,2005:62350,2006:73452,
   2007:72414,2008:73656,2009:87864,2010:97561,2011:104426,2012:135653,2013:134114,
   2014:127111,2015:138558,2016:132534,2017:151712,2018:153569,2019:150349,
   2020:145718,2021:152181,2022:165000,2023:185000,2024:180000,2025:192500,2026:202000,
 };
-let jobs=[
+const DEFAULT_JOBS=[
   {id:0,name:"Job 1",color:"#7fd4b0",years:[1993,1994,1995]},
   {id:1,name:"Job 2",color:"#b89ee0",years:[1996,1997,1998,1999]},
   {id:2,name:"Job 3",color:"#f08aab",years:[2000,2001]},
@@ -351,7 +351,29 @@ let jobs=[
   {id:6,name:"Job 7",color:"#f5756a",years:[2019,2020,2021]},
   {id:7,name:"Job 8",color:"#4da6e8",years:[2022,2023,2024,2025,2026]},
 ];
-let nextId=8;
+function loadState(){
+  try{
+    const s=localStorage.getItem('insight_salaries');
+    const j=localStorage.getItem('insight_jobs');
+    const n=localStorage.getItem('insight_nextId');
+    return{
+      salaries:s?JSON.parse(s):DEFAULT_SALARIES,
+      jobs:j?JSON.parse(j):DEFAULT_JOBS,
+      nextId:n?parseInt(n):8,
+    };
+  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8};}
+}
+function saveState(){
+  try{
+    localStorage.setItem('insight_salaries',JSON.stringify(salaries));
+    localStorage.setItem('insight_jobs',JSON.stringify(jobs));
+    localStorage.setItem('insight_nextId',String(nextId));
+  }catch(e){}
+}
+const _s=loadState();
+let salaries=_s.salaries;
+let jobs=_s.jobs;
+let nextId=_s.nextId;
 let ov={real:false,pct:false,cum:false,proj:false,inf:false,gdp:false,evt:false};
 let activeJob=null;
 let drawerOpen=false;
@@ -918,6 +940,7 @@ function addYearEntry(){
 }
 
 function refresh(){
+  saveState();
   updateStats();renderLegend();drawChart();buildTable();
   if(curSTab==='insights')renderInsights();
   if(curSTab==='pct')renderPctPanel();
