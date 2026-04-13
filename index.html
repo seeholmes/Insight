@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insight</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0b0c0e;--s1:#13141a;--s2:#1a1b22;--s3:#1f2028;
+  --border:#252630;--border2:#32333f;
+  --text:#dddbe4;--muted:#5e5d6e;--accent:#d4a96a;
+  --pos:#6fcf97;--neg:#eb5757;
+  --real:#7eb8f5;--pct:#c47ef5;--cum:#f5a97e;--proj:#f5e97e;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+#topbar{
+  display:flex;align-items:center;gap:1rem;
+  padding:0 1.5rem;height:48px;flex-shrink:0;
+  border-bottom:1px solid var(--border);background:var(--s1);
+}
+#topbar h1{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent);font-style:italic;white-space:nowrap;margin-right:0.5rem;}
+.tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
+.tb-stats{display:flex;gap:0;flex:1;}
+.tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);}
+.tb-stat:first-child{padding-left:0;}
+.tb-stat label{display:block;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+.tb-stat value{display:block;font-size:0.85rem;font-weight:500;}
+.tb-right{display:flex;gap:0.5rem;margin-left:auto;align-items:center;}
+.tbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.28rem 0.7rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tbtn:hover{color:var(--accent);border-color:var(--accent);}
+.tbtn.open{background:var(--s2);border-color:var(--border2);color:var(--text);}
+
+/* ── APP LAYOUT: left sidebar | center | right drawer ── */
+#app{display:flex;flex:1;min-height:0;overflow:hidden;}
+
+/* ── LEFT SIDEBAR ── */
+#sidebar{
+  width:300px;flex-shrink:0;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;background:var(--s1);
+}
+#sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.stab{flex:1;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.5rem 0.3rem;cursor:pointer;transition:all .15s;}
+.stab:last-child{border-right:none;}
+.stab:hover{color:var(--text);}
+.stab.active{background:var(--s2);color:var(--accent);}
+#sidebar-body{flex:1;overflow-y:auto;padding:0.85rem;}
+.spanel{display:none;}.spanel.vis{display:block;}
+.sec-head{font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;padding-bottom:0.3rem;border-bottom:1px solid var(--border);}
+
+/* Legend in sidebar */
+.leg-item{display:flex;align-items:center;gap:0.35rem;padding:0.22rem 0.5rem;border:1px solid transparent;cursor:pointer;font-size:0.65rem;transition:all .15s;color:var(--muted);margin-bottom:0.2rem;}
+.leg-item:hover{border-color:var(--border2);color:var(--text);}
+.leg-item.active{border-color:var(--border2);background:var(--s2);color:var(--text);}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.leg-years{font-size:0.58rem;color:var(--muted);margin-left:auto;}
+
+/* Insight cards in sidebar */
+.ins-card{background:var(--s2);border:1px solid var(--border);padding:0.75rem;margin-bottom:0.65rem;}
+.ins-card h3{font-family:'Playfair Display',serif;font-size:0.85rem;color:var(--accent);margin-bottom:0.6rem;font-style:italic;}
+.jst{width:100%;border-collapse:collapse;font-size:0.62rem;}
+.jst th{text-align:left;padding:0.25rem 0.4rem;font-size:0.5rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+.jst td{padding:0.25rem 0.4rem;border-bottom:1px solid var(--border);}
+.jst tr:last-child td{border-bottom:none;}
+.trans-row{display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.62rem;}
+.trans-row:last-child{border-bottom:none;}
+.pct-row{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;font-size:0.62rem;}
+.pct-bar-wrap{flex:1;height:5px;background:var(--border);}
+.pct-bar-fill{height:100%;background:var(--pct);}
+.pct-yr{color:var(--muted);width:2.2rem;flex-shrink:0;font-size:0.6rem;}
+.pct-val{width:2.8rem;text-align:right;flex-shrink:0;color:var(--pct);font-size:0.6rem;}
+.kpi-mini{display:flex;gap:0;border:1px solid var(--border);margin-bottom:0.5rem;}
+.kpi-m{flex:1;padding:0.4rem 0.5rem;border-right:1px solid var(--border);}
+.kpi-m:last-child{border-right:none;}
+.kpi-m label{display:block;font-size:0.5rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);margin-bottom:0.1rem;}
+.kpi-m value{display:block;font-size:0.8rem;font-weight:500;}
+
+/* ── CENTER AREA ── */
+#center{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Chart section — top ~55% */
+#chart-section{
+  display:flex;flex-direction:column;
+  padding:1rem 1.25rem 0.75rem;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  height:55%;
+}
+#chartControls{display:flex;gap:0.28rem;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap;row-gap:0.28rem;}
+.ctrl-lbl{font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-right:0.1rem;white-space:nowrap;}
+.ctrl-sep{width:1px;height:14px;background:var(--border2);margin:0 0.2rem;flex-shrink:0;}
+.cbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.56rem;letter-spacing:0.06em;text-transform:uppercase;padding:0.2rem 0.45rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.cbtn:hover{color:var(--text);border-color:var(--border2);}
+.cbtn.active{background:var(--s2);border-color:var(--accent);color:var(--accent);}
+.cbtn.on-real{border-color:var(--real)!important;color:var(--real)!important;}
+.cbtn.on-pct{border-color:var(--pct)!important;color:var(--pct)!important;}
+.cbtn.on-cum{border-color:var(--cum)!important;color:var(--cum)!important;}
+.cbtn.on-proj{border-color:var(--proj)!important;color:var(--proj)!important;}
+.cbtn.on-inf{border-color:#d4a96a!important;color:#d4a96a!important;}
+.cbtn.on-gdp{border-color:#6fcf97!important;color:#6fcf97!important;}
+.cbtn.on-evt{border-color:#9b8df5!important;color:#9b8df5!important;}
+#chartWrap{flex:1;position:relative;min-height:0;}
+#chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+
+/* Bottom section — table */
+#bottom-section{flex:1;min-height:0;overflow-y:auto;padding:0.75rem 1.25rem;}
+table{width:100%;border-collapse:collapse;font-size:0.68rem;}
+th{text-align:left;padding:0.38rem 0.6rem;font-size:0.54rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg);}
+td{padding:0.35rem 0.6rem;border-bottom:1px solid var(--border);white-space:nowrap;}
+tr:hover td{background:var(--s1);}
+.tdpos{color:var(--pos);}.tdneg{color:var(--neg);}.tddim{color:var(--muted);font-size:0.62rem;}
+.tdsw{display:inline-block;width:7px;height:7px;border-radius:1px;margin-right:3px;vertical-align:middle;}
+
+/* ── RIGHT SETTINGS DRAWER ── */
+#drawer{
+  width:320px;flex-shrink:0;
+  border-left:1px solid var(--border);
+  display:none;flex-direction:column;
+  overflow:hidden;background:var(--s1);
+}
+#drawer.open{display:flex;}
+.dtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dtab{flex:1;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.5rem;cursor:pointer;transition:all .15s;}
+.dtab:last-child{border-right:none;}
+.dtab:hover{color:var(--text);}
+.dtab.active{background:var(--s2);color:var(--accent);}
+.dbody{flex:1;overflow-y:auto;padding:0.85rem;}
+.dsec{display:none;}.dsec.vis{display:block;}
+
+/* Job cards in drawer */
+.jcard{border:1px solid var(--border);margin-bottom:0.45rem;overflow:hidden;}
+.jcard-head{display:flex;align-items:center;gap:0.45rem;padding:0.45rem 0.55rem;cursor:pointer;background:var(--s2);transition:background .15s;}
+.jcard-head:hover{background:var(--border);}
+.cswatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);}
+.jcard-name{flex:1;font-size:0.68rem;}
+.jcard-yrs{font-size:0.58rem;color:var(--muted);}
+.jcard-arr{font-size:0.6rem;color:var(--muted);transition:transform .2s;}
+.jcard.exp .jcard-arr{transform:rotate(180deg);}
+.jcard-body{display:none;padding:0.65rem;border-top:1px solid var(--border);background:var(--bg);}
+.jcard.exp .jcard-body{display:block;}
+.frow{display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem;}
+.flbl{font-size:0.56rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);width:44px;flex-shrink:0;}
+.finput{flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;padding:0.26rem 0.42rem;outline:none;transition:border-color .15s;}
+.finput:focus{border-color:var(--accent);}
+.finput[type=color]{padding:0;height:24px;width:36px;cursor:pointer;flex:none;}
+.ychips{display:flex;flex-wrap:wrap;gap:0.22rem;margin-bottom:0.4rem;}
+.ychip{font-size:0.6rem;padding:0.1rem 0.38rem;border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;gap:0.2rem;}
+.ychip-x{cursor:pointer;color:var(--muted);font-size:0.78rem;line-height:1;transition:color .12s;}
+.ychip-x:hover{color:var(--neg);}
+.addyrrow{display:flex;gap:0.3rem;margin-top:0.1rem;align-items:center;}
+.addyrrow select{flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:0.22rem 0.36rem;outline:none;}
+.btn-sm{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.06em;text-transform:uppercase;padding:0.22rem 0.5rem;cursor:pointer;transition:all .15s;}
+.btn-sm:hover{border-color:var(--border2);color:var(--text);}
+.btn-sm.danger:hover{border-color:var(--neg);color:var(--neg);}
+.btn-sm.primary{border-color:var(--accent);color:var(--accent);}
+.btn-sm.primary:hover{background:var(--accent);color:var(--bg);}
+.btnrow{display:flex;gap:0.3rem;margin-top:0.4rem;}
+#addJobBtn{width:100%;margin-top:0.5rem;padding:0.42rem;background:none;border:1px dashed var(--border2);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+#addJobBtn:hover{border-color:var(--accent);color:var(--accent);}
+.slist{display:flex;flex-direction:column;gap:0.28rem;}
+.srow{display:grid;grid-template-columns:2.6rem 1fr 1.5rem;align-items:center;gap:0.3rem;}
+.syr{font-size:0.64rem;color:var(--muted);}
+.sinput{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.66rem;padding:0.22rem 0.36rem;outline:none;width:100%;}
+.sinput:focus{border-color:var(--accent);}
+.sdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.88rem;line-height:1;transition:color .12s;text-align:center;}
+.sdel:hover{color:var(--neg);}
+.addyrrow2{display:flex;gap:0.3rem;margin-top:0.6rem;align-items:center;flex-wrap:wrap;}
+.addyrrow2 input{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.66rem;padding:0.24rem 0.36rem;outline:none;}
+.addyrrow2 input:focus{border-color:var(--accent);}
+#newYear{width:66px;}#newSalary{flex:1;min-width:80px;}
+
+/* TOOLTIP */
+#tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.65rem 0.85rem;font-size:0.67rem;pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:160px;line-height:1.8;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
+#tip strong{display:block;font-size:0.95rem;color:var(--accent);margin-bottom:0.15rem;font-family:'Playfair Display',serif;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--border2);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <h1>Insight</h1>
+  <div class="tbsep"></div>
+  <div class="tb-stats">
+    <div class="tb-stat"><label>Total Earned</label><value id="sTotal">—</value></div>
+    <div class="tb-stat"><label>Peak</label><value id="sPeak">—</value></div>
+    <div class="tb-stat"><label>Avg / yr</label><value id="sAvg">—</value></div>
+    <div class="tb-stat"><label>Real Growth</label><value id="sReal">—</value></div>
+    <div class="tb-stat"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
+  </div>
+  <div class="tb-right">
+    <div style="display:flex;gap:0;">
+      <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs')">Jobs</button>
+      <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">Insights</button>
+      <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Percentile</button>
+    </div>
+    <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ Settings</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-body">
+      <!-- Jobs panel -->
+      <div class="spanel vis" id="sp-jobs">
+        <p class="sec-head">Jobs</p>
+        <div id="legendList"></div>
+      </div>
+      <!-- Insights panel -->
+      <div class="spanel" id="sp-insights">
+        <div id="insightCards"></div>
+      </div>
+      <!-- Percentile panel -->
+      <div class="spanel" id="sp-pct">
+        <div id="pctPanel"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center">
+    <!-- CHART -->
+    <div id="chart-section">
+      <div id="chartControls">
+        <span class="ctrl-lbl">Smooth:</span>
+        <button class="cbtn active" id="sm-none"   onclick="setSmoothing('none')">None</button>
+        <button class="cbtn" id="sm-ma3"    onclick="setSmoothing('ma3')">3-yr</button>
+        <button class="cbtn" id="sm-ma5"    onclick="setSmoothing('ma5')">5-yr</button>
+        <button class="cbtn" id="sm-spline" onclick="setSmoothing('spline')">Spline</button>
+        <span class="ctrl-sep"></span>
+        <span class="ctrl-lbl">Lines:</span>
+        <button class="cbtn" id="ov-real" onclick="toggleOv('real')">Real $</button>
+        <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')">Percentile</button>
+        <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')">Cumulative</button>
+        <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')">Projection</button>
+        <span class="ctrl-sep"></span>
+        <span class="ctrl-lbl">Context:</span>
+        <button class="cbtn" id="ov-inf"  onclick="toggleOv('inf')">Inflation</button>
+        <button class="cbtn" id="ov-gdp"  onclick="toggleOv('gdp')">GDP</button>
+        <button class="cbtn" id="ov-evt"  onclick="toggleOv('evt')">Events</button>
+      </div>
+      <div id="chartWrap"><canvas id="c"></canvas></div>
+    </div>
+    <!-- DATA TABLE -->
+    <div id="bottom-section">
+      <table id="dataTable"></table>
+    </div>
+  </div>
+
+  <!-- RIGHT DRAWER -->
+  <div id="drawer">
+    <div class="dtabs">
+      <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Jobs</button>
+      <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
+    </div>
+    <div class="dbody">
+      <div class="dsec vis" id="ds-jobs">
+        <p class="sec-head">Manage Jobs</p>
+        <div id="jobCards"></div>
+        <button id="addJobBtn" onclick="addJob()">+ Add Job</button>
+      </div>
+      <div class="dsec" id="ds-salary">
+        <p class="sec-head">Edit Salaries by Year</p>
+        <div class="slist" id="salaryList"></div>
+        <div class="addyrrow2">
+          <input type="number" id="newYear" placeholder="Year">
+          <input type="number" id="newSalary" placeholder="Salary">
+          <button class="btn-sm primary" onclick="addYearEntry()">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<script>
+// ── MACRO DATA ────────────────────────────────────────────────────────────────
+const MACRO={
+  1993:{inf:0.027,gdp:2.8,evt:"Balanced Budget Act"},
+  1994:{inf:0.027,gdp:4.0,evt:null},1995:{inf:0.025,gdp:2.7,evt:null},
+  1996:{inf:0.033,gdp:3.8,evt:"Welfare reform"},1997:{inf:0.017,gdp:4.4,evt:"Fed raised rates"},
+  1998:{inf:0.016,gdp:4.5,evt:"LTCM crisis"},1999:{inf:0.027,gdp:4.8,evt:"Glass-Steagall repealed"},
+  2000:{inf:0.034,gdp:4.1,evt:"Tech bubble burst"},2001:{inf:0.016,gdp:1.0,evt:"Bush tax cut / 9/11"},
+  2002:{inf:0.024,gdp:1.7,evt:"War on Terror"},2003:{inf:0.019,gdp:2.9,evt:"JGTRRA"},
+  2004:{inf:0.033,gdp:3.8,evt:null},2005:{inf:0.034,gdp:3.5,evt:"Katrina / Bankruptcy Act"},
+  2006:{inf:0.025,gdp:2.9,evt:null},2007:{inf:0.041,gdp:1.9,evt:"Bank crisis"},
+  2008:{inf:0.001,gdp:-0.1,evt:"Financial crisis"},2009:{inf:0.027,gdp:-2.5,evt:"ARRA"},
+  2010:{inf:0.015,gdp:2.6,evt:"ACA, Dodd-Frank"},2011:{inf:0.030,gdp:1.6,evt:"Debt ceiling crisis"},
+  2012:{inf:0.017,gdp:2.2,evt:null},2013:{inf:0.015,gdp:1.8,evt:"Gov't shutdown"},
+  2014:{inf:0.008,gdp:2.5,evt:"QE ends"},2015:{inf:0.007,gdp:3.1,evt:"Oil price deflation"},
+  2016:{inf:0.021,gdp:1.7,evt:null},2017:{inf:0.021,gdp:2.3,evt:null},
+  2018:{inf:0.019,gdp:3.0,evt:null},2019:{inf:0.023,gdp:2.2,evt:null},
+  2020:{inf:0.014,gdp:-3.4,evt:"COVID-19"},2021:{inf:0.070,gdp:5.9,evt:"COVID-19 recovery"},
+  2022:{inf:0.065,gdp:1.9,evt:null},2023:{inf:0.034,gdp:null,evt:null},
+  2024:{inf:0.027,gdp:null,evt:null},2025:{inf:0.030,gdp:null,evt:null},
+  2026:{inf:null,gdp:null,evt:null},
+};
+
+const PCTILE_THRESHOLDS={
+  1993:[10000,21000,38000,62000,82000,150000],1995:[11000,23000,41000,66000,88000,160000],
+  1997:[12500,25000,44000,72000,96000,178000],1999:[14000,28000,49000,80000,107000,200000],
+  2001:[14500,29000,51000,83000,110000,210000],2003:[13500,27500,49000,80000,107000,205000],
+  2005:[14500,29000,52000,84000,113000,220000],2007:[16000,32000,57000,91000,122000,240000],
+  2009:[14000,28000,51000,82000,110000,215000],2011:[14500,29000,52000,84000,112000,220000],
+  2013:[15000,30000,54000,86000,116000,230000],2015:[16000,32000,57000,91000,122000,245000],
+  2017:[17500,35000,62000,99000,133000,270000],2019:[19000,38000,67000,107000,144000,300000],
+  2021:[20000,41000,74000,117000,158000,330000],2022:[21000,44000,79000,126000,170000,360000],
+  2023:[22000,46000,83000,132000,178000,380000],2025:[23000,48000,87000,138000,186000,400000],
+};
+
+function getPercentile(salary,year){
+  const ys=Object.keys(PCTILE_THRESHOLDS).map(Number).sort((a,b)=>a-b);
+  let best=ys[0];for(const y of ys){if(Math.abs(y-year)<Math.abs(best-year))best=y;}
+  const [p25,p50,p75,p90,p95,p99]=PCTILE_THRESHOLDS[best];
+  if(salary>=p99)return Math.min(99.5,99+(salary-p99)/20000);
+  if(salary>=p95)return 95+(salary-p95)/(p99-p95)*4;
+  if(salary>=p90)return 90+(salary-p90)/(p95-p90)*5;
+  if(salary>=p75)return 75+(salary-p75)/(p90-p75)*15;
+  if(salary>=p50)return 50+(salary-p50)/(p75-p50)*25;
+  if(salary>=p25)return 25+(salary-p25)/(p50-p25)*25;
+  return Math.max(1,salary/p25*25);
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let salaries={
+  1993:15000,1994:21618,1995:33683,1996:35531,1997:35448,1998:39944,1999:40918,
+  2000:63249,2001:72213,2002:63202,2003:62000,2004:61037,2005:62350,2006:73452,
+  2007:72414,2008:73656,2009:87864,2010:97561,2011:104426,2012:135653,2013:134114,
+  2014:127111,2015:138558,2016:132534,2017:151712,2018:153569,2019:150349,
+  2020:145718,2021:152181,2022:165000,2023:185000,2024:180000,2025:192500,2026:202000,
+};
+let jobs=[
+  {id:0,name:"Job 1",color:"#7fd4b0",years:[1993,1994,1995]},
+  {id:1,name:"Job 2",color:"#b89ee0",years:[1996,1997,1998,1999]},
+  {id:2,name:"Job 3",color:"#f08aab",years:[2000,2001]},
+  {id:3,name:"Job 4",color:"#b0a8f5",years:[2002,2003,2004]},
+  {id:4,name:"Job 5",color:"#e8d86a",years:[2005,2006,2007,2008]},
+  {id:5,name:"Job 6",color:"#f5b86a",years:[2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]},
+  {id:6,name:"Job 7",color:"#f5756a",years:[2019,2020,2021]},
+  {id:7,name:"Job 8",color:"#4da6e8",years:[2022,2023,2024,2025,2026]},
+];
+let nextId=8;
+let ov={real:false,pct:false,cum:false,proj:false,inf:false,gdp:false,evt:false};
+let activeJob=null;
+let drawerOpen=false;
+let curSTab='jobs';
+let curDTab='jobs';
+let smoothing='none';
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const sortedYrs=()=>Object.keys(salaries).map(Number).sort((a,b)=>a-b);
+const getJob=yr=>jobs.find(j=>j.years.includes(+yr));
+const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
+const fmtK=n=>'$'+(n>=1e6?(n/1e6).toFixed(2)+'M':(n/1000).toFixed(0)+'k');
+const yoy=yr=>{const yrs=sortedYrs(),i=yrs.indexOf(+yr);if(i<=0)return null;return(salaries[yr]-salaries[yrs[i-1]])/salaries[yrs[i-1]];};
+
+function realSalaries(){
+  const yrs=sortedYrs();let idx=1.0;const cpi={};cpi[yrs[0]]=1.0;
+  for(let i=1;i<yrs.length;i++){idx*=(1+(MACRO[yrs[i]]?.inf??0));cpi[yrs[i]]=idx;}
+  const r={};yrs.forEach(yr=>r[yr]=salaries[yr]/cpi[yr]);return r;
+}
+function cumEarnings(){
+  const yrs=sortedYrs();let c=0;const r={};yrs.forEach(yr=>{c+=salaries[yr];r[yr]=c;});return r;
+}
+function projectSalaries(nBack=5,nFwd=5){
+  const yrs=sortedYrs(),recent=yrs.slice(-nBack);
+  const xs=recent.map((_,i)=>i),ys2=recent.map(y=>salaries[y]);
+  const n=xs.length,sx=xs.reduce((a,b)=>a+b,0),sy=ys2.reduce((a,b)=>a+b,0);
+  const sxy=xs.reduce((a,x,i)=>a+x*ys2[i],0),sxx=xs.reduce((a,x)=>a+x*x,0);
+  const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx),intercept=(sy-slope*sx)/n;
+  const lastYr=yrs[yrs.length-1],result={};
+  for(let i=1;i<=nFwd;i++)result[lastYr+i]=Math.max(0,intercept+slope*(nBack-1+i));
+  return result;
+}
+function jobCAGR(j){
+  const sy=j.years.filter(y=>salaries[y]).sort((a,b)=>a-b);
+  if(sy.length<2)return null;
+  const s=salaries[sy[0]],e=salaries[sy[sy.length-1]],n=sy.length-1;
+  return(!s||!e)?null:Math.pow(e/s,1/n)-1;
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats(){
+  const yrs=sortedYrs(),vals=yrs.map(y=>salaries[y]);
+  const total=vals.reduce((a,b)=>a+b,0);
+  const real=realSalaries(),rv=yrs.map(y=>real[y]);
+  const rg=((rv[rv.length-1]/rv[0]-1)*100).toFixed(0);
+  document.getElementById('sTotal').textContent=fmtK(total);
+  document.getElementById('sPeak').textContent=fmtK(Math.max(...vals));
+  document.getElementById('sAvg').textContent=fmtK(total/vals.length);
+  document.getElementById('sReal').textContent=(rg>0?'+':'')+rg+'%';
+  document.getElementById('sYJ').textContent=yrs.length+' · '+jobs.length;
+}
+
+// ── SIDEBAR: JOBS LEGEND ──────────────────────────────────────────────────────
+function renderLegend(){
+  const el=document.getElementById('legendList');el.innerHTML='';
+  jobs.forEach(j=>{
+    const yr=j.years.slice().sort((a,b)=>a-b);
+    const lbl=yr.length?(yr[0]+(yr.length>1?'–'+yr[yr.length-1]:'')):'—';
+    const cagr=jobCAGR(j);const cagrStr=cagr!=null?((cagr*100).toFixed(1)+'% CAGR'):'';
+    const jVals=yr.filter(y=>salaries[y]).map(y=>salaries[y]);
+    const avg=jVals.length?jVals.reduce((a,b)=>a+b,0)/jVals.length:0;
+    const d=document.createElement('div');
+    d.className='leg-item'+(activeJob===j.id?' active':'');
+    d.innerHTML=`
+      <span class="leg-dot" style="background:${j.color}"></span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.65rem;">${j.name}</div>
+        <div style="font-size:0.57rem;color:var(--muted)">${lbl} · avg ${fmtK(avg)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:0.6rem;color:${cagr>=0?'var(--pos)':'var(--neg)'}">${cagrStr}</div>
+      </div>`;
+    d.onclick=()=>{activeJob=(activeJob===j.id)?null:j.id;renderLegend();drawChart();};
+    el.appendChild(d);
+  });
+}
+
+// ── SIDEBAR: INSIGHTS ─────────────────────────────────────────────────────────
+function renderInsights(){
+  const el=document.getElementById('insightCards');
+  const yrs=sortedYrs();
+  const real=realSalaries();
+  const cum=cumEarnings();
+  const proj=projectSalaries();
+
+  const jobRows=jobs.map(j=>{
+    const sy=j.years.filter(y=>salaries[y]).sort((a,b)=>a-b);
+    if(!sy.length)return null;
+    const jv=sy.map(y=>salaries[y]);
+    const total=jv.reduce((a,b)=>a+b,0),avg=total/jv.length,peak=Math.max(...jv);
+    const cagr=jobCAGR(j);
+    const slope=sy.length>1?(jv[jv.length-1]-jv[0])/(sy.length-1):0;
+    return{j,sy,total,avg,peak,cagr,slope};
+  }).filter(Boolean);
+
+  const transitions=[];
+  for(let i=1;i<jobs.length;i++){
+    const prev=jobs[i-1],curr=jobs[i];
+    const psy=prev.years.filter(y=>salaries[y]).sort((a,b)=>a-b);
+    const csy=curr.years.filter(y=>salaries[y]).sort((a,b)=>a-b);
+    if(!psy.length||!csy.length)continue;
+    const lastSal=salaries[psy[psy.length-1]],firstSal=salaries[csy[0]];
+    const delta=firstSal-lastSal,pct=lastSal?delta/lastSal:0;
+    transitions.push({from:prev,to:curr,fromYr:psy[psy.length-1],toYr:csy[0],lastSal,firstSal,delta,pct});
+  }
+
+  const lastYr=yrs[yrs.length-1];
+  const projYrs=Object.keys(proj).map(Number).sort((a,b)=>a-b);
+  const projFinal=proj[projYrs[projYrs.length-1]];
+  let cumProj=cum[lastYr];projYrs.forEach(y=>cumProj+=proj[y]);
+
+  let h='';
+
+  // Per-job table
+  h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
+    <table class="jst">
+      <tr><th>Job</th><th>Yrs</th><th>Avg</th><th>Peak</th><th>Total</th><th>CAGR</th></tr>`;
+  jobRows.forEach(({j,sy,avg,peak,total,cagr})=>{
+    const cs=cagr!=null?((cagr*100).toFixed(1)+'%'):'—';
+    h+=`<tr>
+      <td><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</td>
+      <td class="tddim">${sy.length}</td>
+      <td>${fmtK(avg)}</td><td>${fmtK(peak)}</td>
+      <td style="color:var(--accent)">${fmtK(total)}</td>
+      <td style="color:${cagr>=0?'var(--pos)':'var(--neg)'}">${cs}</td>
+    </tr>`;
+  });
+  h+=`</table></div>`;
+
+  // Velocity bars
+  h+=`<div class="ins-card"><h3>Salary Velocity</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">$/yr increase per job</div>`;
+  const maxSl=Math.max(...jobRows.map(r=>Math.abs(r.slope)),1);
+  jobRows.forEach(({j,slope})=>{
+    h+=`<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem;font-size:0.6rem;">
+      <span style="width:48px;color:var(--muted);font-size:0.57rem;flex-shrink:0">${j.name}</span>
+      <div style="flex:1;height:5px;background:var(--border);">
+        <div style="height:100%;width:${Math.abs(slope)/maxSl*100}%;background:${slope>=0?j.color:'var(--neg)'}"></div>
+      </div>
+      <span style="width:48px;text-align:right;color:${slope>=0?'var(--pos)':'var(--neg)'};">${slope>=0?'+':''}${fmtK(slope)}</span>
+    </div>`;
+  });
+  h+=`</div>`;
+
+  // Transitions
+  h+=`<div class="ins-card"><h3>Job Transitions</h3>`;
+  transitions.forEach(({from,to,fromYr,toYr,lastSal,firstSal,delta,pct})=>{
+    h+=`<div class="trans-row">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.62rem">${from.name} → ${to.name}</div>
+        <div style="font-size:0.57rem;color:var(--muted)">${fromYr}→${toYr} · ${fmt(lastSal)}→${fmt(firstSal)}</div>
+      </div>
+      <div style="color:${delta>=0?'var(--pos)':'var(--neg)'};font-weight:500;font-size:0.65rem;flex-shrink:0;text-align:right">
+        ${delta>=0?'+':''}${fmtK(delta)}<br>
+        <span style="font-size:0.57rem;font-weight:400">${(pct*100).toFixed(1)}%</span>
+      </div>
+    </div>`;
+  });
+  h+=`</div>`;
+
+  // Real vs Nominal
+  h+=`<div class="ins-card"><h3>Real vs Nominal</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Inflation-adjusted to ${yrs[0]} dollars</div>`;
+  yrs.filter((_,i)=>i%4===0||i===yrs.length-1).forEach(yr=>{
+    const nom=salaries[yr],r=real[yr],loss=nom-r;
+    h+=`<div style="display:grid;grid-template-columns:2.5rem 1fr 1fr 1fr;gap:0.3rem;margin-bottom:0.28rem;font-size:0.6rem;align-items:baseline;">
+      <span style="color:var(--muted)">${yr}</span>
+      <span>${fmt(nom)}</span>
+      <span style="color:var(--real)">${fmt(r)}</span>
+      <span style="color:var(--neg)">-${fmt(loss)}</span>
+    </div>`;
+  });
+  h+=`<div style="font-size:0.55rem;color:var(--muted);margin-top:0.3rem">Nominal · <span style="color:var(--real)">Real</span> · <span style="color:var(--neg)">Inflation loss</span></div>
+  </div>`;
+
+  // Projection KPIs
+  h+=`<div class="ins-card"><h3>Cumulative & Projection</h3>
+    <div class="kpi-mini">
+      <div class="kpi-m"><label>Earned to date</label><value>${fmtK(cum[lastYr])}</value></div>
+      <div class="kpi-m"><label>Proj. salary +5yr</label><value style="color:var(--proj)">${fmtK(projFinal)}/yr</value></div>
+    </div>
+    <div class="kpi-mini">
+      <div class="kpi-m"><label>Cum. incl. proj.</label><value style="color:var(--cum)">${fmtK(cumProj)}</value></div>
+      <div class="kpi-m"><label>Based on</label><value style="color:var(--muted);font-size:0.7rem">Last 5 yrs</value></div>
+    </div>
+  </div>`;
+
+  el.innerHTML=h;
+}
+
+// ── SIDEBAR: PERCENTILE DETAIL ────────────────────────────────────────────────
+function renderPctPanel(){
+  const el=document.getElementById('pctPanel');
+  const yrs=sortedYrs();
+  let h=`<div class="ins-card"><h3>Income Percentile by Year</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Relative to all US earners that year</div>`;
+  yrs.forEach(yr=>{
+    const pct=getPercentile(salaries[yr],yr);
+    h+=`<div class="pct-row">
+      <span class="pct-yr">${yr}</span>
+      <div class="pct-bar-wrap"><div class="pct-bar-fill" style="width:${Math.min(pct,100)}%"></div></div>
+      <span class="pct-val">${pct.toFixed(0)}th</span>
+      <span style="color:var(--muted);font-size:0.57rem;width:52px;text-align:right">${fmtK(salaries[yr])}</span>
+    </div>`;
+  });
+  h+=`</div>`;
+  el.innerHTML=h;
+}
+
+// ── CHART ─────────────────────────────────────────────────────────────────────
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('chartWrap');
+const tip=document.getElementById('tip');
+
+function resizeCanvas(){
+  const dpr=window.devicePixelRatio||1,w=wrap.clientWidth,h=wrap.clientHeight;
+  if(!w||!h)return;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawChart();
+}
+window.addEventListener('resize',resizeCanvas);
+
+function movingAvg(vals,w){
+  return vals.map((v,i)=>{
+    const h=Math.floor(w/2),sl=vals.slice(Math.max(0,i-h),Math.min(vals.length,i+h+1));
+    return sl.reduce((a,b)=>a+b,0)/sl.length;
+  });
+}
+function drawSpline(pts,c){
+  if(pts.length<2)return;
+  c.beginPath();c.moveTo(pts[0][0],pts[0][1]);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(pts.length-1,i+2)];
+    c.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,
+                    p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]);
+  }
+}
+function setSmoothing(s){
+  smoothing=s;
+  ['none','ma3','ma5','spline'].forEach(k=>document.getElementById('sm-'+k).classList.toggle('active',k===s));
+  drawChart();
+}
+
+function drawChart(){
+  const W=wrap.clientWidth,H=wrap.clientHeight;
+  if(!W||!H)return;
+  ctx.clearRect(0,0,W,H);
+  const pad={top:28,right:50,bottom:46,left:76};
+  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+
+  const yrs=sortedYrs();
+  const projData=ov.proj?projectSalaries():{};
+  const allYrs=[...yrs,...Object.keys(projData).map(Number).filter(y=>!yrs.includes(y))].sort((a,b)=>a-b);
+  const n=allYrs.length;if(!n)return;
+
+  const vals=allYrs.map(y=>salaries[y]??projData[y]??0);
+  const real=realSalaries(),realVals=yrs.map(y=>real[y]);
+  const cum=cumEarnings(),pcts=yrs.map(y=>getPercentile(salaries[y],y));
+  const maxNom=Math.max(...vals)*1.1,maxCum=Math.max(...Object.values(cum))*1.08;
+
+  const xp=i=>pad.left+(i/(n-1||1))*cW;
+  const ys=v=>pad.top+cH*(1-v/maxNom);
+
+  // Axes
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(pad.left,pad.top);ctx.lineTo(pad.left,pad.top+cH);ctx.lineTo(pad.left+cW,pad.top+cH);ctx.stroke();
+
+  // Y grid + labels
+  const ticks=[0,50000,100000,150000,200000,250000].filter(t=>t<=maxNom*1.05);
+  ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='right';
+  ticks.forEach(t=>{
+    const y=ys(t);
+    ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();
+    ctx.fillStyle='rgba(221,219,228,0.85)';
+    ctx.fillText('$'+t/1000+'k',pad.left-10,y+4);
+  });
+
+  // X labels — show every 2 years for desktop
+  ctx.textAlign='center';ctx.font='11px IBM Plex Mono,monospace';
+  allYrs.forEach((yr,i)=>{
+    const isProj=!yrs.includes(yr);
+    if(yr%2===0||i===0||i===n-1){
+      ctx.fillStyle=isProj?'rgba(245,233,126,0.5)':'rgba(221,219,228,0.75)';
+      ctx.fillText(yr,xp(i),H-pad.bottom+17);
+    }
+  });
+
+  // Job boundary lines
+  jobs.forEach(j=>{
+    const sy=j.years.filter(y=>yrs.includes(y)).sort((a,b)=>a-b);
+    if(!sy.length)return;
+    const firstIdx=allYrs.indexOf(sy[0]);
+    if(firstIdx>0){
+      ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(xp(firstIdx),pad.top);ctx.lineTo(xp(firstIdx),pad.top+cH);ctx.stroke();
+      ctx.setLineDash([]);
+      // job name label
+      ctx.fillStyle=j.color;ctx.globalAlpha=0.7;ctx.textAlign='center';ctx.font='9px IBM Plex Mono,monospace';
+      ctx.fillText(j.name,xp(firstIdx),pad.top-6);
+      ctx.globalAlpha=1;
+    }
+  });
+
+  // Overlays
+  if(ov.inf){
+    ctx.fillStyle='rgba(212,169,106,0.07)';ctx.beginPath();
+    yrs.forEach((yr,i)=>{const v=(MACRO[yr]?.inf??0)/0.08*cH*0.42;const py=pad.top+cH-v;const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),py):ctx.lineTo(xp(xi),py);});
+    ctx.lineTo(xp(allYrs.indexOf(yrs[yrs.length-1])),pad.top+cH);ctx.lineTo(xp(0),pad.top+cH);ctx.closePath();ctx.fill();
+  }
+  if(ov.gdp){
+    ctx.strokeStyle='rgba(111,207,151,0.28)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();let fg=true;
+    yrs.forEach(yr=>{const g=MACRO[yr]?.gdp;if(g==null)return;const xi=allYrs.indexOf(yr);const py=pad.top+cH-((g+4)/12)*cH*0.4-cH*0.08;fg?(ctx.moveTo(xp(xi),py),fg=false):ctx.lineTo(xp(xi),py);});
+    ctx.stroke();ctx.setLineDash([]);
+  }
+
+  // Bars
+  const bw=Math.max(2,cW/(n*1.5));
+  yrs.forEach(yr=>{
+    const xi=allYrs.indexOf(yr);
+    const j=getJob(yr),act=activeJob===null||activeJob===j?.id;
+    ctx.fillStyle=j?j.color:'#555';ctx.globalAlpha=act?0.72:0.05;
+    const top=ys(salaries[yr]);ctx.fillRect(xp(xi)-bw/2,top,bw,pad.top+cH-top);
+  });ctx.globalAlpha=1;
+  if(ov.proj){
+    Object.entries(projData).forEach(([yr,val])=>{
+      const xi=allYrs.indexOf(+yr);if(xi<0)return;
+      ctx.fillStyle='rgba(245,233,126,0.15)';
+      ctx.fillRect(xp(xi)-bw/2,ys(val),bw,pad.top+cH-ys(val));
+    });
+  }
+
+  // Nominal line
+  let dv=yrs.map(y=>salaries[y]);
+  if(smoothing==='ma3')dv=movingAvg(dv,3);
+  else if(smoothing==='ma5')dv=movingAvg(dv,5);
+  const nomPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),ys(dv[i])]);
+  ctx.strokeStyle='rgba(212,169,106,0.85)';ctx.lineWidth=2.5;
+  if(smoothing==='spline'){drawSpline(nomPts,ctx);}
+  else{ctx.beginPath();nomPts.forEach((p,i)=>i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]));}
+  ctx.stroke();
+
+  if(ov.real){
+    ctx.strokeStyle='rgba(126,184,245,0.8)';ctx.lineWidth=1.8;ctx.setLineDash([6,3]);
+    ctx.beginPath();yrs.forEach((yr,i)=>{const p=[xp(allYrs.indexOf(yr)),pad.top+cH*(1-realVals[i]/maxNom)];i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);});ctx.stroke();ctx.setLineDash([]);
+  }
+  if(ov.cum){
+    ctx.strokeStyle='rgba(245,169,126,0.7)';ctx.lineWidth=1.8;ctx.setLineDash([3,3]);
+    ctx.beginPath();yrs.forEach(yr=>{const p=[xp(allYrs.indexOf(yr)),pad.top+cH*(1-cum[yr]/maxCum)];const i=yrs.indexOf(yr);i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);});ctx.stroke();ctx.setLineDash([]);
+    // right axis label
+    ctx.fillStyle='rgba(245,169,126,0.5)';ctx.textAlign='left';ctx.font='9px IBM Plex Mono,monospace';
+    ctx.fillText(fmtK(maxCum),pad.left+cW+4,pad.top+8);
+  }
+  if(ov.pct){
+    ctx.strokeStyle='rgba(196,126,245,0.75)';ctx.lineWidth=1.8;ctx.setLineDash([5,4]);
+    ctx.beginPath();yrs.forEach((yr,i)=>{const p=[xp(allYrs.indexOf(yr)),pad.top+cH*(1-pcts[i]/100)];i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);});ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(196,126,245,0.55)';ctx.textAlign='left';ctx.font='9px IBM Plex Mono,monospace';
+    ctx.fillText('100th',pad.left+cW+4,pad.top+20);ctx.fillText('50th',pad.left+cW+4,pad.top+cH/2+4);
+  }
+  if(ov.proj){
+    const pjYrs=[yrs[yrs.length-1],...Object.keys(projData).map(Number)];
+    const pjVals=pjYrs.map(y=>salaries[y]??projData[y]);
+    ctx.strokeStyle='rgba(245,233,126,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();pjYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),ys(pjVals[i])):ctx.lineTo(xp(xi),ys(pjVals[i]));});ctx.stroke();ctx.setLineDash([]);
+  }
+
+  // Dots + event markers
+  yrs.forEach(yr=>{
+    const xi=allYrs.indexOf(yr);
+    const j=getJob(yr),act=activeJob===null||activeJob===j?.id;
+    ctx.beginPath();ctx.arc(xp(xi),ys(salaries[yr]),act?3.5:1.5,0,Math.PI*2);
+    ctx.fillStyle=j?j.color:'#888';ctx.globalAlpha=act?1:0.1;ctx.fill();ctx.globalAlpha=1;
+    if(ov.evt&&MACRO[yr]?.evt){
+      ctx.beginPath();ctx.arc(xp(xi),ys(salaries[yr])-12,3.5,0,Math.PI*2);
+      ctx.fillStyle='#9b8df5';ctx.fill();
+    }
+  });
+}
+
+// Tooltip
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left;
+  const yrs=sortedYrs();
+  const projData=ov.proj?projectSalaries():{};
+  const allYrs=[...yrs,...Object.keys(projData).map(Number).filter(y=>!yrs.includes(y))].sort((a,b)=>a-b);
+  const n=allYrs.length,cW=wrap.clientWidth-76-50;
+  const bw=Math.max(2,cW/(n*1.5));
+  let hit=-1;
+  for(let i=0;i<n;i++){const x=76+(i/(n-1||1))*cW;if(Math.abs(mx-x)<bw/2+8){hit=i;break;}}
+  if(hit<0){tip.style.opacity=0;return;}
+  const yr=allYrs[hit],isProj=!yrs.includes(yr);
+  const sal=isProj?(projectSalaries()[yr]??0):salaries[yr];
+  const j=getJob(yr),chg=yoy(yr),real=realSalaries();
+  const pct=yrs.includes(yr)?getPercentile(sal,yr):null;
+  const cs=chg!=null?(chg>=0?'+':'')+(chg*100).toFixed(1)+'%':'—';
+  const m=MACRO[yr];
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:0.6rem">projected</span>':''}</strong>
+    <div style="font-size:0.8rem">${fmt(sal)}</div>
+    ${!isProj?`<div style="color:${chg>=0?'var(--pos)':'var(--neg)'}">YoY ${cs}</div>`:''}
+    ${real[yr]?`<div style="color:var(--real)">Real: ${fmt(real[yr])}</div>`:''}
+    ${pct!=null?`<div style="color:var(--pct)">~${pct.toFixed(0)}th percentile</div>`:''}
+    ${m?.inf!=null?`<div style="color:var(--muted)">Inflation ${(m.inf*100).toFixed(1)}%</div>`:''}
+    ${j?`<div style="margin-top:3px"><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</div>`:''}
+    ${m?.evt?`<div style="color:#9b8df5;margin-top:3px">${m.evt}</div>`:''}`;
+  tip.style.opacity=1;
+  tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
+  tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
+});
+canvas.addEventListener('mouseleave',()=>tip.style.opacity=0);
+
+// ── TABLE (always visible below chart) ───────────────────────────────────────
+function buildTable(){
+  const yrs=sortedYrs(),real=realSalaries();
+  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Real $</th><th>YoY</th><th>Percentile</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
+  const cum=cumEarnings();
+  yrs.forEach(yr=>{
+    const j=getJob(yr),chg=yoy(yr);
+    const cs=chg!=null?(chg>=0?'+':'')+(chg*100).toFixed(1)+'%':'';
+    const cc=chg==null?'':(chg>=0?'tdpos':'tdneg');
+    const pct=getPercentile(salaries[yr],yr);
+    h+=`<tr>
+      <td>${yr}</td>
+      <td>${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:''}</td>
+      <td>${fmt(salaries[yr])}</td>
+      <td style="color:var(--real)">${fmt(real[yr])}</td>
+      <td class="${cc}">${cs}</td>
+      <td style="color:var(--pct)">${pct.toFixed(0)}th</td>
+      <td style="color:var(--cum)">${fmtK(cum[yr])}</td>
+      <td class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':''}</td>
+      <td class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':''}</td>
+      <td class="tddim">${MACRO[yr]?.evt||''}</td>
+    </tr>`;
+  });
+  h+=`</tbody>`;
+  document.getElementById('dataTable').innerHTML=h;
+}
+
+// ── OV TOGGLE ─────────────────────────────────────────────────────────────────
+function toggleOv(k){
+  ov[k]=!ov[k];
+  const btn=document.getElementById('ov-'+k);
+  if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);
+  drawChart();
+}
+
+// ── SIDEBAR TABS ──────────────────────────────────────────────────────────────
+function setSTab(t){
+  curSTab=t;
+  ['jobs','insights','pct'].forEach(s=>{
+    const el=document.getElementById('stab-'+s);
+    if(el)el.classList.toggle('open',s===t);
+    document.getElementById('sp-'+s)?.classList.toggle('vis',s===t);
+  });
+  if(t==='insights')renderInsights();
+  if(t==='pct')renderPctPanel();
+}
+
+// ── DRAWER ────────────────────────────────────────────────────────────────────
+function toggleDrawer(){
+  drawerOpen=!drawerOpen;
+  document.getElementById('drawer').classList.toggle('open',drawerOpen);
+  document.getElementById('settingsToggle').classList.toggle('open',drawerOpen);
+  if(drawerOpen)renderJobCards();
+  setTimeout(resizeCanvas,50);
+}
+function setDTab(t){
+  curDTab=t;
+  ['jobs','salary'].forEach(s=>{
+    document.getElementById('dt-'+s).classList.toggle('active',s===t);
+    document.getElementById('ds-'+s).classList.toggle('vis',s===t);
+  });
+  if(t==='salary')renderSalaryList();
+  if(t==='jobs')renderJobCards();
+}
+
+// ── DRAWER: JOBS ──────────────────────────────────────────────────────────────
+function renderJobCards(){
+  const el=document.getElementById('jobCards');el.innerHTML='';
+  jobs.forEach(j=>{
+    const sy=j.years.slice().sort((a,b)=>a-b);
+    const allYrs=sortedYrs();
+    const card=document.createElement('div');
+    card.className='jcard';card.id='jc'+j.id;
+    card.innerHTML=`
+      <div class="jcard-head" onclick="toggleCard(${j.id})">
+        <span class="cswatch" style="background:${j.color}"></span>
+        <span class="jcard-name" id="jcn${j.id}">${j.name}</span>
+        <span class="jcard-yrs">${sy.length?sy[0]+(sy.length>1?'–'+sy[sy.length-1]:''):''}</span>
+        <span class="jcard-arr">▾</span>
+      </div>
+      <div class="jcard-body">
+        <div class="frow"><span class="flbl">Name</span>
+          <input class="finput" value="${j.name}" oninput="updateJobName(${j.id},this.value)"></div>
+        <div class="frow"><span class="flbl">Color</span>
+          <input type="color" class="finput" value="${j.color}" oninput="updateJobColor(${j.id},this.value)"></div>
+        <div>
+          <div class="flbl" style="display:block;margin-bottom:0.35rem">Years assigned</div>
+          <div class="ychips" id="chips${j.id}">
+            ${sy.map(y=>`<span class="ychip">${y}<span class="ychip-x" onclick="removeYr(${j.id},${y})">×</span></span>`).join('')}
+          </div>
+          <div class="addyrrow">
+            <select id="addyr${j.id}" style="flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:0.22rem 0.36rem;outline:none;">
+              <option value="">Move a year here…</option>
+              ${allYrs.filter(y=>!j.years.includes(y)).map(y=>`<option value="${y}">${y}${getJob(y)?' ('+getJob(y).name+')':''}</option>`).join('')}
+            </select>
+            <button class="btn-sm primary" onclick="addYrToJob(${j.id})">Add</button>
+          </div>
+        </div>
+        <div class="btnrow"><button class="btn-sm danger" onclick="deleteJob(${j.id})">Delete</button></div>
+      </div>`;
+    el.appendChild(card);
+  });
+}
+function toggleCard(id){document.getElementById('jc'+id).classList.toggle('exp');}
+function updateJobName(id,v){const j=jobs.find(j=>j.id===id);if(j)j.name=v;const el=document.getElementById('jcn'+id);if(el)el.textContent=v;refresh();}
+function updateJobColor(id,v){const j=jobs.find(j=>j.id===id);if(j)j.color=v;const card=document.getElementById('jc'+id);if(card)card.querySelector('.cswatch').style.background=v;refresh();}
+function removeYr(id,yr){const j=jobs.find(j=>j.id===id);if(j)j.years=j.years.filter(y=>y!==yr);renderJobCards();refresh();}
+function addYrToJob(id){
+  const sel=document.getElementById('addyr'+id);const yr=parseInt(sel.value);if(!yr)return;
+  jobs.forEach(j=>{j.years=j.years.filter(y=>y!==yr);});
+  const j=jobs.find(j=>j.id===id);if(j){j.years.push(yr);j.years.sort((a,b)=>a-b);}
+  renderJobCards();refresh();
+}
+function deleteJob(id){
+  if(!confirm('Delete this job?'))return;
+  jobs=jobs.filter(j=>j.id!==id);if(activeJob===id)activeJob=null;
+  renderJobCards();refresh();
+}
+function addJob(){
+  const cols=['#a8d8a8','#f7c59f','#e8a0bf','#89c4e1','#f9e784','#c3acd0'];
+  jobs.push({id:nextId++,name:'New Job',color:cols[(nextId-1)%cols.length],years:[]});
+  renderJobCards();refresh();
+  setTimeout(()=>{const el=document.getElementById('jc'+(nextId-1));if(el)el.classList.add('exp');},40);
+}
+
+// ── DRAWER: SALARY ────────────────────────────────────────────────────────────
+function renderSalaryList(){
+  const el=document.getElementById('salaryList');el.innerHTML='';
+  sortedYrs().forEach(yr=>{
+    const row=document.createElement('div');row.className='srow';
+    row.innerHTML=`<span class="syr">${yr}</span>
+      <input class="sinput" type="number" value="${salaries[yr]}" onchange="updateSalary(${yr},this.value)">
+      <button class="sdel" onclick="deleteYear(${yr})" title="Remove">×</button>`;
+    el.appendChild(row);
+  });
+}
+function updateSalary(yr,v){const n=parseFloat(v);if(!isNaN(n)&&n>=0){salaries[yr]=n;refresh();}}
+function deleteYear(yr){
+  if(!confirm('Remove '+yr+'?'))return;
+  delete salaries[yr];jobs.forEach(j=>{j.years=j.years.filter(y=>y!==yr);});
+  renderJobCards();renderSalaryList();refresh();
+}
+function addYearEntry(){
+  const yr=parseInt(document.getElementById('newYear').value);
+  const sal=parseFloat(document.getElementById('newSalary').value);
+  if(!yr||isNaN(sal)||sal<0){alert('Enter a valid year and salary.');return;}
+  if(salaries[yr]!==undefined&&!confirm(yr+' already exists. Overwrite?'))return;
+  salaries[yr]=sal;
+  document.getElementById('newYear').value='';document.getElementById('newSalary').value='';
+  renderSalaryList();renderJobCards();refresh();
+}
+
+function refresh(){
+  updateStats();renderLegend();drawChart();buildTable();
+  if(curSTab==='insights')renderInsights();
+  if(curSTab==='pct')renderPctPanel();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// Activate initial sidebar tab button
+document.getElementById('stab-jobs').classList.add('open');
+updateStats();renderLegend();buildTable();
+setTimeout(resizeCanvas,80);
+</script>
+</body>
+</html>
