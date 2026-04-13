@@ -924,10 +924,15 @@ function refresh(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-// Activate initial sidebar tab button
 document.getElementById('stab-jobs').classList.add('open');
 updateStats();renderLegend();buildTable();
-setTimeout(resizeCanvas,80);
+
+function initCanvas(){
+  const w=wrap.clientWidth,h=wrap.clientHeight;
+  if(w>0&&h>0){resizeCanvas();}else{requestAnimationFrame(initCanvas);}
+}
+if(document.readyState==='complete'){requestAnimationFrame(initCanvas);}
+else{window.addEventListener('load',()=>requestAnimationFrame(initCanvas));}
 </script>
 </body>
 </html>
