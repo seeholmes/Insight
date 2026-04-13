@@ -322,6 +322,16 @@ const PCTILE_THRESHOLDS={
   2023:[22000,46000,83000,132000,178000,380000],2025:[23000,48000,87000,138000,186000,400000],
 };
 
+function getSocialClass(pct){
+  if(pct>=99)return{label:'Top 1%',      color:'#f5e97e'};
+  if(pct>=90)return{label:'Upper Class',  color:'#d4a96a'};
+  if(pct>=75)return{label:'Upper Middle', color:'#c47ef5'};
+  if(pct>=50)return{label:'Middle Class', color:'#6fcf97'};
+  if(pct>=25)return{label:'Lower Middle', color:'#7eb8f5'};
+  if(pct>=10)return{label:'Working Class',color:'#f5a97e'};
+  return              {label:'Lower Class',  color:'#eb5757'};
+}
+
 function getPercentile(salary,year){
   const ys=Object.keys(PCTILE_THRESHOLDS).map(Number).sort((a,b)=>a-b);
   let best=ys[0];for(const y of ys){if(Math.abs(y-year)<Math.abs(best-year))best=y;}
@@ -559,11 +569,13 @@ function renderPctPanel(){
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Relative to all US earners that year</div>`;
   yrs.forEach(yr=>{
     const pct=getPercentile(salaries[yr],yr);
+    const sc=getSocialClass(pct);
     h+=`<div class="pct-row">
       <span class="pct-yr">${yr}</span>
-      <div class="pct-bar-wrap"><div class="pct-bar-fill" style="width:${Math.min(pct,100)}%"></div></div>
-      <span class="pct-val">${pct.toFixed(0)}th</span>
+      <div class="pct-bar-wrap"><div class="pct-bar-fill" style="width:${Math.min(pct,100)}%;background:${sc.color}"></div></div>
+      <span class="pct-val" style="color:${sc.color}">${pct.toFixed(0)}th</span>
       <span style="color:var(--muted);font-size:0.57rem;width:52px;text-align:right">${fmtK(salaries[yr])}</span>
+      <span style="color:${sc.color};font-size:0.55rem;width:68px;text-align:right;flex-shrink:0">${sc.label}</span>
     </div>`;
   });
   h+=`</div>`;
@@ -765,6 +777,7 @@ canvas.addEventListener('mousemove',e=>{
     ${!isProj?`<div style="color:${chg>=0?'var(--pos)':'var(--neg)'}">YoY ${cs}</div>`:''}
     ${real[yr]?`<div style="color:var(--real)">Real: ${fmt(real[yr])}</div>`:''}
     ${pct!=null?`<div style="color:var(--pct)">~${pct.toFixed(0)}th percentile</div>`:''}
+    ${pct!=null?`<div style="color:${getSocialClass(pct).color};font-size:0.62rem">${getSocialClass(pct).label}</div>`:''}
     ${m?.inf!=null?`<div style="color:var(--muted)">Inflation ${(m.inf*100).toFixed(1)}%</div>`:''}
     ${j?`<div style="margin-top:3px"><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</div>`:''}
     ${m?.evt?`<div style="color:#9b8df5;margin-top:3px">${m.evt}</div>`:''}`;
@@ -777,7 +790,7 @@ canvas.addEventListener('mouseleave',()=>tip.style.opacity=0);
 // ── TABLE (always visible below chart) ───────────────────────────────────────
 function buildTable(){
   const yrs=sortedYrs(),real=realSalaries();
-  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Real $</th><th>YoY</th><th>Percentile</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Real $</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
   const cum=cumEarnings();
   yrs.forEach(yr=>{
     const j=getJob(yr),chg=yoy(yr);
@@ -791,6 +804,7 @@ function buildTable(){
       <td style="color:var(--real)">${fmt(real[yr])}</td>
       <td class="${cc}">${cs}</td>
       <td style="color:var(--pct)">${pct.toFixed(0)}th</td>
+      <td style="color:${getSocialClass(pct).color}">${getSocialClass(pct).label}</td>
       <td style="color:var(--cum)">${fmtK(cum[yr])}</td>
       <td class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':''}</td>
       <td class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':''}</td>
