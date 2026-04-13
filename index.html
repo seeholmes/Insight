@@ -202,6 +202,8 @@ tr:hover td{background:var(--s1);}
       <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">Insights</button>
       <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Percentile</button>
     </div>
+    <button class="tbtn" onclick="exportData()">⬇ Export</button>
+    <label class="tbtn" style="cursor:pointer" title="Import backup JSON">⬆ Import<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
     <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ Settings</button>
   </div>
 </div>
@@ -334,23 +336,8 @@ function getPercentile(salary,year){
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-const DEFAULT_SALARIES={
-  1993:15000,1994:21618,1995:33683,1996:35531,1997:35448,1998:39944,1999:40918,
-  2000:63249,2001:72213,2002:63202,2003:62000,2004:61037,2005:62350,2006:73452,
-  2007:72414,2008:73656,2009:87864,2010:97561,2011:104426,2012:135653,2013:134114,
-  2014:127111,2015:138558,2016:132534,2017:151712,2018:153569,2019:150349,
-  2020:145718,2021:152181,2022:165000,2023:185000,2024:180000,2025:192500,2026:202000,
-};
-const DEFAULT_JOBS=[
-  {id:0,name:"Job 1",color:"#7fd4b0",years:[1993,1994,1995]},
-  {id:1,name:"Job 2",color:"#b89ee0",years:[1996,1997,1998,1999]},
-  {id:2,name:"Job 3",color:"#f08aab",years:[2000,2001]},
-  {id:3,name:"Job 4",color:"#b0a8f5",years:[2002,2003,2004]},
-  {id:4,name:"Job 5",color:"#e8d86a",years:[2005,2006,2007,2008]},
-  {id:5,name:"Job 6",color:"#f5b86a",years:[2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]},
-  {id:6,name:"Job 7",color:"#f5756a",years:[2019,2020,2021]},
-  {id:7,name:"Job 8",color:"#4da6e8",years:[2022,2023,2024,2025,2026]},
-];
+const DEFAULT_SALARIES={};
+const DEFAULT_JOBS=[];
 function loadState(){
   try{
     const s=localStorage.getItem('insight_salaries');
@@ -937,6 +924,30 @@ function addYearEntry(){
   salaries[yr]=sal;
   document.getElementById('newYear').value='';document.getElementById('newSalary').value='';
   renderSalaryList();renderJobCards();refresh();
+}
+
+// ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
+function exportData(){
+  const data=JSON.stringify({salaries,jobs,nextId},null,2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download='insight_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!d.salaries||!d.jobs)throw new Error('Invalid format');
+      salaries=d.salaries;jobs=d.jobs;nextId=d.nextId||jobs.reduce((m,j)=>Math.max(m,j.id+1),0);
+      saveState();refresh();
+      if(drawerOpen)renderJobCards();
+    }catch(err){alert('Import failed: '+err.message);}
+    input.value='';
+  };
+  reader.readAsText(file);
 }
 
 function refresh(){
