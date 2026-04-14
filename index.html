@@ -175,6 +175,9 @@ tr:hover td{background:var(--s1);}
 .addyrrow2 input{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.66rem;padding:0.24rem 0.36rem;outline:none;}
 .addyrrow2 input:focus{border-color:var(--accent);}
 #newYear{width:66px;}#newSalary{flex:1;min-width:80px;}
+.mlbl{font-size:0.5rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
+.mrow{display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr 1rem;gap:0.25rem;align-items:center;margin-bottom:0.22rem;}
+.mrow .sinput{padding:0.18rem 0.28rem;font-size:0.62rem;}
 
 /* TOOLTIP */
 #tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.65rem 0.85rem;font-size:0.67rem;pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:160px;line-height:1.8;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
@@ -267,6 +270,7 @@ tr:hover td{background:var(--s1);}
     <div class="dtabs">
       <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Jobs</button>
       <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
+      <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
     </div>
     <div class="dbody">
       <div class="dsec vis" id="ds-jobs">
@@ -283,6 +287,23 @@ tr:hover td{background:var(--s1);}
           <button class="btn-sm primary" onclick="addYearEntry()">+ Add</button>
         </div>
       </div>
+      <div class="dsec" id="ds-macro">
+        <p class="sec-head">Inflation · GDP · Events</p>
+        <div style="display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
+          <span class="mlbl">Year</span><span class="mlbl">Inf%</span><span class="mlbl">GDP%</span><span class="mlbl">Event</span><span></span>
+        </div>
+        <div id="macroList"></div>
+        <div style="margin-top:0.7rem;border-top:1px solid var(--border);padding-top:0.6rem;">
+          <p class="sec-head" style="margin-bottom:0.4rem">Add Year</p>
+          <div style="display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr auto;gap:0.25rem;align-items:center;">
+            <input class="sinput" type="number" id="mNewYear"  placeholder="Yr"   style="width:100%">
+            <input class="sinput" type="number" id="mNewInf"   placeholder="e.g. 3.2" step="0.1" style="width:100%">
+            <input class="sinput" type="number" id="mNewGdp"   placeholder="e.g. 2.5" step="0.1" style="width:100%">
+            <input class="sinput" type="text"   id="mNewEvt"   placeholder="Event (opt)" style="width:100%">
+            <button class="btn-sm primary" onclick="addMacroYear()">+</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -291,7 +312,7 @@ tr:hover td{background:var(--s1);}
 
 <script>
 // ── MACRO DATA ────────────────────────────────────────────────────────────────
-const MACRO={
+const DEFAULT_MACRO={
   1993:{inf:0.027,gdp:2.8,evt:"Balanced Budget Act"},
   1994:{inf:0.027,gdp:4.0,evt:null},1995:{inf:0.025,gdp:2.7,evt:null},
   1996:{inf:0.033,gdp:3.8,evt:"Welfare reform"},1997:{inf:0.017,gdp:4.4,evt:"Fed raised rates"},
@@ -311,6 +332,7 @@ const MACRO={
   2024:{inf:0.027,gdp:null,evt:null},2025:{inf:0.030,gdp:null,evt:null},
   2026:{inf:null,gdp:null,evt:null},
 };
+let MACRO=DEFAULT_MACRO;
 
 const PCTILE_THRESHOLDS={
   1993:[10000,21000,38000,62000,82000,150000],1995:[11000,23000,41000,66000,88000,160000],
@@ -355,24 +377,28 @@ function loadState(){
     const s=localStorage.getItem('insight_salaries');
     const j=localStorage.getItem('insight_jobs');
     const n=localStorage.getItem('insight_nextId');
+    const m=localStorage.getItem('insight_macro');
     return{
       salaries:s?JSON.parse(s):DEFAULT_SALARIES,
       jobs:j?JSON.parse(j):DEFAULT_JOBS,
       nextId:n?parseInt(n):8,
+      macro:m?JSON.parse(m):DEFAULT_MACRO,
     };
-  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8};}
+  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO};}
 }
 function saveState(){
   try{
     localStorage.setItem('insight_salaries',JSON.stringify(salaries));
     localStorage.setItem('insight_jobs',JSON.stringify(jobs));
     localStorage.setItem('insight_nextId',String(nextId));
+    localStorage.setItem('insight_macro',JSON.stringify(MACRO));
   }catch(e){}
 }
 const _s=loadState();
 let salaries=_s.salaries;
 let jobs=_s.jobs;
 let nextId=_s.nextId;
+MACRO=_s.macro;
 let ov={real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false};
 let activeJob=null;
 let drawerOpen=false;
@@ -883,12 +909,13 @@ function toggleDrawer(){
 }
 function setDTab(t){
   curDTab=t;
-  ['jobs','salary'].forEach(s=>{
+  ['jobs','salary','macro'].forEach(s=>{
     document.getElementById('dt-'+s).classList.toggle('active',s===t);
     document.getElementById('ds-'+s).classList.toggle('vis',s===t);
   });
   if(t==='salary')renderSalaryList();
   if(t==='jobs')renderJobCards();
+  if(t==='macro')renderMacroList();
 }
 
 // ── DRAWER: JOBS ──────────────────────────────────────────────────────────────
@@ -978,9 +1005,48 @@ function addYearEntry(){
   renderSalaryList();renderJobCards();refresh();
 }
 
+// ── DRAWER: MACRO ─────────────────────────────────────────────────────────────
+function renderMacroList(){
+  const el=document.getElementById('macroList');el.innerHTML='';
+  const yrs=Object.keys(MACRO).map(Number).sort((a,b)=>a-b);
+  yrs.forEach(yr=>{
+    const m=MACRO[yr];
+    const row=document.createElement('div');row.className='mrow';
+    row.innerHTML=`
+      <span class="syr">${yr}</span>
+      <input class="sinput" type="number" step="0.1" value="${m.inf!=null?(m.inf*100).toFixed(1):''}" placeholder="—" onchange="updateMacro(${yr},'inf',this.value)">
+      <input class="sinput" type="number" step="0.1" value="${m.gdp!=null?m.gdp:''}" placeholder="—" onchange="updateMacro(${yr},'gdp',this.value)">
+      <input class="sinput" type="text" value="${m.evt||''}" placeholder="—" onchange="updateMacro(${yr},'evt',this.value)">
+      <button class="sdel" onclick="deleteMacroYear(${yr})" title="Remove">×</button>`;
+    el.appendChild(row);
+  });
+}
+function updateMacro(yr,field,val){
+  if(!MACRO[yr])MACRO[yr]={inf:null,gdp:null,evt:null};
+  if(field==='inf')MACRO[yr].inf=val===''?null:parseFloat(val)/100;
+  else if(field==='gdp')MACRO[yr].gdp=val===''?null:parseFloat(val);
+  else MACRO[yr].evt=val.trim()||null;
+  saveState();refresh();
+}
+function deleteMacroYear(yr){
+  if(!confirm('Remove macro data for '+yr+'?'))return;
+  delete MACRO[yr];saveState();refresh();renderMacroList();
+}
+function addMacroYear(){
+  const yr=parseInt(document.getElementById('mNewYear').value);
+  const inf=document.getElementById('mNewInf').value;
+  const gdp=document.getElementById('mNewGdp').value;
+  const evt=document.getElementById('mNewEvt').value.trim();
+  if(!yr||isNaN(yr)){alert('Enter a valid year.');return;}
+  if(MACRO[yr]&&!confirm(yr+' already exists. Overwrite?'))return;
+  MACRO[yr]={inf:inf===''?null:parseFloat(inf)/100,gdp:gdp===''?null:parseFloat(gdp),evt:evt||null};
+  ['mNewYear','mNewInf','mNewGdp','mNewEvt'].forEach(id=>document.getElementById(id).value='');
+  saveState();refresh();renderMacroList();
+}
+
 // ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
 function exportData(){
-  const data=JSON.stringify({salaries,jobs,nextId},null,2);
+  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO},null,2);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
   a.download='insight_backup_'+new Date().toISOString().slice(0,10)+'.json';
@@ -994,6 +1060,7 @@ function importData(input){
       const d=JSON.parse(e.target.result);
       if(!d.salaries||!d.jobs)throw new Error('Invalid format');
       salaries=d.salaries;jobs=d.jobs;nextId=d.nextId||jobs.reduce((m,j)=>Math.max(m,j.id+1),0);
+      if(d.macro)MACRO=d.macro;
       saveState();refresh();
       if(drawerOpen)renderJobCards();
     }catch(err){alert('Import failed: '+err.message);}
