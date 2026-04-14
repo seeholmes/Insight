@@ -105,6 +105,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 .cbtn.on-inf{border-color:#d4a96a!important;color:#d4a96a!important;}
 .cbtn.on-gdp{border-color:#6fcf97!important;color:#6fcf97!important;}
 .cbtn.on-evt{border-color:#9b8df5!important;color:#9b8df5!important;}
+.cbtn.on-cuminf{border-color:#ff7f7f!important;color:#ff7f7f!important;}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
 
@@ -248,9 +249,10 @@ tr:hover td{background:var(--s1);}
         <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')">Projection</button>
         <span class="ctrl-sep"></span>
         <span class="ctrl-lbl">Context:</span>
-        <button class="cbtn" id="ov-inf"  onclick="toggleOv('inf')">Inflation</button>
-        <button class="cbtn" id="ov-gdp"  onclick="toggleOv('gdp')">GDP</button>
-        <button class="cbtn" id="ov-evt"  onclick="toggleOv('evt')">Events</button>
+        <button class="cbtn" id="ov-inf"    onclick="toggleOv('inf')">Inflation</button>
+        <button class="cbtn" id="ov-cuminf" onclick="toggleOv('cuminf')">Cum. Inflation</button>
+        <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')">GDP</button>
+        <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')">Events</button>
       </div>
       <div id="chartWrap"><canvas id="c"></canvas></div>
     </div>
@@ -371,7 +373,7 @@ const _s=loadState();
 let salaries=_s.salaries;
 let jobs=_s.jobs;
 let nextId=_s.nextId;
-let ov={real:false,pct:false,cum:false,proj:false,inf:false,gdp:false,evt:false};
+let ov={real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab='jobs';
@@ -690,6 +692,24 @@ function drawChart(){
     ctx.strokeStyle='rgba(212,169,106,0.85)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
     ctx.beginPath();infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
   }
+  if(ov.cuminf){
+    // Build cumulative inflation index from first year, then project first salary forward
+    const firstYr=yrs[0],firstSal=salaries[firstYr];
+    let idx=1.0;const cumIdx={};cumIdx[firstYr]=1.0;
+    for(let i=1;i<yrs.length;i++){idx*=(1+(MACRO[yrs[i]]?.inf??0));cumIdx[yrs[i]]=idx;}
+    const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),ys(firstSal*cumIdx[yr])]);
+    // filled area under line
+    ctx.fillStyle='rgba(255,127,127,0.10)';ctx.beginPath();
+    cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+    ctx.lineTo(cumPts[cumPts.length-1][0],pad.top+cH);ctx.lineTo(cumPts[0][0],pad.top+cH);ctx.closePath();ctx.fill();
+    // stroke line
+    ctx.strokeStyle='rgba(255,127,127,0.9)';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+    ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    // label at end
+    const[lx,ly]=cumPts[cumPts.length-1];
+    ctx.fillStyle='rgba(255,127,127,0.9)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText('inf. baseline',lx+4,ly+3);
+  }
   if(ov.gdp){
     ctx.strokeStyle='rgba(111,207,151,0.28)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
     ctx.beginPath();let fg=true;
@@ -782,6 +802,7 @@ canvas.addEventListener('mousemove',e=>{
     ${!isProj?`<div style="color:${chg>=0?'var(--pos)':'var(--neg)'}">YoY ${cs}</div>`:''}
     ${real[yr]?`<div style="color:var(--real)">Real: ${fmt(real[yr])}</div>`:''}
     ${pct!=null?`<div style="color:var(--pct)">~${pct.toFixed(0)}th percentile</div>`:''}
+    ${ov.cuminf&&!isProj&&yrs.includes(yr)?(()=>{let ix=1.0;const ys2=sortedYrs();const fi=ys2[0];for(let i=1;i<=ys2.indexOf(yr);i++)ix*=(1+(MACRO[ys2[i]]?.inf??0));const base=salaries[fi]*ix;const diff=sal-base;return`<div style="color:#ff7f7f;font-size:0.62rem">vs inf. baseline: ${diff>=0?'+':''}${fmt(diff)}</div>`;})():''}
     ${pct!=null?`<div style="color:${getSocialClass(pct).color};font-size:0.62rem">${getSocialClass(pct).label}</div>`:''}
     ${m?.inf!=null?`<div style="color:var(--muted)">Inflation ${(m.inf*100).toFixed(1)}%</div>`:''}
     ${j?`<div style="margin-top:3px"><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</div>`:''}
