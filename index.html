@@ -681,9 +681,14 @@ function drawChart(){
 
   // Overlays
   if(ov.inf){
-    ctx.fillStyle='rgba(212,169,106,0.07)';ctx.beginPath();
-    yrs.forEach((yr,i)=>{const v=(MACRO[yr]?.inf??0)/0.08*cH*0.42;const py=pad.top+cH-v;const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),py):ctx.lineTo(xp(xi),py);});
-    ctx.lineTo(xp(allYrs.indexOf(yrs[yrs.length-1])),pad.top+cH);ctx.lineTo(xp(0),pad.top+cH);ctx.closePath();ctx.fill();
+    const infPts=yrs.map(yr=>{const v=(MACRO[yr]?.inf??0)/0.08*cH*0.42;return[xp(allYrs.indexOf(yr)),pad.top+cH-v];});
+    // filled area
+    ctx.fillStyle='rgba(212,169,106,0.18)';ctx.beginPath();
+    infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+    ctx.lineTo(infPts[infPts.length-1][0],pad.top+cH);ctx.lineTo(infPts[0][0],pad.top+cH);ctx.closePath();ctx.fill();
+    // stroke line on top
+    ctx.strokeStyle='rgba(212,169,106,0.85)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+    ctx.beginPath();infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
   }
   if(ov.gdp){
     ctx.strokeStyle='rgba(111,207,151,0.28)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
