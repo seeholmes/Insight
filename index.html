@@ -368,6 +368,19 @@ function getPercentile(salary,year){
   if(salary>=p25)return 25+(salary-p25)/(p50-p25)*25;
   return Math.max(1,salary/p25*25);
 }
+// Inverse: given an exact percentile, return the salary needed to hit it in a given year
+function getSalaryForPercentile(pct,year){
+  const ys=Object.keys(PCTILE_THRESHOLDS).map(Number).sort((a,b)=>a-b);
+  let best=ys[0];for(const y of ys){if(Math.abs(y-year)<Math.abs(best-year))best=y;}
+  const [p25,p50,p75,p90,p95,p99]=PCTILE_THRESHOLDS[best];
+  if(pct>=99)return p99+(pct-99)*20000;
+  if(pct>=95)return p95+(pct-95)/4*(p99-p95);
+  if(pct>=90)return p90+(pct-90)/5*(p95-p90);
+  if(pct>=75)return p75+(pct-75)/15*(p90-p75);
+  if(pct>=50)return p50+(pct-50)/25*(p75-p50);
+  if(pct>=25)return p25+(pct-25)/25*(p50-p25);
+  return pct/25*p25;
+}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 const DEFAULT_SALARIES={};
@@ -511,67 +524,72 @@ function renderInsights(){
   let cumProj=cum[lastYr];projYrs.forEach(y=>cumProj+=proj[y]);
 
   // ── Peak Percentile Power card ───────────────────────────────────────────────
-  // Build cumulative inflation index across all years
-  let _ci=1.0;const _cumIdx={};_cumIdx[yrs[0]]=1.0;
-  for(let i=1;i<yrs.length;i++){_ci*=(1+(MACRO[yrs[i]]?.inf??0));_cumIdx[yrs[i]]=_ci;}
-
-  // Find year with highest percentile
+  // Find year + exact percentile at peak
   const peakPctYr=yrs.reduce((best,yr)=>getPercentile(salaries[yr],yr)>getPercentile(salaries[best],best)?yr:best,yrs[0]);
-  const peakPct=getPercentile(salaries[peakPctYr],peakPctYr);
+  const peakPct=getPercentile(salaries[peakPctYr],peakPctYr);  // e.g. 96.3
   const peakSc=getSocialClass(peakPct);
   const curYr=yrs[yrs.length-1];
   const curSal=salaries[curYr];
   const curPct=getPercentile(curSal,curYr);
-
-  // Inflate peak salary to current year dollars
-  const inflFactor=(_cumIdx[curYr]||1)/(_cumIdx[peakPctYr]||1);
-  const peakAdjusted=salaries[peakPctYr]*inflFactor;
-  const deficit=peakAdjusted-curSal;
   const isCurrentYear=peakPctYr===curYr;
-  const progress=Math.min(curSal/peakAdjusted,1);
+
+  // Exact salary needed TODAY to land at exactly peakPct
+  const targetSal=getSalaryForPercentile(peakPct,curYr);
+  const deficit=targetSal-curSal;           // positive = still need more, negative = already past it
+  const progress=Math.min(curSal/targetSal,1);
+
+  // CPI context: what peak salary is worth in today's dollars
+  let _ci=1.0;const _cumIdx={};_cumIdx[yrs[0]]=1.0;
+  for(let i=1;i<yrs.length;i++){_ci*=(1+(MACRO[yrs[i]]?.inf??0));_cumIdx[yrs[i]]=_ci;}
+  const inflFactor=(_cumIdx[curYr]||1)/(_cumIdx[peakPctYr]||1);
+  const peakCPIAdjusted=salaries[peakPctYr]*inflFactor;
 
   let h='';
   h+=`<div class="ins-card">
     <h3>Peak Percentile Power</h3>
-    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.65rem">Your highest-ever percentile, adjusted to ${curYr} dollars</div>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.75rem">Exact salary needed to reclaim your all-time percentile rank</div>
+
+    <div style="text-align:center;margin-bottom:0.7rem;padding:0.5rem 0;border:1px solid var(--border);background:var(--bg)">
+      <div style="font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Peak rank · ${peakPctYr}</div>
+      <div style="font-size:1.6rem;font-family:'Playfair Display',serif;color:${peakSc.color};line-height:1">${peakPct.toFixed(1)}<span style="font-size:0.9rem">th</span></div>
+      <div style="font-size:0.58rem;color:${peakSc.color};margin-top:0.15rem">${peakSc.label} · ${fmt(salaries[peakPctYr])} in ${peakPctYr}</div>
+    </div>
+
     <div class="kpi-mini" style="margin-bottom:0.55rem">
       <div class="kpi-m">
-        <label>Peak year</label>
-        <value style="color:${peakSc.color}">${peakPctYr}</value>
+        <label>To hit ${peakPct.toFixed(1)}th in ${curYr}</label>
+        <value style="color:${peakSc.color}">${fmt(targetSal)}</value>
       </div>
       <div class="kpi-m">
-        <label>Percentile then</label>
-        <value style="color:${peakSc.color}">${peakPct.toFixed(0)}th · ${peakSc.label}</value>
-      </div>
-    </div>
-    <div class="kpi-mini" style="margin-bottom:0.55rem">
-      <div class="kpi-m">
-        <label>Peak salary (${peakPctYr})</label>
-        <value>${fmt(salaries[peakPctYr])}</value>
-      </div>
-      <div class="kpi-m">
-        <label>In ${curYr} dollars</label>
-        <value style="color:var(--real)">${fmt(peakAdjusted)}</value>
-      </div>
-    </div>
-    <div class="kpi-mini" style="margin-bottom:0.7rem">
-      <div class="kpi-m">
-        <label>Current salary</label>
+        <label>Your ${curYr} salary</label>
         <value>${fmt(curSal)}</value>
       </div>
+    </div>
+
+    <div class="kpi-mini" style="margin-bottom:0.75rem">
       <div class="kpi-m">
-        <label>${isCurrentYear?'Gap':'Gap to reclaim'}</label>
-        <value style="color:${deficit<=0?'var(--pos)':'var(--neg)'}">${deficit<=0?'+'+fmt(Math.abs(deficit)):'-'+fmt(deficit)}</value>
+        <label>${deficit<=0?'You\'re ahead by':'Gap to target'}</label>
+        <value style="color:${deficit<=0?'var(--pos)':'var(--neg)'};font-size:1rem">${deficit<=0?'+':'-'}${fmt(Math.abs(deficit))}</value>
+      </div>
+      <div class="kpi-m">
+        <label>Current rank</label>
+        <value style="color:${getSocialClass(curPct).color}">${curPct.toFixed(1)}th</value>
       </div>
     </div>
-    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.22rem">Progress toward reclaiming peak purchasing power</div>
+
+    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.22rem">Progress toward ${peakPct.toFixed(1)}th percentile</div>
     <div style="height:6px;background:var(--border);border-radius:1px;overflow:hidden">
-      <div style="height:100%;width:${(progress*100).toFixed(1)}%;background:${deficit<=0?'var(--pos)':peakSc.color};transition:width .3s"></div>
+      <div style="height:100%;width:${(progress*100).toFixed(1)}%;background:${deficit<=0?'var(--pos)':peakSc.color}"></div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:0.55rem;color:var(--muted);margin-top:0.2rem">
-      <span>$0</span>
+      <span>${fmt(curSal)}</span>
       <span style="color:${deficit<=0?'var(--pos)':peakSc.color}">${(progress*100).toFixed(0)}%</span>
-      <span>${fmt(peakAdjusted)}</span>
+      <span>${fmt(targetSal)}</span>
+    </div>
+
+    <div style="margin-top:0.6rem;padding-top:0.5rem;border-top:1px solid var(--border);font-size:0.57rem;color:var(--muted)">
+      <span style="color:var(--real)">${fmt(peakCPIAdjusted)}</span> — peak salary CPI-adjusted to ${curYr} dollars
+      <span style="color:var(--muted);font-size:0.52rem;display:block;margin-top:0.1rem">The gap above this is due to real wage growth at the top outpacing inflation</span>
     </div>
     ${isCurrentYear?`<div style="font-size:0.6rem;color:var(--pos);margin-top:0.5rem;text-align:center">★ Peak percentile is this year — no deficit</div>`:''}
   </div>`;
