@@ -510,7 +510,71 @@ function renderInsights(){
   const projFinal=proj[projYrs[projYrs.length-1]];
   let cumProj=cum[lastYr];projYrs.forEach(y=>cumProj+=proj[y]);
 
+  // ── Peak Percentile Power card ───────────────────────────────────────────────
+  // Build cumulative inflation index across all years
+  let _ci=1.0;const _cumIdx={};_cumIdx[yrs[0]]=1.0;
+  for(let i=1;i<yrs.length;i++){_ci*=(1+(MACRO[yrs[i]]?.inf??0));_cumIdx[yrs[i]]=_ci;}
+
+  // Find year with highest percentile
+  const peakPctYr=yrs.reduce((best,yr)=>getPercentile(salaries[yr],yr)>getPercentile(salaries[best],best)?yr:best,yrs[0]);
+  const peakPct=getPercentile(salaries[peakPctYr],peakPctYr);
+  const peakSc=getSocialClass(peakPct);
+  const curYr=yrs[yrs.length-1];
+  const curSal=salaries[curYr];
+  const curPct=getPercentile(curSal,curYr);
+
+  // Inflate peak salary to current year dollars
+  const inflFactor=(_cumIdx[curYr]||1)/(_cumIdx[peakPctYr]||1);
+  const peakAdjusted=salaries[peakPctYr]*inflFactor;
+  const deficit=peakAdjusted-curSal;
+  const isCurrentYear=peakPctYr===curYr;
+  const progress=Math.min(curSal/peakAdjusted,1);
+
   let h='';
+  h+=`<div class="ins-card">
+    <h3>Peak Percentile Power</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.65rem">Your highest-ever percentile, adjusted to ${curYr} dollars</div>
+    <div class="kpi-mini" style="margin-bottom:0.55rem">
+      <div class="kpi-m">
+        <label>Peak year</label>
+        <value style="color:${peakSc.color}">${peakPctYr}</value>
+      </div>
+      <div class="kpi-m">
+        <label>Percentile then</label>
+        <value style="color:${peakSc.color}">${peakPct.toFixed(0)}th · ${peakSc.label}</value>
+      </div>
+    </div>
+    <div class="kpi-mini" style="margin-bottom:0.55rem">
+      <div class="kpi-m">
+        <label>Peak salary (${peakPctYr})</label>
+        <value>${fmt(salaries[peakPctYr])}</value>
+      </div>
+      <div class="kpi-m">
+        <label>In ${curYr} dollars</label>
+        <value style="color:var(--real)">${fmt(peakAdjusted)}</value>
+      </div>
+    </div>
+    <div class="kpi-mini" style="margin-bottom:0.7rem">
+      <div class="kpi-m">
+        <label>Current salary</label>
+        <value>${fmt(curSal)}</value>
+      </div>
+      <div class="kpi-m">
+        <label>${isCurrentYear?'Gap':'Gap to reclaim'}</label>
+        <value style="color:${deficit<=0?'var(--pos)':'var(--neg)'}">${deficit<=0?'+'+fmt(Math.abs(deficit)):'-'+fmt(deficit)}</value>
+      </div>
+    </div>
+    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.22rem">Progress toward reclaiming peak purchasing power</div>
+    <div style="height:6px;background:var(--border);border-radius:1px;overflow:hidden">
+      <div style="height:100%;width:${(progress*100).toFixed(1)}%;background:${deficit<=0?'var(--pos)':peakSc.color};transition:width .3s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.55rem;color:var(--muted);margin-top:0.2rem">
+      <span>$0</span>
+      <span style="color:${deficit<=0?'var(--pos)':peakSc.color}">${(progress*100).toFixed(0)}%</span>
+      <span>${fmt(peakAdjusted)}</span>
+    </div>
+    ${isCurrentYear?`<div style="font-size:0.6rem;color:var(--pos);margin-top:0.5rem;text-align:center">★ Peak percentile is this year — no deficit</div>`:''}
+  </div>`;
 
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
