@@ -587,9 +587,29 @@ function renderInsights(){
       <span>${fmt(targetSal)}</span>
     </div>
 
-    <div style="margin-top:0.6rem;padding-top:0.5rem;border-top:1px solid var(--border);font-size:0.57rem;color:var(--muted)">
-      <span style="color:var(--real)">${fmt(peakCPIAdjusted)}</span> — peak salary CPI-adjusted to ${curYr} dollars
-      <span style="color:var(--muted);font-size:0.52rem;display:block;margin-top:0.1rem">The gap above this is due to real wage growth at the top outpacing inflation</span>
+    <div style="margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid var(--border)">
+      <div style="font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Purchasing Power · Peak salary in today's dollars</div>
+      <div class="kpi-mini" style="margin-bottom:0.45rem">
+        <div class="kpi-m">
+          <label>Peak ${peakPctYr} salary</label>
+          <value>${fmt(salaries[peakPctYr])}</value>
+        </div>
+        <div class="kpi-m">
+          <label>CPI-adjusted to ${curYr}</label>
+          <value style="color:var(--real)">${fmt(peakCPIAdjusted)}</value>
+        </div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-m">
+          <label>Your ${curYr} salary</label>
+          <value>${fmt(curSal)}</value>
+        </div>
+        <div class="kpi-m">
+          <label>${curSal>=peakCPIAdjusted?'Ahead by':'Behind by'}</label>
+          <value style="color:${curSal>=peakCPIAdjusted?'var(--pos)':'var(--neg)'}">${curSal>=peakCPIAdjusted?'+':'-'}${fmt(Math.abs(curSal-peakCPIAdjusted))}</value>
+        </div>
+      </div>
+      <div style="font-size:0.52rem;color:var(--muted);margin-top:0.4rem">The gap between ${fmt(peakCPIAdjusted)} and ${fmt(targetSal)} reflects real wage growth at the top outpacing inflation</div>
     </div>
     ${isCurrentYear?`<div style="font-size:0.6rem;color:var(--pos);margin-top:0.5rem;text-align:center">★ Peak percentile is this year — no deficit</div>`:''}
   </div>`;
