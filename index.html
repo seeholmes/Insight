@@ -13,6 +13,7 @@
   --text:#dddbe4;--muted:#5e5d6e;--accent:#d4a96a;
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#f5a97e;--proj:#f5e97e;
+  --sidebar-w:300px;--drawer-w:320px;--topbar-h:48px;--tap:44px;--gap:12px;
 }
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;display:flex;flex-direction:column;}
@@ -20,8 +21,9 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 /* ── TOPBAR ── */
 #topbar{
   display:flex;align-items:center;gap:1rem;
-  padding:0 1.5rem;height:48px;flex-shrink:0;
+  padding:0 1.5rem;height:var(--topbar-h);flex-shrink:0;
   border-bottom:1px solid var(--border);background:var(--s1);
+  position:relative;z-index:10;
 }
 #topbar h1{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent);font-style:italic;white-space:nowrap;margin-right:0.5rem;}
 .tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
@@ -40,7 +42,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 
 /* ── LEFT SIDEBAR ── */
 #sidebar{
-  width:300px;flex-shrink:0;
+  width:var(--sidebar-w);flex-shrink:0;
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;
   overflow:hidden;background:var(--s1);
@@ -106,6 +108,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 .cbtn.on-gdp{border-color:#6fcf97!important;color:#6fcf97!important;}
 .cbtn.on-evt{border-color:#9b8df5!important;color:#9b8df5!important;}
 .cbtn.on-cuminf{border-color:#ff7f7f!important;color:#ff7f7f!important;}
+.cbtn.on-classBands{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--s2);}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
 
@@ -120,7 +123,7 @@ tr:hover td{background:var(--s1);}
 
 /* ── RIGHT SETTINGS DRAWER ── */
 #drawer{
-  width:320px;flex-shrink:0;
+  width:var(--drawer-w);flex-shrink:0;
   border-left:1px solid var(--border);
   display:none;flex-direction:column;
   overflow:hidden;background:var(--s1);
@@ -185,12 +188,71 @@ tr:hover td{background:var(--s1);}
 
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* ── EMPTY STATE ── */
+#emptyState{display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:5;}
+#emptyState.vis{display:flex;}
+#emptyState .es-inner{max-width:340px;}
+#emptyState h2{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--accent);font-style:italic;margin-bottom:0.6rem;}
+#emptyState p{font-size:0.72rem;color:var(--muted);line-height:1.6;margin-bottom:1.2rem;}
+#emptyState button{background:none;border:1px solid var(--accent);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.7rem 1.3rem;cursor:pointer;transition:all .15s;}
+#emptyState button:hover{background:var(--accent);color:var(--bg);}
+body.empty #chart-section canvas,body.empty #chart-section #chartControls,body.empty #bottom-section{visibility:hidden;}
+body.empty #emptyState{display:flex;}
+
+/* ── OVERLAY LEGEND ── */
+#ovLegend{position:absolute;top:8px;right:56px;display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:flex-end;max-width:60%;z-index:4;pointer-events:auto;}
+.ovl-item{display:inline-flex;align-items:center;gap:0.3rem;padding:0.12rem 0.38rem;background:rgba(19,20,26,0.85);border:1px solid var(--border);font-size:0.54rem;color:var(--muted);cursor:pointer;transition:all .15s;}
+.ovl-item:hover{border-color:var(--border2);color:var(--text);}
+.ovl-sw{width:8px;height:8px;border-radius:1px;flex-shrink:0;}
+
+/* ── HAMBURGER + SCRIM (mobile) ── */
+#hamburger{display:none;background:none;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;padding:0.3rem 0.55rem;cursor:pointer;margin-right:0.4rem;}
+#hamburger:hover{color:var(--accent);border-color:var(--accent);}
+#scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:50;}
+body.sidebar-open #scrim,body.drawer-open #scrim{display:block;}
+#drawer-close{display:none;background:none;border:1px solid var(--border);color:var(--muted);font-size:1rem;padding:0.2rem 0.55rem;cursor:pointer;margin-left:auto;}
+#drawer-close:hover{color:var(--accent);border-color:var(--accent);}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px){
+  #hamburger{display:inline-block;}
+  #sidebar{position:fixed;top:var(--topbar-h);bottom:0;left:0;width:min(85vw,320px);z-index:60;transform:translateX(-100%);transition:transform .2s ease;}
+  body.sidebar-open #sidebar{transform:translateX(0);}
+  #drawer{position:fixed;top:var(--topbar-h);bottom:0;right:0;width:min(90vw,360px);z-index:60;transform:translateX(100%);transition:transform .2s ease;display:flex;}
+  #drawer.open{transform:translateX(0);}
+  #drawer-close{display:inline-block;}
+  #center{width:100%;}
+  .tb-stats{display:none;}
+  .tb-right .tbtn{padding:0.28rem 0.5rem;font-size:0.58rem;}
+}
+@media (max-width: 600px){
+  #topbar{padding:0 0.6rem;gap:0.5rem;}
+  #topbar h1{font-size:0.95rem;}
+  .tbsep{display:none;}
+  #sidebar{width:85vw;}
+  #drawer{width:100vw;max-width:100vw;}
+  #chart-section{height:auto;min-height:52vh;padding:0.6rem 0.7rem 0.5rem;}
+  #chartControls{gap:0.22rem;}
+  #bottom-section{padding:0.5rem 0.6rem;}
+  table{font-size:0.6rem;}
+  th,td{padding:0.28rem 0.35rem;}
+  #ovLegend{top:4px;right:4px;max-width:90%;}
+}
+@media (hover: none) and (pointer: coarse){
+  .tbtn,.cbtn,.stab,.dtab,.btn-sm,#addJobBtn,.ovl-item{min-height:var(--tap);}
+  .sinput,.finput,#newYear,#newSalary,.addyrrow2 input{font-size:16px;min-height:var(--tap);}
+  .sdel,.ychip-x{min-width:var(--tap);min-height:var(--tap);display:inline-flex;align-items:center;justify-content:center;}
+  .leg-item{padding:0.5rem;}
+  #tip{pointer-events:auto;}
+}
 </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div id="topbar">
+  <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
   <h1>Insight</h1>
   <div class="tbsep"></div>
   <div class="tb-stats">
@@ -256,8 +318,19 @@ tr:hover td{background:var(--s1);}
         <button class="cbtn" id="ov-cuminf" onclick="toggleOv('cuminf')">Cum. Inflation</button>
         <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')">GDP</button>
         <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')">Events</button>
+        <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')">Class Bands</button>
       </div>
-      <div id="chartWrap"><canvas id="c"></canvas></div>
+      <div id="chartWrap">
+        <canvas id="c"></canvas>
+        <div id="ovLegend"></div>
+        <div id="emptyState">
+          <div class="es-inner">
+            <h2>Begin your ledger</h2>
+            <p>Add your first year of income and Insight will start surfacing your earning story — percentile rank, social class, inflation drag, and forensic trend detection.</p>
+            <button onclick="openAddYear()">+ Add First Year</button>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- DATA TABLE -->
     <div id="bottom-section">
@@ -271,6 +344,7 @@ tr:hover td{background:var(--s1);}
       <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Jobs</button>
       <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
       <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
+      <button id="drawer-close" onclick="toggleDrawer()" aria-label="Close">×</button>
     </div>
     <div class="dbody">
       <div class="dsec vis" id="ds-jobs">
@@ -309,6 +383,7 @@ tr:hover td{background:var(--s1);}
 </div>
 
 <div id="tip"></div>
+<div id="scrim" onclick="closeAll()"></div>
 
 <script>
 // ── MACRO DATA ────────────────────────────────────────────────────────────────
@@ -391,13 +466,15 @@ function loadState(){
     const j=localStorage.getItem('insight_jobs');
     const n=localStorage.getItem('insight_nextId');
     const m=localStorage.getItem('insight_macro');
+    const t=localStorage.getItem('insight_uiTab');
     return{
       salaries:s?JSON.parse(s):DEFAULT_SALARIES,
       jobs:j?JSON.parse(j):DEFAULT_JOBS,
       nextId:n?parseInt(n):8,
       macro:m?JSON.parse(m):DEFAULT_MACRO,
+      uiTab:t||'jobs',
     };
-  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO};}
+  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO,uiTab:'jobs'};}
 }
 function saveState(){
   try{
@@ -405,6 +482,7 @@ function saveState(){
     localStorage.setItem('insight_jobs',JSON.stringify(jobs));
     localStorage.setItem('insight_nextId',String(nextId));
     localStorage.setItem('insight_macro',JSON.stringify(MACRO));
+    localStorage.setItem('insight_uiTab',curSTab);
   }catch(e){}
 }
 const _s=loadState();
@@ -412,12 +490,16 @@ let salaries=_s.salaries;
 let jobs=_s.jobs;
 let nextId=_s.nextId;
 MACRO=_s.macro;
-let ov={real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false};
+let ov={real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
-let curSTab='jobs';
+let curSTab=_s.uiTab||'jobs';
 let curDTab='jobs';
 let smoothing='none';
+let _crosshair=null;   // {x, y} or null
+let _eventHitboxes=[]; // [{x,y,r,yr}] — populated during drawChart
+const _isTouch=matchMedia('(hover: none) and (pointer: coarse)').matches;
+if(_isTouch)ov.crosshair=false;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const sortedYrs=()=>Object.keys(salaries).map(Number).sort((a,b)=>a-b);
@@ -454,6 +536,11 @@ function jobCAGR(j){
 // ── STATS ─────────────────────────────────────────────────────────────────────
 function updateStats(){
   const yrs=sortedYrs(),vals=yrs.map(y=>salaries[y]);
+  if(!yrs.length){
+    ['sTotal','sPeak','sAvg','sReal'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('sYJ').textContent='0 · '+jobs.length;
+    return;
+  }
   const total=vals.reduce((a,b)=>a+b,0);
   const real=realSalaries(),rv=yrs.map(y=>real[y]);
   const rg=((rv[rv.length-1]/rv[0]-1)*100).toFixed(0);
@@ -493,6 +580,7 @@ function renderLegend(){
 function renderInsights(){
   const el=document.getElementById('insightCards');
   const yrs=sortedYrs();
+  if(!yrs.length){el.innerHTML='<div class="ins-card" style="text-align:center;color:var(--muted);font-size:0.7rem;padding:1.4rem">Add a year of income to unlock Insights.</div>';return;}
   const real=realSalaries();
   const cum=cumEarnings();
   const proj=projectSalaries();
@@ -614,6 +702,169 @@ function renderInsights(){
     ${isCurrentYear?`<div style="font-size:0.6rem;color:var(--pos);margin-top:0.5rem;text-align:center">★ Peak percentile is this year — no deficit</div>`:''}
   </div>`;
 
+  // ── Class Mobility Timeline ──────────────────────────────────────────────────
+  const CLASS_ORDER=[
+    {label:'Top 1%',     color:'#f5e97e',min:99},
+    {label:'Upper Class', color:'#d4a96a',min:90},
+    {label:'Upper Middle',color:'#c47ef5',min:75},
+    {label:'Middle Class',color:'#6fcf97',min:50},
+    {label:'Lower Middle',color:'#7eb8f5',min:25},
+    {label:'Working Class',color:'#f5a97e',min:10},
+    {label:'Lower Class', color:'#eb5757',min:0},
+  ];
+  const classYears={};CLASS_ORDER.forEach(c=>classYears[c.label]=0);
+  const pctSeries=yrs.map(y=>getPercentile(salaries[y],y));
+  yrs.forEach((y,i)=>{classYears[getSocialClass(pctSeries[i]).label]++;});
+  const peakClassYr=yrs.reduce((best,yr,i)=>pctSeries[i]>getPercentile(salaries[best],best)?yr:best,yrs[0]);
+  const peakClassObj=getSocialClass(getPercentile(salaries[peakClassYr],peakClassYr));
+  // trailing-5yr trend
+  const tailN=Math.min(5,yrs.length);
+  const tailPct=pctSeries.slice(-tailN);
+  const tailDelta=tailPct.length>=2?(tailPct[tailPct.length-1]-tailPct[0]):0;
+  const trendArrow=tailDelta>1.5?'↑':tailDelta<-1.5?'↓':'→';
+  const trendWord=tailDelta>1.5?'rising':tailDelta<-1.5?'falling':'flat';
+  const trendColor=tailDelta>1.5?'var(--pos)':tailDelta<-1.5?'var(--neg)':'var(--muted)';
+  h+=`<div class="ins-card">
+    <h3>Class Mobility</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.55rem">Years spent in each US income class</div>
+    <div style="display:flex;width:100%;height:22px;border:1px solid var(--border);overflow:hidden;margin-bottom:0.5rem">
+      ${CLASS_ORDER.filter(c=>classYears[c.label]>0).map(c=>{
+        const pctW=classYears[c.label]/yrs.length*100;
+        return `<div title="${c.label}: ${classYears[c.label]}yr" style="width:${pctW}%;background:${c.color};opacity:0.85"></div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.2rem 0.55rem;font-size:0.55rem;margin-bottom:0.55rem">
+      ${CLASS_ORDER.filter(c=>classYears[c.label]>0).map(c=>
+        `<span style="display:inline-flex;align-items:center;gap:0.25rem"><span style="width:7px;height:7px;background:${c.color};border-radius:1px"></span><span style="color:var(--muted)">${c.label}</span><span style="color:${c.color}">${classYears[c.label]}y</span></span>`
+      ).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.58rem;padding-top:0.45rem;border-top:1px solid var(--border)">
+      <span style="color:var(--muted)">Peak:</span>
+      <span style="color:${peakClassObj.color}">${peakClassObj.label} (${peakClassYr})</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.58rem;margin-top:0.25rem">
+      <span style="color:var(--muted)">${tailN}-yr trend:</span>
+      <span style="color:${trendColor}">${trendArrow} ${trendWord} (${tailDelta>=0?'+':''}${tailDelta.toFixed(1)} pts)</span>
+    </div>
+  </div>`;
+
+  // ── Percentile Velocity ──────────────────────────────────────────────────────
+  const pctDeltas=[];
+  for(let i=1;i<pctSeries.length;i++)pctDeltas.push(pctSeries[i]-pctSeries[i-1]);
+  const nVel=Math.min(3,pctDeltas.length);
+  const velRecent=pctDeltas.slice(-nVel);
+  const velAvg=velRecent.length?velRecent.reduce((a,b)=>a+b,0)/velRecent.length:0;
+  // compare to nominal salary growth rate to gauge whether you're outpacing inflation (real terms)
+  const lastPct=pctSeries[pctSeries.length-1];
+  const verdict=velAvg>0.5?'Outpacing peers':velAvg<-0.5?'Losing ground to peers':'Holding steady vs peers';
+  const verdictColor=velAvg>0.5?'var(--pos)':velAvg<-0.5?'var(--neg)':'var(--muted)';
+  h+=`<div class="ins-card">
+    <h3>Percentile Velocity</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Average percentile movement — last ${nVel} year${nVel>1?'s':''}</div>
+    <div style="text-align:center;margin-bottom:0.5rem;padding:0.6rem 0;border:1px solid var(--border);background:var(--bg)">
+      <div style="font-size:1.55rem;font-family:'Playfair Display',serif;color:${verdictColor};line-height:1">${velAvg>=0?'+':''}${velAvg.toFixed(1)}<span style="font-size:0.85rem"> pts/yr</span> ${velAvg>0.5?'↑':velAvg<-0.5?'↓':'→'}</div>
+      <div style="font-size:0.58rem;color:${verdictColor};margin-top:0.2rem">${verdict}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.58rem;color:var(--muted)">
+      <span>Current rank: <span style="color:${getSocialClass(lastPct).color}">${lastPct.toFixed(1)}th</span></span>
+      <span>${pctDeltas.length>=1?`Last YoY: ${pctDeltas[pctDeltas.length-1]>=0?'+':''}${pctDeltas[pctDeltas.length-1].toFixed(1)}`:'—'}</span>
+    </div>
+  </div>`;
+
+  // ── Stagnation / Inflection Detector ─────────────────────────────────────────
+  const realArr=yrs.map(y=>real[y]);
+  const realYoY=yrs.map((y,i)=>i===0?null:(realArr[i]-realArr[i-1])/realArr[i-1]);
+  const events=[];
+  // Inflections (single year, real YoY > 15%)
+  yrs.forEach((y,i)=>{
+    if(realYoY[i]!=null&&realYoY[i]>0.15){
+      const jPrev=getJob(yrs[i-1]),jNow=getJob(y);
+      const note=(jPrev&&jNow&&jPrev.id!==jNow.id)?`Job change: ${jPrev.name} → ${jNow.name}`:(jNow?jNow.name:'');
+      events.push({type:'up',yr:y,delta:realYoY[i],label:`${y} · ${note||'Salary jump'}`});
+    }
+  });
+  // Stagnation runs: ≥3 consecutive years with abs(real YoY) < 1%
+  let runStart=null,runLen=0;
+  yrs.forEach((y,i)=>{
+    const r=realYoY[i];
+    if(r!=null&&Math.abs(r)<0.01){if(runStart==null){runStart=y;runLen=1;}else{runLen++;}}
+    else{if(runLen>=3){events.push({type:'flat',yr:runStart,yrEnd:yrs[i-1],delta:0,label:`${runStart}–${yrs[i-1]} · Real salary stagnant`});}runStart=null;runLen=0;}
+  });
+  if(runLen>=3)events.push({type:'flat',yr:runStart,yrEnd:yrs[yrs.length-1],delta:0,label:`${runStart}–${yrs[yrs.length-1]} · Real salary stagnant`});
+  events.sort((a,b)=>a.yr-b.yr);
+  const eventsTrim=events.slice(0,6);
+  h+=`<div class="ins-card">
+    <h3>Inflection Points</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Career accelerations and stagnant runs (real $)</div>
+    ${eventsTrim.length?eventsTrim.map(ev=>{
+      const icon=ev.type==='up'?'↑':'━';
+      const color=ev.type==='up'?'var(--pos)':'var(--muted)';
+      const right=ev.type==='up'?`+${(ev.delta*100).toFixed(0)}%`:`${(ev.yrEnd-ev.yr+1)}yr`;
+      return `<div style="display:flex;align-items:center;gap:0.45rem;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.62rem">
+        <span style="color:${color};font-size:0.9rem;width:14px;text-align:center">${icon}</span>
+        <span style="flex:1;min-width:0">${ev.label}</span>
+        <span style="color:${color};flex-shrink:0;font-size:0.6rem">${right}</span>
+      </div>`;
+    }).join(''):'<div style="font-size:0.62rem;color:var(--muted);text-align:center;padding:0.4rem 0">No jumps or stagnant runs detected.</div>'}
+  </div>`;
+
+  // ── Decade Ledger ────────────────────────────────────────────────────────────
+  const decades={};
+  yrs.forEach((y,i)=>{
+    const d=Math.floor(y/10)*10;
+    if(!decades[d])decades[d]={nom:0,real:0,pctSum:0,n:0};
+    decades[d].nom+=salaries[y];
+    decades[d].real+=real[y];
+    decades[d].pctSum+=pctSeries[i];
+    decades[d].n++;
+  });
+  const decadeKeys=Object.keys(decades).map(Number).sort((a,b)=>a-b);
+  h+=`<div class="ins-card"><h3>Decade Ledger</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Nominal · real · avg percentile per decade</div>
+    <div style="display:grid;grid-template-columns:2.6rem 1fr 1fr 2.3rem;gap:0.25rem;font-size:0.52rem;color:var(--muted);padding-bottom:0.2rem;border-bottom:1px solid var(--border);margin-bottom:0.32rem;letter-spacing:0.08em;text-transform:uppercase">
+      <span>Era</span><span>Nominal</span><span>Real</span><span style="text-align:right">Avg</span>
+    </div>
+    ${decadeKeys.map(d=>{
+      const e=decades[d],avgP=e.pctSum/e.n,sc=getSocialClass(avgP);
+      return `<div style="display:grid;grid-template-columns:2.6rem 1fr 1fr 2.3rem;gap:0.25rem;align-items:baseline;font-size:0.6rem;margin-bottom:0.18rem">
+        <span style="color:var(--muted)">${(d%100).toString().padStart(2,'0')}s</span>
+        <span>${fmtK(e.nom)}</span>
+        <span style="color:var(--real)">${fmtK(e.real)}</span>
+        <span style="text-align:right;color:${sc.color}">${avgP.toFixed(0)}th</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  // ── Inflation Drag ───────────────────────────────────────────────────────────
+  const cumNominalTotal=yrs.reduce((a,y)=>a+salaries[y],0);
+  const cumRealTotal=yrs.reduce((a,y)=>a+real[y],0);
+  const erased=cumNominalTotal-cumRealTotal;
+  // Ghost raise years: nominal up but real down
+  const ghostYears=[];
+  for(let i=1;i<yrs.length;i++){
+    const nomUp=salaries[yrs[i]]>salaries[yrs[i-1]];
+    const realDown=real[yrs[i]]<real[yrs[i-1]];
+    if(nomUp&&realDown){
+      ghostYears.push({yr:yrs[i],nom:salaries[yrs[i]]-salaries[yrs[i-1]],real:real[yrs[i]]-real[yrs[i-1]]});
+    }
+  }
+  ghostYears.sort((a,b)=>a.real-b.real);
+  const worstGhost=ghostYears.slice(0,3);
+  h+=`<div class="ins-card"><h3>Inflation Drag</h3>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Lifetime purchasing power lost to inflation</div>
+    <div style="text-align:center;margin-bottom:0.55rem;padding:0.55rem 0;border:1px solid var(--border);background:var(--bg)">
+      <div style="font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Erased by inflation</div>
+      <div style="font-size:1.5rem;font-family:'Playfair Display',serif;color:var(--neg);line-height:1">${fmtK(erased)}</div>
+      <div style="font-size:0.55rem;color:var(--muted);margin-top:0.2rem">${cumNominalTotal?((erased/cumNominalTotal)*100).toFixed(1):'0'}% of ${fmtK(cumNominalTotal)} total</div>
+    </div>
+    ${worstGhost.length?`<div style="font-size:0.52rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem">Worst "ghost raise" years</div>
+      ${worstGhost.map(g=>`<div style="display:flex;justify-content:space-between;font-size:0.6rem;margin-bottom:0.22rem">
+        <span style="color:var(--muted)">${g.yr}</span>
+        <span style="color:var(--pos)">+${fmt(g.nom)} nom</span>
+        <span style="color:var(--neg)">${fmt(g.real)} real</span>
+      </div>`).join('')}`:'<div style="font-size:0.58rem;color:var(--muted);text-align:center">No ghost-raise years detected.</div>'}
+  </div>`;
+
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
     <table class="jst">
@@ -725,7 +976,8 @@ function resizeCanvas(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   drawChart();
 }
-window.addEventListener('resize',resizeCanvas);
+let _resizeT=null;
+window.addEventListener('resize',()=>{clearTimeout(_resizeT);_resizeT=setTimeout(resizeCanvas,150);});
 
 function movingAvg(vals,w){
   return vals.map((v,i)=>{
@@ -792,6 +1044,43 @@ function drawChart(){
       ctx.fillText(yr,xp(i),H-pad.bottom+17);
     }
   });
+
+  // Social class band shading (under everything else)
+  if(ov.classBands){
+    const pctYrs=Object.keys(PCTILE_THRESHOLDS).map(Number).sort((a,b)=>a-b);
+    const thrFor=yr=>{
+      let best=pctYrs[0];for(const y of pctYrs){if(Math.abs(y-yr)<Math.abs(best-yr))best=y;}
+      return PCTILE_THRESHOLDS[best];
+    };
+    // 7 bands from top: Top 1% (p99+), Upper (p90-p99), Upper Middle (p75-p90),
+    // Middle (p50-p75), Lower Middle (p25-p50), Working (≈p10-p25, use half of p25), Lower (below)
+    const classDefs=[
+      {color:'#f5e97e',top:t=>t[5]*1.5,bot:t=>t[5]},       // Top 1%
+      {color:'#d4a96a',top:t=>t[5],bot:t=>t[3]},           // Upper
+      {color:'#c47ef5',top:t=>t[3],bot:t=>t[2]},           // Upper Middle
+      {color:'#6fcf97',top:t=>t[2],bot:t=>t[1]},           // Middle
+      {color:'#7eb8f5',top:t=>t[1],bot:t=>t[0]},           // Lower Middle
+      {color:'#f5a97e',top:t=>t[0],bot:t=>t[0]*0.5},       // Working
+      {color:'#eb5757',top:t=>t[0]*0.5,bot:t=>0},          // Lower
+    ];
+    const clampY=v=>Math.max(pad.top,Math.min(pad.top+cH,ys(v)));
+    for(let i=0;i<allYrs.length-1;i++){
+      const y0=allYrs[i],y1=allYrs[i+1];
+      const t0=thrFor(y0),t1=thrFor(y1);
+      const x0=xp(i),x1=xp(i+1);
+      classDefs.forEach(cd=>{
+        const top0=clampY(cd.top(t0)),top1=clampY(cd.top(t1));
+        const bot0=clampY(cd.bot(t0)),bot1=clampY(cd.bot(t1));
+        if(bot0-top0<0.5&&bot1-top1<0.5)return;
+        ctx.fillStyle=cd.color;ctx.globalAlpha=0.08;
+        ctx.beginPath();ctx.moveTo(x0,top0);ctx.lineTo(x1,top1);ctx.lineTo(x1,bot1);ctx.lineTo(x0,bot0);ctx.closePath();ctx.fill();
+      });
+    }
+    ctx.globalAlpha=1;
+    // Caption
+    ctx.fillStyle='rgba(221,219,228,0.5)';ctx.font='italic 9px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText('Bands: US income percentile classes',pad.left+6,pad.top+12);
+  }
 
   // Job boundary lines
   jobs.forEach(j=>{
@@ -908,21 +1197,44 @@ function drawChart(){
   }
 
   // Dots + event markers
+  _eventHitboxes=[];
   yrs.forEach(yr=>{
     const xi=allYrs.indexOf(yr);
     const j=getJob(yr),act=activeJob===null||activeJob===j?.id;
-    ctx.beginPath();ctx.arc(xp(xi),ys(salaries[yr]),act?3.5:1.5,0,Math.PI*2);
+    const barTop=ys(salaries[yr]);
+    ctx.beginPath();ctx.arc(xp(xi),barTop,act?3.5:1.5,0,Math.PI*2);
     ctx.fillStyle=j?j.color:'#888';ctx.globalAlpha=act?1:0.1;ctx.fill();ctx.globalAlpha=1;
     if(ov.evt&&MACRO[yr]?.evt){
-      ctx.beginPath();ctx.arc(xp(xi),ys(salaries[yr])-12,3.5,0,Math.PI*2);
-      ctx.fillStyle='#9b8df5';ctx.fill();
+      const x=xp(xi),pinY=Math.max(pad.top+6,barTop-18);
+      // Vertical tick from bar top up to pin
+      ctx.strokeStyle='rgba(155,141,245,0.55)';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+      ctx.beginPath();ctx.moveTo(x,barTop-2);ctx.lineTo(x,pinY+4);ctx.stroke();ctx.setLineDash([]);
+      // Triangle pin
+      ctx.fillStyle='#9b8df5';
+      ctx.beginPath();ctx.moveTo(x,pinY+5);ctx.lineTo(x-4.5,pinY-3);ctx.lineTo(x+4.5,pinY-3);ctx.closePath();ctx.fill();
+      // Small white dot center for pop
+      ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.beginPath();ctx.arc(x,pinY-0.5,1.2,0,Math.PI*2);ctx.fill();
+      _eventHitboxes.push({x,y:pinY,r:10,yr});
     }
   });
+
+  // Crosshair (desktop only)
+  if(_crosshair&&ov.crosshair){
+    const {x,y}=_crosshair;
+    if(x>=pad.left&&x<=pad.left+cW&&y>=pad.top&&y<=pad.top+cH){
+      ctx.strokeStyle='rgba(221,219,228,0.18)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(x,pad.top);ctx.lineTo(x,pad.top+cH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
 }
 
 // Tooltip
 canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left;
+  const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(ov.crosshair){_crosshair={x:mx,y:my};drawChart();}
   const yrs=sortedYrs();
   const projData=ov.proj?projectSalaries():{};
   const allYrs=[...yrs,...Object.keys(projData).map(Number).filter(y=>!yrs.includes(y))].sort((a,b)=>a-b);
@@ -951,7 +1263,29 @@ canvas.addEventListener('mousemove',e=>{
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
 });
-canvas.addEventListener('mouseleave',()=>tip.style.opacity=0);
+canvas.addEventListener('mouseleave',()=>{tip.style.opacity=0;if(_crosshair){_crosshair=null;drawChart();}});
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  let hit=null;
+  for(const h of _eventHitboxes){
+    if(Math.abs(mx-h.x)<=h.r&&Math.abs(my-h.y)<=h.r){hit=h;break;}
+  }
+  if(!hit)return;
+  if(!drawerOpen)toggleDrawer();
+  setDTab('macro');
+  setTimeout(()=>{
+    const rows=document.querySelectorAll('#macroList .mrow');
+    rows.forEach(row=>{
+      const yrTxt=row.querySelector('.syr')?.textContent;
+      if(yrTxt&&+yrTxt===hit.yr){
+        row.scrollIntoView({block:'center',behavior:'smooth'});
+        row.style.transition='background .4s';
+        row.style.background='rgba(212,169,106,0.22)';
+        setTimeout(()=>{row.style.background='';},1200);
+      }
+    });
+  },140);
+});
 
 // ── TABLE (always visible below chart) ───────────────────────────────────────
 function buildTable(){
@@ -985,8 +1319,30 @@ function buildTable(){
 function toggleOv(k){
   ov[k]=!ov[k];
   const btn=document.getElementById('ov-'+k);
-  if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);
-  drawChart();
+  if(btn){if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);}
+  drawChart();renderOvLegend();
+}
+
+// ── OVERLAY LEGEND (HTML overlay over canvas) ────────────────────────────────
+const OV_META={
+  real:{label:'Real $',color:'#7eb8f5'},
+  pct:{label:'Percentile',color:'#c47ef5'},
+  cum:{label:'Cumulative',color:'#f5a97e'},
+  proj:{label:'Projection',color:'#f5e97e'},
+  inf:{label:'Inflation',color:'#d4a96a'},
+  cuminf:{label:'Cum. Inflation',color:'#ff7f7f'},
+  gdp:{label:'GDP',color:'#6fcf97'},
+  evt:{label:'Events',color:'#9b8df5'},
+  classBands:{label:'Class Bands',color:'#d4a96a'},
+};
+function renderOvLegend(){
+  const el=document.getElementById('ovLegend');if(!el)return;
+  const active=Object.keys(OV_META).filter(k=>ov[k]);
+  if(!active.length){el.innerHTML='';return;}
+  el.innerHTML=active.map(k=>{
+    const m=OV_META[k];
+    return `<span class="ovl-item" onclick="toggleOv('${k}')" title="Click to hide"><span class="ovl-sw" style="background:${m.color}"></span>${m.label}</span>`;
+  }).join('');
 }
 
 // ── SIDEBAR TABS ──────────────────────────────────────────────────────────────
@@ -1006,9 +1362,25 @@ function toggleDrawer(){
   drawerOpen=!drawerOpen;
   document.getElementById('drawer').classList.toggle('open',drawerOpen);
   document.getElementById('settingsToggle').classList.toggle('open',drawerOpen);
-  if(drawerOpen)renderJobCards();
+  document.body.classList.toggle('drawer-open',drawerOpen);
+  if(drawerOpen){renderJobCards();document.body.classList.remove('sidebar-open');}
   setTimeout(resizeCanvas,50);
 }
+function toggleSidebar(){
+  const open=!document.body.classList.contains('sidebar-open');
+  document.body.classList.toggle('sidebar-open',open);
+  if(open&&drawerOpen)toggleDrawer();
+}
+function closeAll(){
+  document.body.classList.remove('sidebar-open');
+  if(drawerOpen)toggleDrawer();
+}
+function openAddYear(){
+  if(!drawerOpen)toggleDrawer();
+  setDTab('salary');
+  setTimeout(()=>{const el=document.getElementById('newYear');if(el)el.focus();},120);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
 function setDTab(t){
   curDTab=t;
   ['jobs','salary','macro'].forEach(s=>{
@@ -1173,14 +1545,16 @@ function importData(input){
 
 function refresh(){
   saveState();
-  updateStats();renderLegend();drawChart();buildTable();
+  document.body.classList.toggle('empty',sortedYrs().length===0);
+  updateStats();renderLegend();drawChart();buildTable();renderOvLegend();
   if(curSTab==='insights')renderInsights();
   if(curSTab==='pct')renderPctPanel();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-document.getElementById('stab-jobs').classList.add('open');
-updateStats();renderLegend();buildTable();
+setSTab(curSTab);
+document.body.classList.toggle('empty',sortedYrs().length===0);
+updateStats();renderLegend();buildTable();renderOvLegend();
 
 function initCanvas(){
   const w=wrap.clientWidth,h=wrap.clientHeight;
