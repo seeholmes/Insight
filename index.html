@@ -344,6 +344,7 @@ body.empty #emptyState{display:flex;}
       <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Jobs</button>
       <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
       <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
+      <button class="dtab"        id="dt-about"  onclick="setDTab('about')">About</button>
       <button id="drawer-close" onclick="toggleDrawer()" aria-label="Close">×</button>
     </div>
     <div class="dbody">
@@ -359,6 +360,52 @@ body.empty #emptyState{display:flex;}
           <input type="number" id="newYear" placeholder="Year">
           <input type="number" id="newSalary" placeholder="Salary">
           <button class="btn-sm primary" onclick="addYearEntry()">+ Add</button>
+        </div>
+      </div>
+      <div class="dsec" id="ds-about">
+        <p class="sec-head">About Insight</p>
+        <div class="ins-card">
+          <h3>What it does</h3>
+          <p style="font-size:0.65rem;color:var(--text);line-height:1.55;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, and pattern detection across decades of data.</p>
+        </div>
+        <div class="ins-card">
+          <h3>Features</h3>
+          <div style="font-size:0.62rem;line-height:1.6;color:var(--muted)">
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Chart overlays</span> — toggle Real $, Percentile, Cumulative earnings, Projection, Inflation, GDP, Events, and Social Class Bands.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Smoothing</span> — raw, 3-yr MA, 5-yr MA, or Catmull-Rom spline.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Peak Percentile Power</span> — exact salary needed today to reclaim your all-time percentile rank, plus CPI-adjusted view.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Class Mobility</span> — years spent in each US income class with peak-class and trailing-trend.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Percentile Velocity</span> — pts/yr movement vs peer earners.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflection Points</span> — detects real-salary jumps (>15%) and stagnant runs (≥3yr flat), correlated with job changes.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Decade Ledger</span> — nominal, real, and avg percentile bucketed per decade.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflation Drag</span> — lifetime purchasing power erased, plus worst "ghost raise" years.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Job transitions</span> — before/after salary, delta, and % change for every role switch.</p>
+            <p><span style="color:var(--accent)">Import / Export</span> — full JSON backup and restore of all data.</p>
+          </div>
+        </div>
+        <div class="ins-card">
+          <h3>Data sources</h3>
+          <div style="font-size:0.62rem;line-height:1.6;color:var(--muted)">
+            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">Percentile thresholds</span> — US individual income data from Census / IRS SOI, 1993–2025, interpolated between reference years.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">CPI / Inflation</span> — BLS CPI-U year-over-year rates.</p>
+            <p><span style="color:var(--text)">GDP</span> — BEA real GDP growth rates. All macro data editable in the Macro tab.</p>
+          </div>
+        </div>
+        <div class="ins-card">
+          <h3>Tech stack</h3>
+          <div style="font-size:0.62rem;line-height:1.7;color:var(--muted)">
+            <div style="display:grid;grid-template-columns:5.2rem 1fr;gap:0.35rem 0.6rem;margin-bottom:0.4rem">
+              <span style="color:var(--accent)">Runtime</span><span>Vanilla JavaScript (ES2020+), no frameworks</span>
+              <span style="color:var(--accent)">Markup</span><span>Single-file HTML5, no build step</span>
+              <span style="color:var(--accent)">Styling</span><span>Handwritten CSS with custom properties + media queries</span>
+              <span style="color:var(--accent)">Charts</span><span>HTML5 Canvas 2D (no chart library)</span>
+              <span style="color:var(--accent)">Storage</span><span>Browser localStorage (local-first, no backend)</span>
+              <span style="color:var(--accent)">Fonts</span><span>Playfair Display + IBM Plex Mono (Google Fonts)</span>
+              <span style="color:var(--accent)">Hosting</span><span>GitHub Pages (static)</span>
+              <span style="color:var(--accent)">Source</span><span>github.com/seeholmes/Insight</span>
+            </div>
+            <p style="margin-top:0.5rem;padding-top:0.4rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.58rem;font-style:italic">Built with Claude Code. All data stays on your device.</p>
+          </div>
         </div>
       </div>
       <div class="dsec" id="ds-macro">
@@ -1383,7 +1430,7 @@ function openAddYear(){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
 function setDTab(t){
   curDTab=t;
-  ['jobs','salary','macro'].forEach(s=>{
+  ['jobs','salary','macro','about'].forEach(s=>{
     document.getElementById('dt-'+s).classList.toggle('active',s===t);
     document.getElementById('ds-'+s).classList.toggle('vis',s===t);
   });
