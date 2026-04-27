@@ -344,6 +344,7 @@ body.empty #emptyState{display:flex;}
       <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Jobs</button>
       <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
       <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
+      <button class="dtab"        id="dt-events" onclick="setDTab('events')">Events</button>
       <button class="dtab"        id="dt-about"  onclick="setDTab('about')">About</button>
       <button id="drawer-close" onclick="toggleDrawer()" aria-label="Close">×</button>
     </div>
@@ -379,6 +380,7 @@ body.empty #emptyState{display:flex;}
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflection Points</span> — detects real-salary jumps (>15%) and stagnant runs (≥3yr flat), correlated with job changes.</p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Decade Ledger</span> — nominal, real, and avg percentile bucketed per decade.</p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflation Drag</span> — lifetime purchasing power erased, plus worst "ghost raise" years.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Macro Events</span> — multi-year ranges (recessions, policy regimes, crises) overlay your earnings as colored bands.</p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Job transitions</span> — before/after salary, delta, and % change for every role switch.</p>
             <p><span style="color:var(--accent)">Import / Export</span> — full JSON backup and restore of all data.</p>
           </div>
@@ -409,19 +411,40 @@ body.empty #emptyState{display:flex;}
         </div>
       </div>
       <div class="dsec" id="ds-macro">
-        <p class="sec-head">Inflation · GDP · Events</p>
-        <div style="display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
-          <span class="mlbl">Year</span><span class="mlbl">Inf%</span><span class="mlbl">GDP%</span><span class="mlbl">Event</span><span></span>
+        <p class="sec-head">Inflation · GDP</p>
+        <div style="display:grid;grid-template-columns:2.8rem 1fr 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
+          <span class="mlbl">Year</span><span class="mlbl">Inf%</span><span class="mlbl">GDP%</span><span></span>
         </div>
         <div id="macroList"></div>
         <div style="margin-top:0.7rem;border-top:1px solid var(--border);padding-top:0.6rem;">
           <p class="sec-head" style="margin-bottom:0.4rem">Add Year</p>
-          <div style="display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr auto;gap:0.25rem;align-items:center;">
+          <div style="display:grid;grid-template-columns:2.8rem 1fr 1fr auto;gap:0.25rem;align-items:center;">
             <input class="sinput" type="number" id="mNewYear"  placeholder="Yr"   style="width:100%">
-            <input class="sinput" type="number" id="mNewInf"   placeholder="e.g. 3.2" step="0.1" style="width:100%">
-            <input class="sinput" type="number" id="mNewGdp"   placeholder="e.g. 2.5" step="0.1" style="width:100%">
-            <input class="sinput" type="text"   id="mNewEvt"   placeholder="Event (opt)" style="width:100%">
+            <input class="sinput" type="number" id="mNewInf"   placeholder="3.2" step="0.1" style="width:100%">
+            <input class="sinput" type="number" id="mNewGdp"   placeholder="2.5" step="0.1" style="width:100%">
             <button class="btn-sm primary" onclick="addMacroYear()">+</button>
+          </div>
+          <div style="margin-top:0.55rem;font-size:0.55rem;color:var(--muted);font-style:italic">Manage macro events (recessions, policy, crises) in the Events tab — they support multi-year ranges.</div>
+        </div>
+      </div>
+      <div class="dsec" id="ds-events">
+        <p class="sec-head">Macro Events</p>
+        <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;line-height:1.5">Multi-year events (recessions, policy regimes, crises) overlay your earnings as colored bands. Single-year events are bands one year wide.</div>
+        <div style="display:grid;grid-template-columns:2.4rem 2.4rem 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
+          <span class="mlbl">Start</span><span class="mlbl">End</span><span class="mlbl">Label</span><span></span>
+        </div>
+        <div id="eventsList"></div>
+        <div style="margin-top:0.7rem;border-top:1px solid var(--border);padding-top:0.6rem;">
+          <p class="sec-head" style="margin-bottom:0.4rem">Add Event</p>
+          <div style="display:grid;grid-template-columns:2.6rem 2.6rem 1fr auto;gap:0.25rem;align-items:center;">
+            <input class="sinput" type="number" id="evNewStart" placeholder="Start" style="width:100%">
+            <input class="sinput" type="number" id="evNewEnd"   placeholder="End"   style="width:100%">
+            <input class="sinput" type="text"   id="evNewLabel" placeholder="Label (e.g. Great Recession)" style="width:100%">
+            <button class="btn-sm primary" onclick="addEvent()">+</button>
+          </div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.6rem;">
+            <button class="btn-sm" onclick="restoreDefaultEvents()">Restore Defaults</button>
+            <button class="btn-sm danger" onclick="clearEvents()">Clear All</button>
           </div>
         </div>
       </div>
@@ -455,6 +478,38 @@ const DEFAULT_MACRO={
   2026:{inf:null,gdp:null,evt:null},
 };
 let MACRO=DEFAULT_MACRO;
+
+// ── DEFAULT MACRO EVENTS (curated, multi-year ranges where applicable) ───────
+const DEFAULT_EVENTS=[
+  {startYear:1993,endYear:1993,label:"Balanced Budget Act"},
+  {startYear:1994,endYear:1994,label:"NAFTA takes effect"},
+  {startYear:1994,endYear:1995,label:"Mexican Peso Crisis"},
+  {startYear:1995,endYear:2000,label:"Dot-com bubble"},
+  {startYear:1996,endYear:1996,label:"Welfare reform (PRWORA)"},
+  {startYear:1997,endYear:1998,label:"Asian Financial Crisis"},
+  {startYear:1998,endYear:1998,label:"LTCM collapse"},
+  {startYear:1999,endYear:1999,label:"Glass-Steagall repealed"},
+  {startYear:2000,endYear:2002,label:"Tech bubble burst"},
+  {startYear:2001,endYear:2001,label:"9/11 attacks"},
+  {startYear:2001,endYear:2003,label:"Bush tax cuts (EGTRRA, JGTRRA)"},
+  {startYear:2001,endYear:2014,label:"War on Terror"},
+  {startYear:2003,endYear:2007,label:"Housing bubble"},
+  {startYear:2007,endYear:2009,label:"Global Financial Crisis"},
+  {startYear:2008,endYear:2015,label:"ZIRP / QE era"},
+  {startYear:2009,endYear:2009,label:"ARRA stimulus"},
+  {startYear:2010,endYear:2010,label:"ACA passed; Dodd-Frank"},
+  {startYear:2011,endYear:2011,label:"Debt ceiling crisis / S&P downgrade"},
+  {startYear:2013,endYear:2013,label:"Government shutdown"},
+  {startYear:2014,endYear:2016,label:"Oil price collapse"},
+  {startYear:2017,endYear:2018,label:"Tax Cuts & Jobs Act (TCJA)"},
+  {startYear:2018,endYear:2020,label:"US–China trade war"},
+  {startYear:2020,endYear:2022,label:"COVID-19 pandemic"},
+  {startYear:2020,endYear:2021,label:"CARES Act / COVID stimulus"},
+  {startYear:2021,endYear:2023,label:"Post-COVID inflation surge"},
+  {startYear:2022,endYear:2024,label:"Fed rate hike cycle"},
+  {startYear:2022,endYear:2026,label:"Russia–Ukraine war"},
+  {startYear:2023,endYear:2023,label:"Banking stress (SVB, Signature)"},
+];
 
 const PCTILE_THRESHOLDS={
   1993:[10000,21000,38000,62000,82000,150000],1995:[11000,23000,41000,66000,88000,160000],
@@ -514,14 +569,18 @@ function loadState(){
     const n=localStorage.getItem('insight_nextId');
     const m=localStorage.getItem('insight_macro');
     const t=localStorage.getItem('insight_uiTab');
+    const ev=localStorage.getItem('insight_events');
+    const evN=localStorage.getItem('insight_eventNextId');
     return{
       salaries:s?JSON.parse(s):DEFAULT_SALARIES,
       jobs:j?JSON.parse(j):DEFAULT_JOBS,
       nextId:n?parseInt(n):8,
       macro:m?JSON.parse(m):DEFAULT_MACRO,
       uiTab:t||'jobs',
+      events:ev?JSON.parse(ev):null,
+      eventNextId:evN?parseInt(evN):1,
     };
-  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO,uiTab:'jobs'};}
+  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO,uiTab:'jobs',events:null,eventNextId:1};}
 }
 function saveState(){
   try{
@@ -530,13 +589,35 @@ function saveState(){
     localStorage.setItem('insight_nextId',String(nextId));
     localStorage.setItem('insight_macro',JSON.stringify(MACRO));
     localStorage.setItem('insight_uiTab',curSTab);
+    localStorage.setItem('insight_events',JSON.stringify(EVENTS));
+    localStorage.setItem('insight_eventNextId',String(eventNextId));
   }catch(e){}
+}
+// Seed EVENTS from DEFAULT_EVENTS, then layer in any leftover MACRO.evt strings
+// that aren't already represented (preserves user-added single-year entries).
+function migrateEventsFromMacro(){
+  let id=eventNextId||1;
+  if(EVENTS.length===0&&typeof DEFAULT_EVENTS!=='undefined'){
+    DEFAULT_EVENTS.forEach(ev=>{EVENTS.push({id:id++,startYear:ev.startYear,endYear:ev.endYear,label:ev.label});});
+  }
+  Object.keys(MACRO).forEach(yr=>{
+    const m=MACRO[yr];
+    if(m&&m.evt){
+      const y=+yr;
+      if(EVENTS.some(e=>e.label===m.evt&&e.startYear<=y&&e.endYear>=y))return;
+      EVENTS.push({id:id++,startYear:y,endYear:y,label:m.evt});
+    }
+  });
+  eventNextId=id;
 }
 const _s=loadState();
 let salaries=_s.salaries;
 let jobs=_s.jobs;
 let nextId=_s.nextId;
 MACRO=_s.macro;
+let EVENTS=_s.events||[];
+let eventNextId=_s.eventNextId||1;
+if(_s.events==null){migrateEventsFromMacro();}
 let ov={real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
@@ -554,6 +635,7 @@ const getJob=yr=>jobs.find(j=>j.years.includes(+yr));
 const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
 const fmtK=n=>'$'+(n>=1e6?(n/1e6).toFixed(2)+'M':(n/1000).toFixed(0)+'k');
 const yoy=yr=>{const yrs=sortedYrs(),i=yrs.indexOf(+yr);if(i<=0)return null;return(salaries[yr]-salaries[yrs[i-1]])/salaries[yrs[i-1]];};
+const eventsForYear=yr=>EVENTS.filter(ev=>ev.startYear<=yr&&ev.endYear>=yr);
 
 function realSalaries(){
   const yrs=sortedYrs();let idx=1.0;const cpi={};cpi[yrs[0]]=1.0;
@@ -1243,28 +1325,64 @@ function drawChart(){
     ctx.beginPath();pjYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),ys(pjVals[i])):ctx.lineTo(xp(xi),ys(pjVals[i]));});ctx.stroke();ctx.setLineDash([]);
   }
 
-  // Dots + event markers
-  _eventHitboxes=[];
+  // Dots
   yrs.forEach(yr=>{
     const xi=allYrs.indexOf(yr);
     const j=getJob(yr),act=activeJob===null||activeJob===j?.id;
     const barTop=ys(salaries[yr]);
     ctx.beginPath();ctx.arc(xp(xi),barTop,act?3.5:1.5,0,Math.PI*2);
     ctx.fillStyle=j?j.color:'#888';ctx.globalAlpha=act?1:0.1;ctx.fill();ctx.globalAlpha=1;
-    if(ov.evt&&MACRO[yr]?.evt){
-      const x=xp(xi),pinY=Math.max(pad.top+6,barTop-18);
-      // Vertical tick from bar top up to pin
-      ctx.strokeStyle='rgba(155,141,245,0.55)';ctx.lineWidth=1;ctx.setLineDash([2,2]);
-      ctx.beginPath();ctx.moveTo(x,barTop-2);ctx.lineTo(x,pinY+4);ctx.stroke();ctx.setLineDash([]);
-      // Triangle pin
-      ctx.fillStyle='#9b8df5';
-      ctx.beginPath();ctx.moveTo(x,pinY+5);ctx.lineTo(x-4.5,pinY-3);ctx.lineTo(x+4.5,pinY-3);ctx.closePath();ctx.fill();
-      // Small white dot center for pop
-      ctx.fillStyle='rgba(255,255,255,0.85)';
-      ctx.beginPath();ctx.arc(x,pinY-0.5,1.2,0,Math.PI*2);ctx.fill();
-      _eventHitboxes.push({x,y:pinY,r:10,yr});
-    }
   });
+
+  // Event range bands
+  _eventHitboxes=[];
+  if(ov.evt&&EVENTS.length&&allYrs.length>1){
+    // Stack overlapping events into rows so labels don't collide
+    const sorted=[...EVENTS].sort((a,b)=>a.startYear-b.startYear||a.endYear-b.endYear);
+    const rows=[];   // each row stores last endYear placed
+    const rowOf={};
+    sorted.forEach(ev=>{
+      let r=0;while(r<rows.length&&rows[r]>=ev.startYear)r++;
+      rows[r]=ev.endYear;rowOf[ev.id]=r;
+    });
+    const rowH=12,maxRows=Math.min(rows.length,3);
+    const stripTop=pad.top+2;
+    const minYr=allYrs[0],maxYr=allYrs[allYrs.length-1];
+    const xForYr=y=>{
+      const clamped=Math.max(minYr,Math.min(maxYr,y));
+      // linear position; if exact year not in allYrs, interpolate
+      const idx=allYrs.indexOf(clamped);
+      if(idx>=0)return xp(idx);
+      // interpolate between neighbors
+      let lo=0;for(let i=0;i<allYrs.length;i++){if(allYrs[i]<=clamped)lo=i;}
+      const hi=Math.min(lo+1,allYrs.length-1);
+      const t=(clamped-allYrs[lo])/((allYrs[hi]-allYrs[lo])||1);
+      return xp(lo)+(xp(hi)-xp(lo))*t;
+    };
+    sorted.forEach(ev=>{
+      // skip events fully outside chart range
+      if(ev.endYear<minYr||ev.startYear>maxYr)return;
+      const x0=xForYr(ev.startYear),x1=xForYr(ev.endYear);
+      const ry=Math.min(rowOf[ev.id],maxRows-1);
+      const y=stripTop+ry*rowH;
+      // Vertical band over full chart height — translucent
+      ctx.fillStyle='rgba(155,141,245,0.10)';
+      const bandPad=Math.max(2,bw*0.4);
+      const bandW=Math.max(3,(x1-x0)+bandPad*2);
+      ctx.fillRect(x0-bandPad,pad.top,bandW,cH);
+      // Top label strip — purple bar with year label
+      ctx.fillStyle='rgba(155,141,245,0.78)';
+      ctx.fillRect(x0-bandPad,y,bandW,rowH-2);
+      // Label text (truncated to band width)
+      ctx.fillStyle='#fff';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+      const yrTxt=ev.startYear===ev.endYear?String(ev.startYear):`${ev.startYear}–${ev.endYear}`;
+      const fullTxt=`${yrTxt} · ${ev.label}`;
+      const maxChars=Math.max(3,Math.floor(bandW/5.4));
+      const truncated=fullTxt.length>maxChars?fullTxt.slice(0,maxChars-1)+'…':fullTxt;
+      ctx.fillText(truncated,x0-bandPad+3,y+rowH-4);
+      _eventHitboxes.push({x0:x0-bandPad,x1:x0-bandPad+bandW,y0:y,y1:y+rowH-2,id:ev.id,fullBandY1:pad.top+cH});
+    });
+  }
 
   // Crosshair (desktop only)
   if(_crosshair&&ov.crosshair){
@@ -1305,7 +1423,7 @@ canvas.addEventListener('mousemove',e=>{
     ${pct!=null?`<div style="color:${getSocialClass(pct).color};font-size:0.62rem">${getSocialClass(pct).label}</div>`:''}
     ${m?.inf!=null?`<div style="color:var(--muted)">Inflation ${(m.inf*100).toFixed(1)}%</div>`:''}
     ${j?`<div style="margin-top:3px"><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</div>`:''}
-    ${m?.evt?`<div style="color:#9b8df5;margin-top:3px">${m.evt}</div>`:''}`;
+    ${(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted);font-size:0.58rem">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:#9b8df5;margin-top:3px">${e.label}${rng}</div>`;}).join('');})()}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
@@ -1315,22 +1433,19 @@ canvas.addEventListener('click',e=>{
   const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   let hit=null;
   for(const h of _eventHitboxes){
-    if(Math.abs(mx-h.x)<=h.r&&Math.abs(my-h.y)<=h.r){hit=h;break;}
+    if(mx>=h.x0&&mx<=h.x1&&my>=h.y0&&my<=h.y1){hit=h;break;}
   }
   if(!hit)return;
   if(!drawerOpen)toggleDrawer();
-  setDTab('macro');
+  setDTab('events');
   setTimeout(()=>{
-    const rows=document.querySelectorAll('#macroList .mrow');
-    rows.forEach(row=>{
-      const yrTxt=row.querySelector('.syr')?.textContent;
-      if(yrTxt&&+yrTxt===hit.yr){
-        row.scrollIntoView({block:'center',behavior:'smooth'});
-        row.style.transition='background .4s';
-        row.style.background='rgba(212,169,106,0.22)';
-        setTimeout(()=>{row.style.background='';},1200);
-      }
-    });
+    const row=document.getElementById('ev'+hit.id);
+    if(row){
+      row.scrollIntoView({block:'center',behavior:'smooth'});
+      row.style.transition='background .4s';
+      row.style.background='rgba(155,141,245,0.28)';
+      setTimeout(()=>{row.style.background='';},1200);
+    }
   },140);
 });
 
@@ -1430,13 +1545,14 @@ function openAddYear(){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
 function setDTab(t){
   curDTab=t;
-  ['jobs','salary','macro','about'].forEach(s=>{
+  ['jobs','salary','macro','events','about'].forEach(s=>{
     document.getElementById('dt-'+s).classList.toggle('active',s===t);
     document.getElementById('ds-'+s).classList.toggle('vis',s===t);
   });
   if(t==='salary')renderSalaryList();
   if(t==='jobs')renderJobCards();
   if(t==='macro')renderMacroList();
+  if(t==='events')renderEventsList();
 }
 
 // ── DRAWER: JOBS ──────────────────────────────────────────────────────────────
@@ -1533,11 +1649,11 @@ function renderMacroList(){
   yrs.forEach(yr=>{
     const m=MACRO[yr];
     const row=document.createElement('div');row.className='mrow';
+    row.style.gridTemplateColumns='2.8rem 1fr 1fr 1rem';
     row.innerHTML=`
       <span class="syr">${yr}</span>
       <input class="sinput" type="number" step="0.1" value="${m.inf!=null?(m.inf*100).toFixed(1):''}" placeholder="—" onchange="updateMacro(${yr},'inf',this.value)">
       <input class="sinput" type="number" step="0.1" value="${m.gdp!=null?m.gdp:''}" placeholder="—" onchange="updateMacro(${yr},'gdp',this.value)">
-      <input class="sinput" type="text" value="${m.evt||''}" placeholder="—" onchange="updateMacro(${yr},'evt',this.value)">
       <button class="sdel" onclick="deleteMacroYear(${yr})" title="Remove">×</button>`;
     el.appendChild(row);
   });
@@ -1557,17 +1673,71 @@ function addMacroYear(){
   const yr=parseInt(document.getElementById('mNewYear').value);
   const inf=document.getElementById('mNewInf').value;
   const gdp=document.getElementById('mNewGdp').value;
-  const evt=document.getElementById('mNewEvt').value.trim();
   if(!yr||isNaN(yr)){alert('Enter a valid year.');return;}
   if(MACRO[yr]&&!confirm(yr+' already exists. Overwrite?'))return;
-  MACRO[yr]={inf:inf===''?null:parseFloat(inf)/100,gdp:gdp===''?null:parseFloat(gdp),evt:evt||null};
-  ['mNewYear','mNewInf','mNewGdp','mNewEvt'].forEach(id=>document.getElementById(id).value='');
+  MACRO[yr]={inf:inf===''?null:parseFloat(inf)/100,gdp:gdp===''?null:parseFloat(gdp),evt:MACRO[yr]?.evt||null};
+  ['mNewYear','mNewInf','mNewGdp'].forEach(id=>document.getElementById(id).value='');
   saveState();refresh();renderMacroList();
+}
+
+// ── DRAWER: EVENTS ────────────────────────────────────────────────────────────
+function renderEventsList(){
+  const el=document.getElementById('eventsList');if(!el)return;el.innerHTML='';
+  const sorted=[...EVENTS].sort((a,b)=>a.startYear-b.startYear||a.endYear-b.endYear);
+  if(!sorted.length){el.innerHTML='<div style="font-size:0.6rem;color:var(--muted);text-align:center;padding:0.6rem 0">No events yet — add one below or restore defaults.</div>';return;}
+  sorted.forEach(ev=>{
+    const row=document.createElement('div');row.className='mrow';row.id='ev'+ev.id;
+    row.style.gridTemplateColumns='2.4rem 2.4rem 1fr 1rem';
+    row.innerHTML=`
+      <input class="sinput" type="number" value="${ev.startYear}" onchange="updateEvent(${ev.id},'startYear',this.value)">
+      <input class="sinput" type="number" value="${ev.endYear}" onchange="updateEvent(${ev.id},'endYear',this.value)">
+      <input class="sinput" type="text" value="${ev.label.replace(/"/g,'&quot;')}" onchange="updateEvent(${ev.id},'label',this.value)">
+      <button class="sdel" onclick="deleteEvent(${ev.id})" title="Remove">×</button>`;
+    el.appendChild(row);
+  });
+}
+function addEvent(){
+  const s=parseInt(document.getElementById('evNewStart').value);
+  const eRaw=document.getElementById('evNewEnd').value;
+  const e=eRaw===''?s:parseInt(eRaw);
+  const label=document.getElementById('evNewLabel').value.trim();
+  if(!s||isNaN(s)){alert('Enter a valid start year.');return;}
+  if(!label){alert('Enter a label.');return;}
+  const startYear=Math.min(s,e),endYear=Math.max(s,e);
+  EVENTS.push({id:eventNextId++,startYear,endYear,label});
+  ['evNewStart','evNewEnd','evNewLabel'].forEach(id=>document.getElementById(id).value='');
+  saveState();renderEventsList();drawChart();
+}
+function updateEvent(id,field,val){
+  const ev=EVENTS.find(e=>e.id===id);if(!ev)return;
+  if(field==='label'){ev.label=val.trim();}
+  else{
+    const n=parseInt(val);if(isNaN(n))return;
+    ev[field]=n;
+    if(ev.startYear>ev.endYear){const t=ev.startYear;ev.startYear=ev.endYear;ev.endYear=t;}
+  }
+  saveState();renderEventsList();drawChart();
+}
+function deleteEvent(id){
+  const ev=EVENTS.find(e=>e.id===id);if(!ev)return;
+  if(!confirm('Delete event: '+ev.label+'?'))return;
+  EVENTS=EVENTS.filter(e=>e.id!==id);
+  saveState();renderEventsList();drawChart();
+}
+function clearEvents(){
+  if(!confirm('Remove ALL events?'))return;
+  EVENTS=[];eventNextId=1;saveState();renderEventsList();drawChart();
+}
+function restoreDefaultEvents(){
+  if(EVENTS.length&&!confirm('Replace existing events with defaults?'))return;
+  EVENTS=DEFAULT_EVENTS.map((ev,i)=>({id:i+1,startYear:ev.startYear,endYear:ev.endYear,label:ev.label}));
+  eventNextId=EVENTS.length+1;
+  saveState();renderEventsList();drawChart();
 }
 
 // ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
 function exportData(){
-  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO},null,2);
+  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO,events:EVENTS,eventNextId},null,2);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
   a.download='insight_backup_'+new Date().toISOString().slice(0,10)+'.json';
@@ -1582,6 +1752,8 @@ function importData(input){
       if(!d.salaries||!d.jobs)throw new Error('Invalid format');
       salaries=d.salaries;jobs=d.jobs;nextId=d.nextId||jobs.reduce((m,j)=>Math.max(m,j.id+1),0);
       if(d.macro)MACRO=d.macro;
+      if(Array.isArray(d.events)){EVENTS=d.events;eventNextId=d.eventNextId||(EVENTS.reduce((m,ev)=>Math.max(m,ev.id+1),1));}
+      else{EVENTS=[];eventNextId=1;migrateEventsFromMacro();}
       saveState();refresh();
       if(drawerOpen)renderJobCards();
     }catch(err){alert('Import failed: '+err.message);}
