@@ -181,6 +181,7 @@ tr:hover td{background:var(--s1);}
 .mlbl{font-size:0.5rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
 .mrow{display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr 1rem;gap:0.25rem;align-items:center;margin-bottom:0.22rem;}
 .mrow .sinput{padding:0.18rem 0.28rem;font-size:0.62rem;}
+.evyr{padding-right:0.18rem!important;font-variant-numeric:tabular-nums;}
 
 /* TOOLTIP */
 #tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.65rem 0.85rem;font-size:0.67rem;pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:160px;line-height:1.8;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
@@ -430,13 +431,13 @@ body.empty #emptyState{display:flex;}
       <div class="dsec" id="ds-events">
         <p class="sec-head">Macro Events</p>
         <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;line-height:1.5">Multi-year events (recessions, policy regimes, crises) overlay your earnings as colored bands. Single-year events are bands one year wide.</div>
-        <div style="display:grid;grid-template-columns:2.4rem 2.4rem 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
+        <div style="display:grid;grid-template-columns:3.8rem 3.8rem 1fr 1.4rem;gap:0.3rem;margin-bottom:0.4rem;padding:0 0.1rem;">
           <span class="mlbl">Start</span><span class="mlbl">End</span><span class="mlbl">Label</span><span></span>
         </div>
         <div id="eventsList"></div>
         <div style="margin-top:0.7rem;border-top:1px solid var(--border);padding-top:0.6rem;">
           <p class="sec-head" style="margin-bottom:0.4rem">Add Event</p>
-          <div style="display:grid;grid-template-columns:2.6rem 2.6rem 1fr auto;gap:0.25rem;align-items:center;">
+          <div style="display:grid;grid-template-columns:3.8rem 3.8rem 1fr auto;gap:0.3rem;align-items:center;">
             <input class="sinput" type="number" id="evNewStart" placeholder="Start" style="width:100%">
             <input class="sinput" type="number" id="evNewEnd"   placeholder="End"   style="width:100%">
             <input class="sinput" type="text"   id="evNewLabel" placeholder="Label (e.g. Great Recession)" style="width:100%">
@@ -1687,10 +1688,11 @@ function renderEventsList(){
   if(!sorted.length){el.innerHTML='<div style="font-size:0.6rem;color:var(--muted);text-align:center;padding:0.6rem 0">No events yet — add one below or restore defaults.</div>';return;}
   sorted.forEach(ev=>{
     const row=document.createElement('div');row.className='mrow';row.id='ev'+ev.id;
-    row.style.gridTemplateColumns='2.4rem 2.4rem 1fr 1rem';
+    row.style.gridTemplateColumns='3.8rem 3.8rem 1fr 1.4rem';
+    row.style.gap='0.3rem';
     row.innerHTML=`
-      <input class="sinput" type="number" value="${ev.startYear}" onchange="updateEvent(${ev.id},'startYear',this.value)">
-      <input class="sinput" type="number" value="${ev.endYear}" onchange="updateEvent(${ev.id},'endYear',this.value)">
+      <input class="sinput evyr" type="number" value="${ev.startYear}" onchange="updateEvent(${ev.id},'startYear',this.value)">
+      <input class="sinput evyr" type="number" value="${ev.endYear}" onchange="updateEvent(${ev.id},'endYear',this.value)">
       <input class="sinput" type="text" value="${ev.label.replace(/"/g,'&quot;')}" onchange="updateEvent(${ev.id},'label',this.value)">
       <button class="sdel" onclick="deleteEvent(${ev.id})" title="Remove">×</button>`;
     el.appendChild(row);
