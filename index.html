@@ -13,7 +13,18 @@
   --text:#dddbe4;--muted:#5e5d6e;--accent:#d4a96a;
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#f5a97e;--proj:#f5e97e;
+  /* Chart overlay colors (consolidated; was hardcoded inline) */
+  --inf-color:#d4a96a;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;
+  /* Layout */
   --sidebar-w:300px;--drawer-w:320px;--topbar-h:48px;--tap:44px;--gap:12px;
+  /* Type scale */
+  --fs-xs:0.65rem;   /* 10.4px — tiny labels (uppercase) */
+  --fs-sm:0.72rem;   /* 11.5px — UI controls */
+  --fs-md:0.82rem;   /* 13.1px — body / table cells */
+  --fs-lg:0.95rem;   /* 15.2px — section heads / KPI values */
+  --fs-xl:1.1rem;    /* 17.6px — card titles */
+  /* Spacing scale */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
 }
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;display:flex;flex-direction:column;}
@@ -30,10 +41,10 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 .tb-stats{display:flex;gap:0;flex:1;}
 .tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);}
 .tb-stat:first-child{padding-left:0;}
-.tb-stat label{display:block;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
-.tb-stat value{display:block;font-size:0.85rem;font-weight:500;}
-.tb-right{display:flex;gap:0.5rem;margin-left:auto;align-items:center;}
-.tbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.28rem 0.7rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tb-stat label{display:block;font-size:var(--fs-xs);letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+.tb-stat value{display:block;font-size:var(--fs-lg);font-weight:500;}
+.tb-right{display:flex;gap:var(--sp-2);margin-left:auto;align-items:center;}
+.tbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;padding:0.32rem 0.75rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .tbtn:hover{color:var(--accent);border-color:var(--accent);}
 .tbtn.open{background:var(--s2);border-color:var(--border2);color:var(--text);}
 
@@ -48,40 +59,40 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   overflow:hidden;background:var(--s1);
 }
 #sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.stab{flex:1;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.5rem 0.3rem;cursor:pointer;transition:all .15s;}
+.stab{flex:1;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;padding:0.55rem 0.3rem;cursor:pointer;transition:all .15s;}
 .stab:last-child{border-right:none;}
 .stab:hover{color:var(--text);}
 .stab.active{background:var(--s2);color:var(--accent);}
-#sidebar-body{flex:1;overflow-y:auto;padding:0.85rem;}
+#sidebar-body{flex:1;overflow-y:auto;padding:var(--sp-3);}
 .spanel{display:none;}.spanel.vis{display:block;}
-.sec-head{font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;padding-bottom:0.3rem;border-bottom:1px solid var(--border);}
+.sec-head{font-size:var(--fs-xs);letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--sp-2);padding-bottom:var(--sp-1);border-bottom:1px solid var(--border);}
 
 /* Legend in sidebar */
-.leg-item{display:flex;align-items:center;gap:0.35rem;padding:0.22rem 0.5rem;border:1px solid transparent;cursor:pointer;font-size:0.65rem;transition:all .15s;color:var(--muted);margin-bottom:0.2rem;}
+.leg-item{display:flex;align-items:center;gap:0.4rem;padding:0.32rem 0.55rem;border:1px solid transparent;cursor:pointer;font-size:var(--fs-sm);transition:all .15s;color:var(--muted);margin-bottom:0.22rem;}
 .leg-item:hover{border-color:var(--border2);color:var(--text);}
 .leg-item.active{border-color:var(--border2);background:var(--s2);color:var(--text);}
-.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
-.leg-years{font-size:0.58rem;color:var(--muted);margin-left:auto;}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.leg-years{font-size:var(--fs-xs);color:var(--muted);margin-left:auto;}
 
 /* Insight cards in sidebar */
-.ins-card{background:var(--s2);border:1px solid var(--border);padding:0.75rem;margin-bottom:0.65rem;}
-.ins-card h3{font-family:'Playfair Display',serif;font-size:0.85rem;color:var(--accent);margin-bottom:0.6rem;font-style:italic;}
-.jst{width:100%;border-collapse:collapse;font-size:0.62rem;}
-.jst th{text-align:left;padding:0.25rem 0.4rem;font-size:0.5rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
-.jst td{padding:0.25rem 0.4rem;border-bottom:1px solid var(--border);}
+.ins-card{background:var(--s2);border:1px solid var(--border);padding:var(--sp-3);margin-bottom:var(--sp-2);}
+.ins-card h3{font-family:'Playfair Display',serif;font-size:var(--fs-lg);color:var(--accent);margin-bottom:var(--sp-2);font-style:italic;}
+.jst{width:100%;border-collapse:collapse;font-size:var(--fs-sm);}
+.jst th{text-align:left;padding:0.3rem 0.45rem;font-size:var(--fs-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+.jst td{padding:0.3rem 0.45rem;border-bottom:1px solid var(--border);}
 .jst tr:last-child td{border-bottom:none;}
-.trans-row{display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.62rem;}
+.trans-row{display:flex;align-items:center;gap:0.45rem;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:var(--fs-sm);}
 .trans-row:last-child{border-bottom:none;}
-.pct-row{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;font-size:0.62rem;}
-.pct-bar-wrap{flex:1;height:5px;background:var(--border);}
+.pct-row{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;font-size:var(--fs-sm);}
+.pct-bar-wrap{flex:1;height:6px;background:var(--border);}
 .pct-bar-fill{height:100%;background:var(--pct);}
-.pct-yr{color:var(--muted);width:2.2rem;flex-shrink:0;font-size:0.6rem;}
-.pct-val{width:2.8rem;text-align:right;flex-shrink:0;color:var(--pct);font-size:0.6rem;}
-.kpi-mini{display:flex;gap:0;border:1px solid var(--border);margin-bottom:0.5rem;}
-.kpi-m{flex:1;padding:0.4rem 0.5rem;border-right:1px solid var(--border);}
+.pct-yr{color:var(--muted);width:2.4rem;flex-shrink:0;font-size:var(--fs-xs);}
+.pct-val{width:3rem;text-align:right;flex-shrink:0;color:var(--pct);font-size:var(--fs-xs);}
+.kpi-mini{display:flex;gap:0;border:1px solid var(--border);margin-bottom:var(--sp-2);}
+.kpi-m{flex:1;padding:0.5rem 0.6rem;border-right:1px solid var(--border);}
 .kpi-m:last-child{border-right:none;}
-.kpi-m label{display:block;font-size:0.5rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);margin-bottom:0.1rem;}
-.kpi-m value{display:block;font-size:0.8rem;font-weight:500;}
+.kpi-m label{display:block;font-size:var(--fs-xs);letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);margin-bottom:0.15rem;}
+.kpi-m value{display:block;font-size:var(--fs-md);font-weight:500;}
 
 /* ── CENTER AREA ── */
 #center{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
@@ -94,32 +105,50 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   flex-shrink:0;
   height:55%;
 }
-#chartControls{display:flex;gap:0.28rem;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap;row-gap:0.28rem;}
-.ctrl-lbl{font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-right:0.1rem;white-space:nowrap;}
-.ctrl-sep{width:1px;height:14px;background:var(--border2);margin:0 0.2rem;flex-shrink:0;}
-.cbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.56rem;letter-spacing:0.06em;text-transform:uppercase;padding:0.2rem 0.45rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+#chartControls{display:flex;gap:0.4rem;margin-bottom:var(--sp-2);align-items:center;flex-wrap:wrap;row-gap:0.4rem;}
+.ctrl-group{display:inline-flex;align-items:center;gap:0.28rem;padding:0.22rem 0.5rem;background:rgba(255,255,255,0.025);border-radius:3px;}
+.ctrl-lbl{font-size:var(--fs-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);font-weight:500;margin-right:0.25rem;white-space:nowrap;}
+.cbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.06em;text-transform:uppercase;padding:0.28rem 0.55rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .cbtn:hover{color:var(--text);border-color:var(--border2);}
 .cbtn.active{background:var(--s2);border-color:var(--accent);color:var(--accent);}
 .cbtn.on-real{border-color:var(--real)!important;color:var(--real)!important;}
 .cbtn.on-pct{border-color:var(--pct)!important;color:var(--pct)!important;}
 .cbtn.on-cum{border-color:var(--cum)!important;color:var(--cum)!important;}
 .cbtn.on-proj{border-color:var(--proj)!important;color:var(--proj)!important;}
-.cbtn.on-inf{border-color:#d4a96a!important;color:#d4a96a!important;}
-.cbtn.on-gdp{border-color:#6fcf97!important;color:#6fcf97!important;}
-.cbtn.on-evt{border-color:#9b8df5!important;color:#9b8df5!important;}
-.cbtn.on-cuminf{border-color:#ff7f7f!important;color:#ff7f7f!important;}
+.cbtn.on-inf{border-color:var(--inf-color)!important;color:var(--inf-color)!important;}
+.cbtn.on-gdp{border-color:var(--gdp-color)!important;color:var(--gdp-color)!important;}
+.cbtn.on-evt{border-color:var(--evt-color)!important;color:var(--evt-color)!important;}
+.cbtn.on-cuminf{border-color:var(--cuminf-color)!important;color:var(--cuminf-color)!important;}
 .cbtn.on-classBands{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--s2);}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
 
 /* Bottom section — table */
-#bottom-section{flex:1;min-height:0;overflow-y:auto;padding:0.75rem 1.25rem;}
-table{width:100%;border-collapse:collapse;font-size:0.68rem;}
-th{text-align:left;padding:0.38rem 0.6rem;font-size:0.54rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg);}
-td{padding:0.35rem 0.6rem;border-bottom:1px solid var(--border);white-space:nowrap;}
+#bottom-section{flex:1;min-height:0;overflow-y:auto;padding:var(--sp-2) var(--sp-4);}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-md);}
+th{text-align:left;padding:0.45rem 0.65rem;font-size:var(--fs-xs);letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg);}
+td{padding:0.42rem 0.65rem;border-bottom:1px solid var(--border);white-space:nowrap;}
 tr:hover td{background:var(--s1);}
-.tdpos{color:var(--pos);}.tdneg{color:var(--neg);}.tddim{color:var(--muted);font-size:0.62rem;}
-.tdsw{display:inline-block;width:7px;height:7px;border-radius:1px;margin-right:3px;vertical-align:middle;}
+.tdpos{color:var(--pos);}.tdneg{color:var(--neg);}.tddim{color:var(--muted);font-size:var(--fs-sm);}
+.tdsw{display:inline-block;width:8px;height:8px;border-radius:1px;margin-right:4px;vertical-align:middle;}
+
+/* ── YEAR CARDS (mobile fallback for the data table) ── */
+#yearCardList{display:none;flex-direction:column;gap:var(--sp-2);}
+.yc{background:var(--s1);border:1px solid var(--border);overflow:hidden;}
+.yc-head{display:flex;align-items:center;gap:0.55rem;padding:0.6rem 0.75rem;cursor:pointer;}
+.yc-head:hover{background:var(--s2);}
+.yc-yr{font-size:var(--fs-md);font-weight:500;color:var(--accent);min-width:3rem;}
+.yc-job{display:flex;align-items:center;gap:0.35rem;font-size:var(--fs-sm);color:var(--muted);flex:1;min-width:0;}
+.yc-sal{font-size:var(--fs-md);font-weight:500;text-align:right;}
+.yc-yoy{font-size:var(--fs-xs);text-align:right;min-width:3.5rem;}
+.yc-pct-pill{font-size:var(--fs-xs);padding:0.15rem 0.45rem;border-radius:8px;border:1px solid currentColor;}
+.yc-arr{font-size:var(--fs-sm);color:var(--muted);transition:transform .2s;margin-left:0.25rem;}
+.yc.exp .yc-arr{transform:rotate(180deg);}
+.yc-body{display:none;padding:0.65rem 0.75rem;border-top:1px solid var(--border);background:var(--bg);}
+.yc.exp .yc-body{display:block;}
+.yc-row{display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:0.32rem 0;border-bottom:1px solid var(--border);}
+.yc-row:last-child{border-bottom:none;}
+.yc-row .l{color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-size:var(--fs-xs);}
 
 /* ── RIGHT SETTINGS DRAWER ── */
 #drawer{
@@ -130,62 +159,62 @@ tr:hover td{background:var(--s1);}
 }
 #drawer.open{display:flex;}
 .dtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.dtab{flex:1;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.5rem;cursor:pointer;transition:all .15s;}
+.dtab{flex:1;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;padding:0.6rem 0.3rem;cursor:pointer;transition:all .15s;}
 .dtab:last-child{border-right:none;}
 .dtab:hover{color:var(--text);}
 .dtab.active{background:var(--s2);color:var(--accent);}
-.dbody{flex:1;overflow-y:auto;padding:0.85rem;}
+.dbody{flex:1;overflow-y:auto;padding:var(--sp-3);}
 .dsec{display:none;}.dsec.vis{display:block;}
 
 /* Job cards in drawer */
-.jcard{border:1px solid var(--border);margin-bottom:0.45rem;overflow:hidden;}
-.jcard-head{display:flex;align-items:center;gap:0.45rem;padding:0.45rem 0.55rem;cursor:pointer;background:var(--s2);transition:background .15s;}
+.jcard{border:1px solid var(--border);margin-bottom:0.5rem;overflow:hidden;}
+.jcard-head{display:flex;align-items:center;gap:0.5rem;padding:0.55rem 0.65rem;cursor:pointer;background:var(--s2);transition:background .15s;}
 .jcard-head:hover{background:var(--border);}
-.cswatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);}
-.jcard-name{flex:1;font-size:0.68rem;}
-.jcard-yrs{font-size:0.58rem;color:var(--muted);}
-.jcard-arr{font-size:0.6rem;color:var(--muted);transition:transform .2s;}
+.cswatch{width:14px;height:14px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);}
+.jcard-name{flex:1;font-size:var(--fs-md);}
+.jcard-yrs{font-size:var(--fs-xs);color:var(--muted);}
+.jcard-arr{font-size:var(--fs-sm);color:var(--muted);transition:transform .2s;}
 .jcard.exp .jcard-arr{transform:rotate(180deg);}
-.jcard-body{display:none;padding:0.65rem;border-top:1px solid var(--border);background:var(--bg);}
+.jcard-body{display:none;padding:0.7rem;border-top:1px solid var(--border);background:var(--bg);}
 .jcard.exp .jcard-body{display:block;}
-.frow{display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem;}
-.flbl{font-size:0.56rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);width:44px;flex-shrink:0;}
-.finput{flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;padding:0.26rem 0.42rem;outline:none;transition:border-color .15s;}
+.frow{display:flex;align-items:center;gap:0.45rem;margin-bottom:0.45rem;}
+.flbl{font-size:var(--fs-xs);letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);width:48px;flex-shrink:0;}
+.finput{flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-md);padding:0.32rem 0.5rem;outline:none;transition:border-color .15s;}
 .finput:focus{border-color:var(--accent);}
-.finput[type=color]{padding:0;height:24px;width:36px;cursor:pointer;flex:none;}
-.ychips{display:flex;flex-wrap:wrap;gap:0.22rem;margin-bottom:0.4rem;}
-.ychip{font-size:0.6rem;padding:0.1rem 0.38rem;border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;gap:0.2rem;}
-.ychip-x{cursor:pointer;color:var(--muted);font-size:0.78rem;line-height:1;transition:color .12s;}
+.finput[type=color]{padding:0;height:28px;width:42px;cursor:pointer;flex:none;}
+.ychips{display:flex;flex-wrap:wrap;gap:0.28rem;margin-bottom:0.45rem;}
+.ychip{font-size:var(--fs-sm);padding:0.18rem 0.45rem;border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;gap:0.25rem;}
+.ychip-x{cursor:pointer;color:var(--muted);font-size:0.85rem;line-height:1;transition:color .12s;}
 .ychip-x:hover{color:var(--neg);}
-.addyrrow{display:flex;gap:0.3rem;margin-top:0.1rem;align-items:center;}
-.addyrrow select{flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:0.22rem 0.36rem;outline:none;}
-.btn-sm{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.06em;text-transform:uppercase;padding:0.22rem 0.5rem;cursor:pointer;transition:all .15s;}
+.addyrrow{display:flex;gap:0.35rem;margin-top:0.15rem;align-items:center;}
+.addyrrow select{flex:1;background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);padding:0.3rem 0.45rem;outline:none;}
+.btn-sm{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.06em;text-transform:uppercase;padding:0.32rem 0.6rem;cursor:pointer;transition:all .15s;}
 .btn-sm:hover{border-color:var(--border2);color:var(--text);}
 .btn-sm.danger:hover{border-color:var(--neg);color:var(--neg);}
 .btn-sm.primary{border-color:var(--accent);color:var(--accent);}
 .btn-sm.primary:hover{background:var(--accent);color:var(--bg);}
-.btnrow{display:flex;gap:0.3rem;margin-top:0.4rem;}
-#addJobBtn{width:100%;margin-top:0.5rem;padding:0.42rem;background:none;border:1px dashed var(--border2);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+.btnrow{display:flex;gap:0.35rem;margin-top:0.5rem;}
+#addJobBtn{width:100%;margin-top:0.55rem;padding:0.55rem;background:none;border:1px dashed var(--border2);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
 #addJobBtn:hover{border-color:var(--accent);color:var(--accent);}
-.slist{display:flex;flex-direction:column;gap:0.28rem;}
-.srow{display:grid;grid-template-columns:2.6rem 1fr 1.5rem;align-items:center;gap:0.3rem;}
-.syr{font-size:0.64rem;color:var(--muted);}
-.sinput{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.66rem;padding:0.22rem 0.36rem;outline:none;width:100%;}
+.slist{display:flex;flex-direction:column;gap:0.32rem;}
+.srow{display:grid;grid-template-columns:2.8rem 1fr 1.6rem;align-items:center;gap:0.35rem;}
+.syr{font-size:var(--fs-md);color:var(--muted);}
+.sinput{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-md);padding:0.3rem 0.45rem;outline:none;width:100%;}
 .sinput:focus{border-color:var(--accent);}
-.sdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.88rem;line-height:1;transition:color .12s;text-align:center;}
+.sdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;transition:color .12s;text-align:center;}
 .sdel:hover{color:var(--neg);}
-.addyrrow2{display:flex;gap:0.3rem;margin-top:0.6rem;align-items:center;flex-wrap:wrap;}
-.addyrrow2 input{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.66rem;padding:0.24rem 0.36rem;outline:none;}
+.addyrrow2{display:flex;gap:0.35rem;margin-top:0.65rem;align-items:center;flex-wrap:wrap;}
+.addyrrow2 input{background:var(--s1);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-md);padding:0.32rem 0.45rem;outline:none;}
 .addyrrow2 input:focus{border-color:var(--accent);}
-#newYear{width:66px;}#newSalary{flex:1;min-width:80px;}
-.mlbl{font-size:0.5rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
-.mrow{display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr 1rem;gap:0.25rem;align-items:center;margin-bottom:0.22rem;}
-.mrow .sinput{padding:0.18rem 0.28rem;font-size:0.62rem;}
-.evyr{padding-right:0.18rem!important;font-variant-numeric:tabular-nums;}
+#newYear{width:74px;}#newSalary{flex:1;min-width:90px;}
+.mlbl{font-size:var(--fs-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
+.mrow{display:grid;grid-template-columns:2.8rem 3.2rem 3.2rem 1fr 1rem;gap:0.3rem;align-items:center;margin-bottom:0.28rem;}
+.mrow .sinput{padding:0.26rem 0.36rem;font-size:var(--fs-sm);}
+.evyr{padding-right:0.22rem!important;font-variant-numeric:tabular-nums;}
 
 /* TOOLTIP */
-#tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.65rem 0.85rem;font-size:0.67rem;pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:160px;line-height:1.8;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
-#tip strong{display:block;font-size:0.95rem;color:var(--accent);margin-bottom:0.15rem;font-family:'Playfair Display',serif;}
+#tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.7rem 0.9rem;font-size:var(--fs-sm);pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:170px;line-height:1.6;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
+#tip strong{display:block;font-size:var(--fs-xl);color:var(--accent);margin-bottom:0.2rem;font-family:'Playfair Display',serif;}
 
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);}
@@ -194,18 +223,21 @@ tr:hover td{background:var(--s1);}
 #emptyState{display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:5;}
 #emptyState.vis{display:flex;}
 #emptyState .es-inner{max-width:340px;}
-#emptyState h2{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--accent);font-style:italic;margin-bottom:0.6rem;}
-#emptyState p{font-size:0.72rem;color:var(--muted);line-height:1.6;margin-bottom:1.2rem;}
-#emptyState button{background:none;border:1px solid var(--accent);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.7rem 1.3rem;cursor:pointer;transition:all .15s;}
+#emptyState h2{font-family:'Playfair Display',serif;font-size:1.55rem;color:var(--accent);font-style:italic;margin-bottom:0.7rem;}
+#emptyState p{font-size:var(--fs-md);color:var(--muted);line-height:1.6;margin-bottom:1.3rem;}
+#emptyState .es-btns{display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:wrap;}
+#emptyState button{background:none;border:1px solid var(--accent);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.1em;text-transform:uppercase;padding:0.8rem 1.4rem;cursor:pointer;transition:all .15s;}
 #emptyState button:hover{background:var(--accent);color:var(--bg);}
+#emptyState button.secondary{border-color:var(--border2);color:var(--muted);}
+#emptyState button.secondary:hover{border-color:var(--text);color:var(--text);background:var(--s2);}
 body.empty #chart-section canvas,body.empty #chart-section #chartControls,body.empty #bottom-section{visibility:hidden;}
 body.empty #emptyState{display:flex;}
 
 /* ── OVERLAY LEGEND ── */
-#ovLegend{position:absolute;top:8px;right:56px;display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:flex-end;max-width:60%;z-index:4;pointer-events:auto;}
-.ovl-item{display:inline-flex;align-items:center;gap:0.3rem;padding:0.12rem 0.38rem;background:rgba(19,20,26,0.85);border:1px solid var(--border);font-size:0.54rem;color:var(--muted);cursor:pointer;transition:all .15s;}
+#ovLegend{position:absolute;top:8px;right:56px;display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:flex-end;max-width:60%;z-index:4;pointer-events:auto;}
+.ovl-item{display:inline-flex;align-items:center;gap:0.35rem;padding:0.18rem 0.45rem;background:rgba(19,20,26,0.85);border:1px solid var(--border);font-size:var(--fs-xs);color:var(--muted);cursor:pointer;transition:all .15s;}
 .ovl-item:hover{border-color:var(--border2);color:var(--text);}
-.ovl-sw{width:8px;height:8px;border-radius:1px;flex-shrink:0;}
+.ovl-sw{width:9px;height:9px;border-radius:1px;flex-shrink:0;}
 
 /* ── HAMBURGER + SCRIM (mobile) ── */
 #hamburger{display:none;background:none;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;padding:0.3rem 0.55rem;cursor:pointer;margin-right:0.4rem;}
@@ -227,17 +259,21 @@ body.empty #emptyState{display:flex;}
   .tb-stats{display:none;}
   .tb-right .tbtn{padding:0.28rem 0.5rem;font-size:0.58rem;}
 }
+@media (max-width: 700px){
+  /* Replace the 11-column table with a card list — table is unreadable below this width */
+  #dataTable{display:none;}
+  #yearCardList{display:flex;}
+}
 @media (max-width: 600px){
   #topbar{padding:0 0.6rem;gap:0.5rem;}
-  #topbar h1{font-size:0.95rem;}
+  #topbar h1{font-size:1rem;}
   .tbsep{display:none;}
   #sidebar{width:85vw;}
   #drawer{width:100vw;max-width:100vw;}
   #chart-section{height:auto;min-height:52vh;padding:0.6rem 0.7rem 0.5rem;}
-  #chartControls{gap:0.22rem;}
+  #chartControls{gap:0.3rem;}
+  .ctrl-group{padding:0.18rem 0.4rem;gap:0.25rem;}
   #bottom-section{padding:0.5rem 0.6rem;}
-  table{font-size:0.6rem;}
-  th,td{padding:0.28rem 0.35rem;}
   #ovLegend{top:4px;right:4px;max-width:90%;}
 }
 @media (hover: none) and (pointer: coarse){
@@ -302,24 +338,28 @@ body.empty #emptyState{display:flex;}
     <!-- CHART -->
     <div id="chart-section">
       <div id="chartControls">
-        <span class="ctrl-lbl">Smooth:</span>
-        <button class="cbtn active" id="sm-none"   onclick="setSmoothing('none')">None</button>
-        <button class="cbtn" id="sm-ma3"    onclick="setSmoothing('ma3')">3-yr</button>
-        <button class="cbtn" id="sm-ma5"    onclick="setSmoothing('ma5')">5-yr</button>
-        <button class="cbtn" id="sm-spline" onclick="setSmoothing('spline')">Spline</button>
-        <span class="ctrl-sep"></span>
-        <span class="ctrl-lbl">Lines:</span>
-        <button class="cbtn" id="ov-real" onclick="toggleOv('real')">Real $</button>
-        <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')">Percentile</button>
-        <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')">Cumulative</button>
-        <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')">Projection</button>
-        <span class="ctrl-sep"></span>
-        <span class="ctrl-lbl">Context:</span>
-        <button class="cbtn" id="ov-inf"    onclick="toggleOv('inf')">Inflation</button>
-        <button class="cbtn" id="ov-cuminf" onclick="toggleOv('cuminf')">Cum. Inflation</button>
-        <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')">GDP</button>
-        <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')">Events</button>
-        <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')">Class Bands</button>
+        <div class="ctrl-group">
+          <span class="ctrl-lbl">Smooth</span>
+          <button class="cbtn active" id="sm-none" onclick="setSmoothing('none')" title="No smoothing — raw year-over-year line">None</button>
+          <button class="cbtn" id="sm-ma3" onclick="setSmoothing('ma3')" title="3-year moving average">3-yr</button>
+          <button class="cbtn" id="sm-ma5" onclick="setSmoothing('ma5')" title="5-year moving average">5-yr</button>
+          <button class="cbtn" id="sm-spline" onclick="setSmoothing('spline')" title="Catmull-Rom spline interpolation">Spline</button>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-lbl">Lines</span>
+          <button class="cbtn" id="ov-real" onclick="toggleOv('real')" title="Inflation-adjusted salary in base-year dollars">Real $</button>
+          <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')"  title="Your percentile rank vs all US individual earners">Percentile</button>
+          <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')"  title="Cumulative lifetime earnings">Cumulative</button>
+          <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')" title="5-year linear projection from recent trend">Projection</button>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-lbl">Context</span>
+          <button class="cbtn" id="ov-inf"    onclick="toggleOv('inf')"    title="Annual inflation rate (CPI-U)">Inflation</button>
+          <button class="cbtn" id="ov-cuminf" onclick="toggleOv('cuminf')" title="Cumulative inflation index since first year">Cum. Inflation</button>
+          <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')"    title="Real GDP growth rate">GDP</button>
+          <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')"    title="Macro events as colored bands across their date ranges">Events</button>
+          <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')" title="US income class bands shaded behind the chart">Class Bands</button>
+        </div>
       </div>
       <div id="chartWrap">
         <canvas id="c"></canvas>
@@ -327,8 +367,11 @@ body.empty #emptyState{display:flex;}
         <div id="emptyState">
           <div class="es-inner">
             <h2>Begin your ledger</h2>
-            <p>Add your first year of income and Insight will start surfacing your earning story — percentile rank, social class, inflation drag, and forensic trend detection.</p>
-            <button onclick="openAddYear()">+ Add First Year</button>
+            <p>Add your first year of income and Insight will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
+            <div class="es-btns">
+              <button onclick="openAddYear()">+ Add First Year</button>
+              <button class="secondary" onclick="loadSampleData()">⚡ Try Sample Data</button>
+            </div>
           </div>
         </div>
       </div>
@@ -336,6 +379,7 @@ body.empty #emptyState{display:flex;}
     <!-- DATA TABLE -->
     <div id="bottom-section">
       <table id="dataTable"></table>
+      <div id="yearCardList"></div>
     </div>
   </div>
 
@@ -1415,16 +1459,19 @@ canvas.addEventListener('mousemove',e=>{
   const pct=yrs.includes(yr)?getPercentile(sal,yr):null;
   const cs=chg!=null?(chg>=0?'+':'')+(chg*100).toFixed(1)+'%':'—';
   const m=MACRO[yr];
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:0.6rem">projected</span>':''}</strong>
-    <div style="font-size:0.8rem">${fmt(sal)}</div>
-    ${!isProj?`<div style="color:${chg>=0?'var(--pos)':'var(--neg)'}">YoY ${cs}</div>`:''}
-    ${real[yr]?`<div style="color:var(--real)">Real: ${fmt(real[yr])}</div>`:''}
-    ${pct!=null?`<div style="color:var(--pct)">~${pct.toFixed(0)}th percentile</div>`:''}
-    ${ov.cuminf&&!isProj&&yrs.includes(yr)?(()=>{let ix=1.0;const ys2=sortedYrs();const fi=ys2[0];for(let i=1;i<=ys2.indexOf(yr);i++)ix*=(1+(MACRO[ys2[i]]?.inf??0));const base=salaries[fi]*ix;const diff=sal-base;return`<div style="color:#ff7f7f;font-size:0.62rem">vs inf. baseline: ${diff>=0?'+':''}${fmt(diff)}</div>`;})():''}
-    ${pct!=null?`<div style="color:${getSocialClass(pct).color};font-size:0.62rem">${getSocialClass(pct).label}</div>`:''}
-    ${m?.inf!=null?`<div style="color:var(--muted)">Inflation ${(m.inf*100).toFixed(1)}%</div>`:''}
-    ${j?`<div style="margin-top:3px"><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</div>`:''}
-    ${(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted);font-size:0.58rem">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:#9b8df5;margin-top:3px">${e.label}${rng}</div>`;}).join('');})()}`;
+  // Tooltip — 3 hero metrics (Year/Salary/Percentile), 1 secondary line, then job + events
+  const sc=pct!=null?getSocialClass(pct):null;
+  const heroSal=`<div style="font-size:1.05rem;font-weight:500;margin-bottom:0.1rem">${fmt(sal)}</div>`;
+  const heroPct=pct!=null?`<div style="font-size:var(--fs-md);color:${sc.color};margin-bottom:0.35rem">${pct.toFixed(0)}th percentile · ${sc.label}</div>`:'';
+  // Secondary line: YoY · Real · Inflation (compact, separated by middots)
+  const secondary=[];
+  if(!isProj&&chg!=null)secondary.push(`<span style="color:${chg>=0?'var(--pos)':'var(--neg)'}">${cs}</span>`);
+  if(real[yr]&&real[yr]!==sal)secondary.push(`<span style="color:var(--real)">${fmt(real[yr])} real</span>`);
+  if(m?.inf!=null)secondary.push(`<span style="color:var(--muted)">${(m.inf*100).toFixed(1)}% inf</span>`);
+  const secondaryLine=secondary.length?`<div style="font-size:var(--fs-sm)">${secondary.join(' <span style="color:var(--muted)">·</span> ')}</div>`:'';
+  const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
+  const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${secondaryLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
@@ -1453,13 +1500,17 @@ canvas.addEventListener('click',e=>{
 // ── TABLE (always visible below chart) ───────────────────────────────────────
 function buildTable(){
   const yrs=sortedYrs(),real=realSalaries();
-  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Real $</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
   const cum=cumEarnings();
+  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Real $</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
+  let cards='';
   yrs.forEach(yr=>{
     const j=getJob(yr),chg=yoy(yr);
     const cs=chg!=null?(chg>=0?'+':'')+(chg*100).toFixed(1)+'%':'';
     const cc=chg==null?'':(chg>=0?'tdpos':'tdneg');
     const pct=getPercentile(salaries[yr],yr);
+    const sc=getSocialClass(pct);
+    const evs=eventsForYear(yr);
+    const evTxt=evs.map(e=>e.label).join(' · ');
     h+=`<tr>
       <td>${yr}</td>
       <td>${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:''}</td>
@@ -1467,15 +1518,35 @@ function buildTable(){
       <td style="color:var(--real)">${fmt(real[yr])}</td>
       <td class="${cc}">${cs}</td>
       <td style="color:var(--pct)">${pct.toFixed(0)}th</td>
-      <td style="color:${getSocialClass(pct).color}">${getSocialClass(pct).label}</td>
+      <td style="color:${sc.color}">${sc.label}</td>
       <td style="color:var(--cum)">${fmtK(cum[yr])}</td>
       <td class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':''}</td>
       <td class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':''}</td>
-      <td class="tddim">${MACRO[yr]?.evt||''}</td>
+      <td class="tddim">${evTxt}</td>
     </tr>`;
+    // Year card (mobile)
+    cards+=`<div class="yc" onclick="this.classList.toggle('exp')">
+      <div class="yc-head">
+        <span class="yc-yr">${yr}</span>
+        <span class="yc-job">${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:'<span style="opacity:0.4">—</span>'}</span>
+        <span class="yc-sal">${fmt(salaries[yr])}</span>
+        <span class="yc-yoy ${cc}">${cs}</span>
+        <span class="yc-pct-pill" style="color:${sc.color}">${pct.toFixed(0)}th</span>
+        <span class="yc-arr">▾</span>
+      </div>
+      <div class="yc-body">
+        <div class="yc-row"><span class="l">Real $</span><span style="color:var(--real)">${fmt(real[yr])}</span></div>
+        <div class="yc-row"><span class="l">Cum. earned</span><span style="color:var(--cum)">${fmtK(cum[yr])}</span></div>
+        <div class="yc-row"><span class="l">Class</span><span style="color:${sc.color}">${sc.label}</span></div>
+        <div class="yc-row"><span class="l">Inflation</span><span class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':'—'}</span></div>
+        <div class="yc-row"><span class="l">GDP</span><span class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':'—'}</span></div>
+        ${evs.length?`<div class="yc-row"><span class="l">Events</span><span style="color:var(--evt-color);text-align:right;flex:1;margin-left:0.6rem">${evTxt}</span></div>`:''}
+      </div>
+    </div>`;
   });
   h+=`</tbody>`;
   document.getElementById('dataTable').innerHTML=h;
+  document.getElementById('yearCardList').innerHTML=cards;
 }
 
 // ── OV TOGGLE ─────────────────────────────────────────────────────────────────
@@ -1487,16 +1558,17 @@ function toggleOv(k){
 }
 
 // ── OVERLAY LEGEND (HTML overlay over canvas) ────────────────────────────────
+const _cssVar=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
 const OV_META={
-  real:{label:'Real $',color:'#7eb8f5'},
-  pct:{label:'Percentile',color:'#c47ef5'},
-  cum:{label:'Cumulative',color:'#f5a97e'},
-  proj:{label:'Projection',color:'#f5e97e'},
-  inf:{label:'Inflation',color:'#d4a96a'},
-  cuminf:{label:'Cum. Inflation',color:'#ff7f7f'},
-  gdp:{label:'GDP',color:'#6fcf97'},
-  evt:{label:'Events',color:'#9b8df5'},
-  classBands:{label:'Class Bands',color:'#d4a96a'},
+  real:{label:'Real $',color:_cssVar('--real')||'#7eb8f5'},
+  pct:{label:'Percentile',color:_cssVar('--pct')||'#c47ef5'},
+  cum:{label:'Cumulative',color:_cssVar('--cum')||'#f5a97e'},
+  proj:{label:'Projection',color:_cssVar('--proj')||'#f5e97e'},
+  inf:{label:'Inflation',color:_cssVar('--inf-color')||'#d4a96a'},
+  cuminf:{label:'Cum. Inflation',color:_cssVar('--cuminf-color')||'#ff7f7f'},
+  gdp:{label:'GDP',color:_cssVar('--gdp-color')||'#6fcf97'},
+  evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
+  classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
 };
 function renderOvLegend(){
   const el=document.getElementById('ovLegend');if(!el)return;
@@ -1764,6 +1836,27 @@ function importData(input){
   reader.readAsText(file);
 }
 
+// Sample data for new visitors — a plausible 12-year career arc, 2 jobs.
+// Shows the full power of Insight (percentile shifts, job transition, inflation drag).
+function loadSampleData(){
+  if(sortedYrs().length>0&&!confirm('Replace your current data with sample data? Existing data will be lost (export first if you want to keep it).'))return;
+  salaries={
+    2013:48000,2014:52000,2015:55000,2016:58000,
+    2017:72000,2018:81000,2019:88000,2020:92000,
+    2021:108000,2022:118000,2023:127000,2024:135000,
+  };
+  jobs=[
+    {id:1,name:'Junior Analyst',color:'#7eb8f5',years:[2013,2014,2015,2016]},
+    {id:2,name:'Senior Strategist',color:'#d4a96a',years:[2017,2018,2019,2020,2021,2022,2023,2024]},
+  ];
+  nextId=3;
+  // Keep existing MACRO + EVENTS so user sees full forensic context
+  curSTab='insights';
+  saveState();refresh();
+  if(drawerOpen)renderJobCards();
+  setSTab('insights');
+}
+
 function refresh(){
   saveState();
   document.body.classList.toggle('empty',sortedYrs().length===0);
@@ -1773,7 +1866,11 @@ function refresh(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-setSTab(curSTab);
+// First-time visitors with data go straight to Insights (the killer feature).
+// Returning visitors restore their last-used tab via insight_uiTab.
+const _hasUiTabPref=!!localStorage.getItem('insight_uiTab');
+const _initialTab=(!_hasUiTabPref&&sortedYrs().length>0)?'insights':curSTab;
+setSTab(_initialTab);
 document.body.classList.toggle('empty',sortedYrs().length===0);
 updateStats();renderLegend();buildTable();renderOvLegend();
 
