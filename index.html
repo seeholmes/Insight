@@ -1306,6 +1306,7 @@ const DEFAULT_COL_CFG={
   zip:'60601',housing:'rent',eatInRatio:0.7,
   milesPerYear:12000,mpg:25,evRatio:0,chargingMode:'standard',
   homePrice:350000,interestRate:6.5,purchaseYear:2020,
+  displayMode:'dollars',  // 'dollars' or 'pctSalary' — how the COL line and tooltip render
 };
 function loadColData(){
   try{const s=localStorage.getItem('cream_cfg');return s?JSON.parse(s):null;}catch{return null;}
@@ -1325,6 +1326,10 @@ function updateColField(field,raw){
   saveColCfg(cfg);
   // Housing toggle changes which fields appear/disappear → full re-render
   if(field==='housing'){renderColPanel();drawChart();return;}
+  // Display mode toggle: re-render so the active button updates
+  if(field==='displayMode'){
+    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.mode===v));
+  }
   // Other fields: surgical inline updates so focused input keeps focus
   if(field==='chargingMode'){
     document.querySelectorAll('[data-charge]').forEach(b=>b.classList.toggle('primary',b.dataset.charge===v));
@@ -1362,6 +1367,11 @@ function renderColPanel(){
   const sourceTag=stored?'<span style="color:var(--pos)">●</span> Saved profile':'<span style="color:var(--muted)">○</span> Default profile (not yet saved — edit any field to save)';
   el.innerHTML=`
     <div id="colStatus" style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;letter-spacing:0.06em;text-transform:uppercase">Status: ${sourceTag}</div>
+
+    <div class="frow"><span class="flbl" style="width:80px">Show as</span>
+      <button data-mode="dollars"   class="btn-sm ${cfg.displayMode!=='pctSalary'?'primary':''}" style="flex:1" onclick="updateColField('displayMode','dollars')">$ /yr</button>
+      <button data-mode="pctSalary" class="btn-sm ${cfg.displayMode==='pctSalary'?'primary':''}" style="flex:1" onclick="updateColField('displayMode','pctSalary')">% of salary</button>
+    </div>
 
     <div class="frow"><span class="flbl" style="width:80px">ZIP</span>
       <input class="finput" type="text" maxlength="5" value="${cfg.zip||''}" placeholder="e.g. 60601" oninput="updateColField('zip',this.value)">
@@ -1613,22 +1623,51 @@ function drawChart(){
     const colYrs=allYrs.filter(y=>y>=2000&&y<=2026);
     if(colYrs.length){
       const colVals=colYrs.map(y=>calcColForYear(colCfg,y));
+      const isPct=colCfg.displayMode==='pctSalary';
+      // For % mode, plot ratio on its own y-axis spanning 0–100%
+      const yPct=p=>pad.top+cH*(1-Math.max(0,Math.min(1.5,p))/1.5);
       ctx.strokeStyle='rgba(240,168,0,0.95)';ctx.lineWidth=2.2;ctx.setLineDash([5,3]);
       ctx.beginPath();
-      let started=false;
-      colYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);const v=colVals[i];if(v==null)return;if(!started){ctx.moveTo(xp(xi),ys(v));started=true;}else{ctx.lineTo(xp(xi),ys(v));}});
+      let started=false,lastDrawnVal=null,lastDrawnY=null,lastDrawnX=null;
+      colYrs.forEach((yr,i)=>{
+        const xi=allYrs.indexOf(yr);
+        const v=colVals[i];if(v==null)return;
+        let plotY;
+        if(isPct){
+          const sal=salaries[yr];if(!sal||sal<=0)return;
+          const ratio=v/sal;
+          plotY=yPct(ratio);
+          lastDrawnVal=ratio;
+        }else{
+          plotY=ys(v);
+          lastDrawnVal=v;
+        }
+        lastDrawnY=plotY;lastDrawnX=xp(xi);
+        if(!started){ctx.moveTo(xp(xi),plotY);started=true;}else{ctx.lineTo(xp(xi),plotY);}
+      });
       ctx.stroke();ctx.setLineDash([]);
+      // Right-axis ticks for % mode
+      if(isPct&&started){
+        const ticks=[0.25,0.50,0.75,1.0];
+        ticks.forEach(t=>{
+          const y=yPct(t);
+          ctx.strokeStyle='rgba(240,168,0,0.10)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+          ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+          ctx.fillStyle='rgba(240,168,0,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+          ctx.fillText(Math.round(t*100)+'%',pad.left+cW+4,y+3);
+        });
+      }
       // End-of-line label
-      const lastIdx=colYrs.length-1,lastVal=colVals[lastIdx],lastX=xp(allYrs.indexOf(colYrs[lastIdx]));
-      if(lastVal!=null){
-        ctx.fillStyle='var(--col-color)';ctx.fillStyle='rgba(240,168,0,0.95)';
+      if(lastDrawnVal!=null&&lastDrawnY!=null){
+        ctx.fillStyle='rgba(240,168,0,0.95)';
         ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-        ctx.fillText(fmtK(lastVal)+'/yr',lastX+5,ys(lastVal)+3);
+        const txt=isPct?(Math.round(lastDrawnVal*100)+'% of pay'):(fmtK(lastDrawnVal)+'/yr');
+        ctx.fillText(txt,lastDrawnX+5,lastDrawnY+3);
       }
       // Hint when using default cfg
       if(!userCfg){
         ctx.fillStyle='rgba(240,168,0,0.7)';ctx.font='italic 10px IBM Plex Mono,monospace';ctx.textAlign='left';
-        ctx.fillText('COL using default profile · run CREAM companion to personalize',pad.left+8,pad.top+14);
+        ctx.fillText('COL using default profile · edit in Settings → COL',pad.left+8,pad.top+14);
       }
     }else{
       ctx.fillStyle='rgba(240,168,0,0.7)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='center';
@@ -1735,7 +1774,7 @@ canvas.addEventListener('mousemove',e=>{
   if(real[yr]&&real[yr]!==sal)secondary.push(`<span style="color:var(--real)">${fmt(real[yr])} real</span>`);
   if(m?.inf!=null)secondary.push(`<span style="color:var(--muted)">${(m.inf*100).toFixed(1)}% inf</span>`);
   const secondaryLine=secondary.length?`<div style="font-size:var(--fs-sm)">${secondary.join(' <span style="color:var(--muted)">·</span> ')}</div>`:'';
-  // COL row: this year's $/yr cost-of-living, plus COL-YoY contrasted with CPI for the same year
+  // COL row: this year's cost-of-living, mode-aware ($/yr or % of salary)
   const colLine=(()=>{
     if(yr<2000||yr>2026)return'';
     const cfg=getEffectiveColCfg();
@@ -1751,7 +1790,12 @@ canvas.addEventListener('mousemove',e=>{
       gapHint=` <span style="color:${gapColor}">· ${gapTxt}</span>`;
     }
     const yoyTxt=colYoy!=null?` <span style="color:${colYoy>=0?'var(--pos)':'var(--neg)'}">${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%</span>`:'';
-    return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">COL ${fmt(v)}/yr</span>${yoyTxt}${gapHint}</div>`;
+    // Always show the absolute COL value; if mode is %, also show ratio
+    let primary=`COL ${fmt(v)}/yr`;
+    if(cfg.displayMode==='pctSalary'&&sal>0){
+      primary=`COL ${(v/sal*100).toFixed(0)}% of pay <span style="color:var(--muted);font-size:var(--fs-xs)">(${fmt(v)}/yr)</span>`;
+    }
+    return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">${primary}</span>${yoyTxt}${gapHint}</div>`;
   })();
   // Net raise vs COL and CPI — the $-figure punchline
   const netLine=(()=>{
