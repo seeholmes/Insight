@@ -405,6 +405,7 @@ body.empty #emptyState{display:flex;}
       <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
       <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
       <button class="dtab"        id="dt-events" onclick="setDTab('events')">Events</button>
+      <button class="dtab"        id="dt-col"    onclick="setDTab('col')">COL</button>
       <button class="dtab"        id="dt-about"  onclick="setDTab('about')">About</button>
       <button id="drawer-close" onclick="toggleDrawer()" aria-label="Close">×</button>
     </div>
@@ -507,6 +508,16 @@ body.empty #emptyState{display:flex;}
             <button class="btn-sm" onclick="restoreDefaultEvents()">Restore Defaults</button>
             <button class="btn-sm danger" onclick="clearEvents()">Clear All</button>
           </div>
+        </div>
+      </div>
+      <div class="dsec" id="ds-col">
+        <p class="sec-head">Cost of Living</p>
+        <div style="font-size:0.6rem;color:var(--muted);margin-bottom:0.7rem;line-height:1.55">Personal cost-of-living profile — drives the amber <span style="color:var(--col-color)">COL</span> overlay on the chart. Edits save instantly to <code style="color:var(--accent)">cream_cfg</code> in localStorage and the line redraws live.</div>
+        <div id="colForm"></div>
+        <div id="colPreview" style="margin-top:0.8rem;padding:0.7rem;background:var(--s2);border:1px solid var(--border)"></div>
+        <div style="display:flex;gap:0.4rem;margin-top:0.7rem;">
+          <button class="btn-sm" onclick="resetColCfg()">Reset to Defaults</button>
+          <button class="btn-sm danger" onclick="clearColCfg()">Clear</button>
         </div>
       </div>
     </div>
@@ -1232,6 +1243,97 @@ const DEFAULT_COL_CFG={
 function loadColData(){
   try{const s=localStorage.getItem('cream_cfg');return s?JSON.parse(s):null;}catch{return null;}
 }
+function saveColCfg(cfg){
+  try{localStorage.setItem('cream_cfg',JSON.stringify(cfg));}catch(e){}
+}
+function getEffectiveColCfg(){return loadColData()||{...DEFAULT_COL_CFG};}
+function updateColField(field,raw){
+  const cfg=getEffectiveColCfg();
+  let v=raw;
+  if(['eatInRatio','evRatio'].includes(field))v=Math.max(0,Math.min(1,parseFloat(raw)||0));
+  else if(['milesPerYear','mpg','homePrice','purchaseYear'].includes(field))v=parseFloat(raw)||0;
+  else if(field==='interestRate')v=parseFloat(raw)||0;
+  cfg[field]=v;
+  saveColCfg(cfg);
+  renderColPanel();
+  drawChart();
+}
+function resetColCfg(){
+  saveColCfg({...DEFAULT_COL_CFG});
+  renderColPanel();drawChart();
+}
+function clearColCfg(){
+  if(!confirm('Clear COL config? The line will use the built-in default profile.'))return;
+  try{localStorage.removeItem('cream_cfg');}catch(e){}
+  renderColPanel();drawChart();
+}
+function renderColPanel(){
+  const el=document.getElementById('colForm');if(!el)return;
+  const stored=loadColData();
+  const cfg=stored||DEFAULT_COL_CFG;
+  const isOwning=cfg.housing==='own';
+  const sourceTag=stored?'<span style="color:var(--pos)">●</span> Saved profile':'<span style="color:var(--muted)">○</span> Default profile (not yet saved — edit any field to save)';
+  el.innerHTML=`
+    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;letter-spacing:0.06em;text-transform:uppercase">Status: ${sourceTag}</div>
+
+    <div class="frow"><span class="flbl" style="width:80px">ZIP</span>
+      <input class="finput" type="text" maxlength="5" value="${cfg.zip||''}" placeholder="e.g. 60601" oninput="updateColField('zip',this.value)">
+      <span style="font-size:0.55rem;color:var(--muted);width:96px">First digit picks region</span>
+    </div>
+
+    <div class="frow"><span class="flbl" style="width:80px">Housing</span>
+      <button class="btn-sm ${cfg.housing==='rent'?'primary':''}" style="flex:1" onclick="updateColField('housing','rent')">Rent</button>
+      <button class="btn-sm ${cfg.housing==='own'?'primary':''}" style="flex:1" onclick="updateColField('housing','own')">Own</button>
+    </div>
+
+    ${isOwning?`
+      <div class="frow"><span class="flbl" style="width:80px">Home price</span>
+        <input class="finput" type="number" value="${cfg.homePrice||0}" oninput="updateColField('homePrice',this.value)">
+      </div>
+      <div class="frow"><span class="flbl" style="width:80px">Mortgage %</span>
+        <input class="finput" type="number" step="0.1" value="${cfg.interestRate||0}" oninput="updateColField('interestRate',this.value)">
+      </div>
+      <div class="frow"><span class="flbl" style="width:80px">Purchased</span>
+        <input class="finput" type="number" value="${cfg.purchaseYear||2020}" oninput="updateColField('purchaseYear',this.value)">
+      </div>
+    `:''}
+
+    <div class="frow"><span class="flbl" style="width:80px">Eat in %</span>
+      <input class="finput" type="range" min="0" max="1" step="0.05" value="${cfg.eatInRatio||0}" oninput="updateColField('eatInRatio',this.value)" style="flex:1">
+      <span style="font-size:var(--fs-sm);color:var(--accent);width:38px;text-align:right">${Math.round((cfg.eatInRatio||0)*100)}%</span>
+    </div>
+
+    <div class="frow"><span class="flbl" style="width:80px">Miles/yr</span>
+      <input class="finput" type="number" value="${cfg.milesPerYear||0}" oninput="updateColField('milesPerYear',this.value)">
+    </div>
+
+    <div class="frow"><span class="flbl" style="width:80px">MPG</span>
+      <input class="finput" type="number" value="${cfg.mpg||0}" oninput="updateColField('mpg',this.value)">
+    </div>
+
+    <div class="frow"><span class="flbl" style="width:80px">EV ratio</span>
+      <input class="finput" type="range" min="0" max="1" step="0.05" value="${cfg.evRatio||0}" oninput="updateColField('evRatio',this.value)" style="flex:1">
+      <span style="font-size:var(--fs-sm);color:var(--accent);width:38px;text-align:right">${Math.round((cfg.evRatio||0)*100)}%</span>
+    </div>
+
+    <div class="frow"><span class="flbl" style="width:80px">Charging</span>
+      <button class="btn-sm ${cfg.chargingMode==='standard'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','standard')">Std</button>
+      <button class="btn-sm ${cfg.chargingMode==='offpeak'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','offpeak')">Off-peak</button>
+      <button class="btn-sm ${cfg.chargingMode==='free'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','free')">Free</button>
+    </div>
+  `;
+  // Live preview: this year's COL with breakdown
+  const pv=document.getElementById('colPreview');
+  if(pv){
+    const yr=new Date().getFullYear()<=2026?new Date().getFullYear():2026;
+    const v=calcColForYear(cfg,yr);
+    pv.innerHTML=`
+      <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">Live preview · ${yr}</div>
+      <div style="font-size:1.4rem;font-family:'Playfair Display',serif;font-style:italic;color:var(--col-color);line-height:1">${v?fmt(v)+'/yr':'—'}</div>
+      <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:0.4rem;line-height:1.5">Toggle the <span style="color:var(--col-color)">COL</span> button above the chart to see this rendered as a line across all years 2000–2026.</div>
+    `;
+  }
+}
 
 function drawChart(){
   const W=wrap.clientWidth,H=wrap.clientHeight;
@@ -1706,7 +1808,7 @@ function openAddYear(){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
 function setDTab(t){
   curDTab=t;
-  ['jobs','salary','macro','events','about'].forEach(s=>{
+  ['jobs','salary','macro','events','col','about'].forEach(s=>{
     document.getElementById('dt-'+s).classList.toggle('active',s===t);
     document.getElementById('ds-'+s).classList.toggle('vis',s===t);
   });
@@ -1714,6 +1816,7 @@ function setDTab(t){
   if(t==='jobs')renderJobCards();
   if(t==='macro')renderMacroList();
   if(t==='events')renderEventsList();
+  if(t==='col')renderColPanel();
 }
 
 // ── DRAWER: JOBS ──────────────────────────────────────────────────────────────
