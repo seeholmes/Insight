@@ -319,8 +319,8 @@ body.empty #emptyState{display:flex;}
       <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">Insights</button>
       <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Percentile</button>
     </div>
-    <button class="tbtn" onclick="exportData()">⬇ Export</button>
-    <label class="tbtn" style="cursor:pointer" title="Import backup JSON">⬆ Import<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
+    <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇ Stash It</button>
+    <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆ Import<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
     <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ Settings</button>
   </div>
 </div>
@@ -430,7 +430,7 @@ body.empty #emptyState{display:flex;}
         <p class="sec-head">About CREAM</p>
         <div class="ins-card">
           <h3>What it does</h3>
-          <span class="ins-tag">cash rules. so we count it.</span>
+          <span class="ins-tag">knowledge reigns supreme over nearly everyone.</span>
           <p style="font-size:0.65rem;color:var(--text);line-height:1.55;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, and pattern detection across decades of data. Pair with the <span style="color:var(--col-color)">CREAM COL companion</span> to overlay your personal cost of living directly on the chart.</p>
         </div>
         <div class="ins-card">
@@ -836,7 +836,11 @@ function renderInsights(){
   const inflFactor=(_cumIdx[curYr]||1)/(_cumIdx[peakPctYr]||1);
   const peakCPIAdjusted=salaries[peakPctYr]*inflFactor;
 
-  let h='';
+  // Wu-Tang flavor: a chambers header that anchors the Insights panel
+  let h=`<div style="text-align:center;padding:0.85rem 0.5rem 1rem;border-bottom:1px solid var(--border);margin-bottom:var(--sp-3)">
+    <div style="font-family:'Bebas Neue',cursive;font-size:1.55rem;color:var(--accent);letter-spacing:0.16em;line-height:1">36 CHAMBERS</div>
+    <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:var(--fs-xs);color:var(--muted);letter-spacing:0.12em;margin-top:0.3rem">liquid swords. mathematics. real talk.</div>
+  </div>`;
   h+=`<div class="ins-card">
     <h3>Peak Percentile Power</h3>
     <span class="ins-tag">your apex. your moment.</span>
@@ -1126,6 +1130,7 @@ function renderInsights(){
 
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
+    <span class="ins-tag">every chapter, every chamber.</span>
     <table class="jst">
       <tr><th>Job</th><th>Yrs</th><th>Avg</th><th>Peak</th><th>Total</th><th>CAGR</th></tr>`;
   jobRows.forEach(({j,sy,avg,peak,total,cagr})=>{
@@ -1142,6 +1147,7 @@ function renderInsights(){
 
   // Velocity bars
   h+=`<div class="ins-card"><h3>Salary Velocity</h3>
+    <span class="ins-tag">the come-up, by job.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">$/yr increase per job</div>`;
   const maxSl=Math.max(...jobRows.map(r=>Math.abs(r.slope)),1);
   jobRows.forEach(({j,slope})=>{
@@ -1156,7 +1162,8 @@ function renderInsights(){
   h+=`</div>`;
 
   // Transitions
-  h+=`<div class="ins-card"><h3>Job Transitions</h3>`;
+  h+=`<div class="ins-card"><h3>Job Transitions</h3>
+    <span class="ins-tag">the leap, the gain, the loss.</span>`;
   transitions.forEach(({from,to,fromYr,toYr,lastSal,firstSal,delta,pct})=>{
     h+=`<div class="trans-row">
       <div style="flex:1;min-width:0">
@@ -1173,6 +1180,7 @@ function renderInsights(){
 
   // Real vs Nominal
   h+=`<div class="ins-card"><h3>Real vs Nominal</h3>
+    <span class="ins-tag">what's left after the world takes its cut.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Inflation-adjusted to ${yrs[0]} dollars</div>`;
   yrs.filter((_,i)=>i%4===0||i===yrs.length-1).forEach(yr=>{
     const nom=salaries[yr],r=real[yr],loss=nom-r;
@@ -1188,6 +1196,7 @@ function renderInsights(){
 
   // Projection KPIs
   h+=`<div class="ins-card"><h3>Cumulative & Projection</h3>
+    <span class="ins-tag">the pile. the path forward.</span>
     <div class="kpi-mini">
       <div class="kpi-m"><label>Earned to date</label><value>${fmtK(cum[lastYr])}</value></div>
       <div class="kpi-m"><label>Proj. salary +5yr</label><value style="color:var(--proj)">${fmtK(projFinal)}/yr</value></div>
@@ -2166,6 +2175,24 @@ const _initialTab=(!_hasUiTabPref&&sortedYrs().length>0)?'insights':curSTab;
 setSTab(_initialTab);
 document.body.classList.toggle('empty',sortedYrs().length===0);
 updateStats();renderLegend();buildTable();renderOvLegend();
+
+// Rotating tagline — picks a random Wu-Tang-flavored line on each load
+const TAGLINES=[
+  "Cash Rules Everything Around Me",
+  "Watch how the things change",
+  "Dollar dollar bill, y'all",
+  "Stack your bills, count the cents",
+  "The mathematics never lie",
+  "Knowledge reigns supreme",
+  "Liquid swords cut through the noise",
+  "Protect ya net worth",
+];
+(()=>{const el=document.querySelector('.cream-sub');if(el)el.textContent=TAGLINES[Math.floor(Math.random()*TAGLINES.length)];})();
+
+// Easter egg
+console.log('%cCREAM','font-family:Georgia,serif;font-style:italic;font-size:32px;color:#d4a96a');
+console.log('%cWu-Tang Forever 🐝 · the math keeps the books','color:#d4a96a;font-style:italic');
+console.log('%cBuilt on vanilla JS, sql.js mathematics, and bills (dollar dollar).','color:#5e5d6e;font-size:11px');
 
 function initCanvas(){
   const w=wrap.clientWidth,h=wrap.clientHeight;
