@@ -18,7 +18,7 @@
   /* Chart overlay colors (consolidated; was hardcoded inline) */
   --inf-color:#d4a96a;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;
   /* Layout */
-  --sidebar-w:300px;--drawer-w:320px;--topbar-h:48px;--tap:44px;--gap:12px;
+  --sidebar-w:300px;--drawer-w:320px;--topbar-h:64px;--tap:44px;--gap:12px;
   /* Type scale */
   --fs-xs:0.65rem;   /* 10.4px — tiny labels (uppercase) */
   --fs-sm:0.72rem;   /* 11.5px — UI controls */
@@ -38,11 +38,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   border-bottom:1px solid var(--border);background:var(--s1);
   position:relative;z-index:10;
 }
-#cream-brand{display:inline-flex;align-items:center;gap:0.55rem;white-space:nowrap;margin-right:0.5rem;line-height:1;}
-.cream-mark{flex-shrink:0;display:block;}
+#cream-brand{display:inline-flex;align-items:center;gap:0.7rem;white-space:nowrap;margin-right:0.6rem;line-height:1;}
+.cream-mark{flex-shrink:0;display:block;width:56px;height:56px;}
 .cream-words{display:flex;flex-direction:column;justify-content:center;line-height:1;}
-#cream-brand h1{font-family:'Bebas Neue',cursive;font-size:1.9rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
-#cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.44rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:1px;}
+#cream-brand h1{font-family:'Bebas Neue',cursive;font-size:2.4rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
+#cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.55rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:3px;}
 .tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
 .tb-stats{display:flex;gap:0;flex:1;}
 .tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);}
@@ -298,7 +298,7 @@ body.empty #emptyState{display:flex;}
 <div id="topbar">
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
   <div id="cream-brand">
-    <img class="cream-mark" src="cream-logo-96.png" alt="CREAM" width="40" height="40">
+    <img class="cream-mark" src="cream-logo-96.png" srcset="cream-logo-96.png 1x, cream-logo-256.png 2x" alt="CREAM" width="56" height="56">
     <div class="cream-words">
       <h1>CREAM</h1>
       <span class="cream-sub">Cash Rules Everything Around Me</span>
@@ -380,7 +380,7 @@ body.empty #emptyState{display:flex;}
         <div id="ovLegend"></div>
         <div id="emptyState">
           <div class="es-inner">
-            <img src="cream-logo-256.png" alt="CREAM" width="120" height="120" style="display:block;margin:0 auto 1.2rem">
+            <img src="cream-logo-256.png" alt="CREAM" width="180" height="180" style="display:block;margin:0 auto 1.4rem">
             <h2>Begin your ledger</h2>
             <p>Add your first year of income and CREAM will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
             <div class="es-btns">
@@ -1222,6 +1222,13 @@ function calcColForYear(cfg,y){
   const transport=cfg.evRatio*ev+(1-cfg.evRatio)*gas;
   return Math.round(housing+food+transport+3480*inf+5400*inf+4200*inf);
 }
+// Default COL config used when companion app hasn't written cream_cfg yet —
+// roughly a national-median renter so the line draws immediately on toggle.
+const DEFAULT_COL_CFG={
+  zip:'60601',housing:'rent',eatInRatio:0.7,
+  milesPerYear:12000,mpg:25,evRatio:0,chargingMode:'standard',
+  homePrice:350000,interestRate:6.5,purchaseYear:2020,
+};
 function loadColData(){
   try{const s=localStorage.getItem('cream_cfg');return s?JSON.parse(s):null;}catch{return null;}
 }
@@ -1422,15 +1429,31 @@ function drawChart(){
     ctx.beginPath();pjYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),ys(pjVals[i])):ctx.lineTo(xp(xi),ys(pjVals[i]));});ctx.stroke();ctx.setLineDash([]);
   }
   if(ov.col){
-    const colCfg=loadColData();
-    if(colCfg){
-      const colYrs=allYrs.filter(y=>y>=2000&&y<=2026);
+    const userCfg=loadColData();
+    const colCfg=userCfg||DEFAULT_COL_CFG;
+    const colYrs=allYrs.filter(y=>y>=2000&&y<=2026);
+    if(colYrs.length){
       const colVals=colYrs.map(y=>calcColForYear(colCfg,y));
-      ctx.strokeStyle='rgba(240,168,0,0.9)';ctx.lineWidth=2;ctx.setLineDash([5,3]);
-      ctx.beginPath();colYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);const v=colVals[i];if(v==null)return;i===0||colVals.slice(0,i).every(v=>v==null)?ctx.moveTo(xp(xi),ys(v)):ctx.lineTo(xp(xi),ys(v));});ctx.stroke();ctx.setLineDash([]);
-    } else {
-      ctx.fillStyle='rgba(240,168,0,0.4)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='center';
-      ctx.fillText('COL: open CREAM companion to configure',pad.left+cW/2,pad.top+16);
+      ctx.strokeStyle='rgba(240,168,0,0.95)';ctx.lineWidth=2.2;ctx.setLineDash([5,3]);
+      ctx.beginPath();
+      let started=false;
+      colYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);const v=colVals[i];if(v==null)return;if(!started){ctx.moveTo(xp(xi),ys(v));started=true;}else{ctx.lineTo(xp(xi),ys(v));}});
+      ctx.stroke();ctx.setLineDash([]);
+      // End-of-line label
+      const lastIdx=colYrs.length-1,lastVal=colVals[lastIdx],lastX=xp(allYrs.indexOf(colYrs[lastIdx]));
+      if(lastVal!=null){
+        ctx.fillStyle='var(--col-color)';ctx.fillStyle='rgba(240,168,0,0.95)';
+        ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+        ctx.fillText(fmtK(lastVal)+'/yr',lastX+5,ys(lastVal)+3);
+      }
+      // Hint when using default cfg
+      if(!userCfg){
+        ctx.fillStyle='rgba(240,168,0,0.7)';ctx.font='italic 10px IBM Plex Mono,monospace';ctx.textAlign='left';
+        ctx.fillText('COL using default profile · run CREAM companion to personalize',pad.left+8,pad.top+14);
+      }
+    }else{
+      ctx.fillStyle='rgba(240,168,0,0.7)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='center';
+      ctx.fillText('COL data covers 2000–2026 — add a year in that range to see the line',pad.left+cW/2,pad.top+18);
     }
   }
 
