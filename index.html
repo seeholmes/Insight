@@ -428,50 +428,95 @@ body.empty #emptyState{display:flex;}
       </div>
       <div class="dsec" id="ds-about">
         <p class="sec-head">About CREAM</p>
+
         <div class="ins-card">
           <h3>What it does</h3>
           <span class="ins-tag">knowledge reigns supreme over nearly everyone.</span>
-          <p style="font-size:0.65rem;color:var(--text);line-height:1.55;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, and pattern detection across decades of data. Pair with the <span style="color:var(--col-color)">CREAM COL companion</span> to overlay your personal cost of living directly on the chart.</p>
+          <p style="font-size:var(--fs-sm);color:var(--text);line-height:1.6;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, personal cost-of-living vs official CPI, and pattern detection across decades of data. Local-first, single-file, no backend.</p>
         </div>
+
         <div class="ins-card">
-          <h3>Features</h3>
-          <div style="font-size:0.62rem;line-height:1.6;color:var(--muted)">
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Chart overlays</span> — toggle Real $, Percentile, Cumulative earnings, Projection, Inflation, GDP, Events, and Social Class Bands.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Smoothing</span> — raw, 3-yr MA, 5-yr MA, or Catmull-Rom spline.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Peak Percentile Power</span> — exact salary needed today to reclaim your all-time percentile rank, plus CPI-adjusted view.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Class Mobility</span> — years spent in each US income class with peak-class and trailing-trend.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Percentile Velocity</span> — pts/yr movement vs peer earners.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflection Points</span> — detects real-salary jumps (>15%) and stagnant runs (≥3yr flat), correlated with job changes.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Decade Ledger</span> — nominal, real, and avg percentile bucketed per decade.</p>
+          <h3>The 36 Chambers</h3>
+          <span class="ins-tag">twelve forensic insights, all on one panel.</span>
+          <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Peak Percentile Power</span> — exact salary needed today to reclaim your all-time percentile rank.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Class Mobility</span> — years spent in each US income class with peak-class and 5-yr trend.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Percentile Velocity</span> — average pts/yr movement vs peer earners.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflection Points</span> — flags real-salary jumps (>15%) and stagnant runs (≥3yr flat) with job-change correlation.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Decade Ledger</span> — nominal, real, avg percentile bucketed per decade.</p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflation Drag</span> — lifetime purchasing power erased, plus worst "ghost raise" years.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Macro Events</span> — multi-year ranges (recessions, policy regimes, crises) overlay your earnings as colored bands.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Job transitions</span> — before/after salary, delta, and % change for every role switch.</p>
-            <p><span style="color:var(--accent)">Import / Export</span> — full JSON backup and restore of all data.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--col-color)">Your COL vs Inflation</span> — personal cost-of-living growth rate vs official CPI; gap tells you if your lifestyle inflates faster than the country.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Per-Job Summary, Salary Velocity, Job Transitions</span> — tabular breakdown of every role you've held.</p>
+            <p><span style="color:var(--accent)">Real vs Nominal · Cumulative & Projection</span> — inflation-adjusted earnings and 5-yr regression forecast.</p>
           </div>
         </div>
+
+        <div class="ins-card">
+          <h3>Chart overlays</h3>
+          <span class="ins-tag">layer the math on the come-up.</span>
+          <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
+            <p style="margin-bottom:0.4rem"><span style="color:var(--real)">Real $</span> · <span style="color:var(--pct)">Percentile</span> · <span style="color:var(--cum)">Cumulative</span> · <span style="color:var(--proj)">Projection</span></p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--col-color)">COL</span> in dollar or % of salary mode (toggle in Settings → COL) · <span style="color:var(--inf-color)">Inflation</span> + <span style="color:var(--cuminf-color)">Cum. Inflation</span> · <span style="color:var(--gdp-color)">GDP</span></p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--evt-color)">Events</span> render as multi-year colored bands · <span style="color:var(--accent)">Class Bands</span> shade the chart by US income tier</p>
+            <p>Hover any year for a dense tooltip: salary, percentile, social class, YoY · real · CPI, COL with personal vs CPI gap, Net raise after COL and CPI in $ and %, plus active job and events. Click an event band to jump to the Events tab.</p>
+          </div>
+        </div>
+
+        <div class="ins-card">
+          <h3>Settings drawer</h3>
+          <span class="ins-tag">the vault — six tabs, total control.</span>
+          <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
+            <div style="display:grid;grid-template-columns:4.5rem 1fr;gap:0.3rem 0.5rem">
+              <span style="color:var(--accent)">Jobs</span><span>Add, rename, color-code, and assign years to each role.</span>
+              <span style="color:var(--accent)">Salary</span><span>Per-year salary editor.</span>
+              <span style="color:var(--accent)">Macro</span><span>Inflation and GDP per year (BLS / BEA defaults provided, fully editable).</span>
+              <span style="color:var(--accent)">Events</span><span>Multi-year economic events with start/end years; 28 curated US events 1993–2026.</span>
+              <span style="color:var(--col-color)">COL</span><span>Personal cost-of-living config: ZIP region, rent vs own, eating habits, miles/year, MPG, EV ratio, charging mode. Live preview + dollars/percent display toggle.</span>
+              <span style="color:var(--accent)">About</span><span>This page.</span>
+            </div>
+          </div>
+        </div>
+
         <div class="ins-card">
           <h3>Data sources</h3>
-          <div style="font-size:0.62rem;line-height:1.6;color:var(--muted)">
-            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">Percentile thresholds</span> — US individual income data from Census / IRS SOI, 1993–2025, interpolated between reference years.</p>
-            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">CPI / Inflation</span> — BLS CPI-U year-over-year rates.</p>
-            <p><span style="color:var(--text)">GDP</span> — BEA real GDP growth rates. All macro data editable in the Macro tab.</p>
+          <span class="ins-tag">the bills are real. so is the math.</span>
+          <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
+            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">Percentile thresholds</span> — US individual income from Census / IRS SOI, 1993–2025, interpolated.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">CPI / GDP</span> — BLS CPI-U and BEA real GDP, year-over-year.</p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--text)">COL components</span> — BLS rent CPI, food-at-home / food-away CPI, EIA gasoline retail prices, EIA residential electricity, BEA Home Value Index for owners.</p>
+            <p><span style="color:var(--text)">Regional zones</span> — 10 ZIP-prefix cost zones (housing/food/transport multipliers).</p>
           </div>
         </div>
+
+        <div class="ins-card">
+          <h3>Quick tips</h3>
+          <span class="ins-tag">protect ya net worth.</span>
+          <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
+            <p style="margin-bottom:0.4rem">⌘ <span style="color:var(--accent)">Stash It</span> regularly — exports a JSON backup of everything. Drop it back via Import to restore on a new device.</p>
+            <p style="margin-bottom:0.4rem">⌘ Toggle <span style="color:var(--col-color)">COL</span> overlay then flip its mode in Settings → COL between dollars and "% of salary" — the % view reveals if your lifestyle is winning or losing the race against your raises.</p>
+            <p style="margin-bottom:0.4rem">⌘ Click an event band on the chart to jump straight to the Events tab and edit it.</p>
+            <p style="margin-bottom:0.4rem">⌘ Click a job in the sidebar legend to highlight only that job's years on the chart; click again to deselect.</p>
+            <p>⌘ <span style="color:var(--accent)">Esc</span> closes the settings drawer and the mobile sidebar.</p>
+          </div>
+        </div>
+
         <div class="ins-card">
           <h3>Tech stack</h3>
-          <div style="font-size:0.62rem;line-height:1.7;color:var(--muted)">
+          <span class="ins-tag">vanilla. no frameworks. no friends.</span>
+          <div style="font-size:var(--fs-sm);line-height:1.7;color:var(--muted)">
             <div style="display:grid;grid-template-columns:5.2rem 1fr;gap:0.35rem 0.6rem;margin-bottom:0.4rem">
-              <span style="color:var(--accent)">Runtime</span><span>Vanilla JavaScript (ES2020+), no frameworks</span>
-              <span style="color:var(--accent)">Markup</span><span>Single-file HTML5, no build step</span>
-              <span style="color:var(--accent)">Styling</span><span>Handwritten CSS with custom properties + media queries</span>
-              <span style="color:var(--accent)">Charts</span><span>HTML5 Canvas 2D (no chart library)</span>
-              <span style="color:var(--accent)">Storage</span><span>Browser localStorage (local-first, no backend)</span>
-              <span style="color:var(--accent)">Fonts</span><span>Playfair Display + IBM Plex Mono (Google Fonts)</span>
-              <span style="color:var(--accent)">Hosting</span><span>GitHub Pages (static)</span>
+              <span style="color:var(--accent)">Runtime</span><span>Vanilla JavaScript (ES2020+), zero dependencies, no frameworks</span>
+              <span style="color:var(--accent)">Markup</span><span>Single-file HTML5 — no build step, view-source-friendly</span>
+              <span style="color:var(--accent)">Styling</span><span>Handwritten CSS with custom-property type + spacing scale and media queries</span>
+              <span style="color:var(--accent)">Charts</span><span>HTML5 Canvas 2D (no chart library) — bars, lines, splines, range bands, class shading, crosshair</span>
+              <span style="color:var(--accent)">Storage</span><span>Browser localStorage — salaries, jobs, macro, events, COL config, UI prefs</span>
+              <span style="color:var(--accent)">Fonts</span><span>Bebas Neue (wordmark) · Playfair Display (italic display) · IBM Plex Mono (UI)</span>
+              <span style="color:var(--accent)">Mobile</span><span>Responsive at 900 / 700 / 600px; year cards replace the data table on phones</span>
+              <span style="color:var(--accent)">Hosting</span><span>GitHub Pages (static, public)</span>
               <span style="color:var(--accent)">Source</span><span>github.com/seeholmes/Insight</span>
-              <span style="color:var(--col-color)">Companion</span><span>CREAM COL — cost-of-living model (localStorage bridge)</span>
+              <span style="color:var(--col-color)">COL model</span><span>Built-in cost-of-living engine; reads/writes <code>cream_cfg</code> in localStorage so an external companion can also drive it.</span>
             </div>
-            <p style="margin-top:0.5rem;padding-top:0.4rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.58rem;font-style:italic">All data stays on your device.</p>
+            <p style="margin-top:0.5rem;padding-top:0.4rem;border-top:1px solid var(--border);color:var(--muted);font-size:var(--fs-xs);font-style:italic">All data stays on your device. Cash rules everything around me — including this app.</p>
           </div>
         </div>
       </div>
