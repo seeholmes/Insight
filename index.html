@@ -1706,9 +1706,27 @@ canvas.addEventListener('mousemove',e=>{
   if(real[yr]&&real[yr]!==sal)secondary.push(`<span style="color:var(--real)">${fmt(real[yr])} real</span>`);
   if(m?.inf!=null)secondary.push(`<span style="color:var(--muted)">${(m.inf*100).toFixed(1)}% inf</span>`);
   const secondaryLine=secondary.length?`<div style="font-size:var(--fs-sm)">${secondary.join(' <span style="color:var(--muted)">·</span> ')}</div>`:'';
+  // COL row: this year's $/yr cost-of-living, plus COL-YoY contrasted with CPI for the same year
+  const colLine=(()=>{
+    if(yr<2000||yr>2026)return'';
+    const cfg=getEffectiveColCfg();
+    const v=calcColForYear(cfg,yr);if(v==null)return'';
+    const vp=yr>2000?calcColForYear(cfg,yr-1):null;
+    const colYoy=(vp!=null&&vp>0)?(v-vp)/vp:null;
+    const cpiThis=MACRO[yr]?.inf;
+    let gapHint='';
+    if(colYoy!=null&&cpiThis!=null){
+      const gap=colYoy-cpiThis;
+      const gapColor=Math.abs(gap)<0.003?'var(--muted)':(gap>0?'var(--neg)':'var(--pos)');
+      const gapTxt=Math.abs(gap)<0.003?'≈ CPI':(gap>0?`+${(gap*100).toFixed(1)} pts vs CPI`:`${(gap*100).toFixed(1)} pts vs CPI`);
+      gapHint=` <span style="color:${gapColor}">· ${gapTxt}</span>`;
+    }
+    const yoyTxt=colYoy!=null?` <span style="color:${colYoy>=0?'var(--pos)':'var(--neg)'}">${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%</span>`:'';
+    return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">COL ${fmt(v)}/yr</span>${yoyTxt}${gapHint}</div>`;
+  })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${secondaryLine}${jobLine}${evLine}`;
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${secondaryLine}${colLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
