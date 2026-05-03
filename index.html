@@ -82,7 +82,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 
 /* Insight cards in sidebar */
 .ins-card{background:var(--s2);border:1px solid var(--border);padding:var(--sp-3);margin-bottom:var(--sp-2);}
-.ins-card h3{font-family:'Playfair Display',serif;font-size:var(--fs-lg);color:var(--accent);margin-bottom:var(--sp-2);font-style:italic;}
+.ins-card h3{font-family:'Playfair Display',serif;font-size:var(--fs-lg);color:var(--accent);margin-bottom:0.18rem;font-style:italic;}
+.ins-tag{display:block;font-family:'Playfair Display',serif;font-style:italic;font-size:var(--fs-xs);color:var(--muted);letter-spacing:0.05em;margin-bottom:var(--sp-2);opacity:0.9;}
 .jst{width:100%;border-collapse:collapse;font-size:var(--fs-sm);}
 .jst th{text-align:left;padding:0.3rem 0.45rem;font-size:var(--fs-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
 .jst td{padding:0.3rem 0.45rem;border-bottom:1px solid var(--border);}
@@ -381,11 +382,12 @@ body.empty #emptyState{display:flex;}
         <div id="emptyState">
           <div class="es-inner">
             <img src="cream-logo-512.png" alt="CREAM" width="360" height="360" style="display:block;margin:0 auto 1.5rem;max-width:80vw;height:auto">
-            <h2>Begin your ledger</h2>
-            <p>Add your first year of income and CREAM will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
+            <h2>Cash rules everything</h2>
+            <p style="font-style:italic;color:var(--accent);font-size:var(--fs-md);margin-bottom:0.6rem;letter-spacing:0.04em">Dollar dollar bill, y'all.</p>
+            <p>Add your first year of income and CREAM surfaces your earning story — percentile rank, social class, inflation drag, and forensic trend detection across the chambers of your career.</p>
             <div class="es-btns">
-              <button onclick="openAddYear()">+ Add First Year</button>
-              <button class="secondary" onclick="loadSampleData()">⚡ Try Sample Data</button>
+              <button onclick="openAddYear()">+ Add to the Cipher</button>
+              <button class="secondary" onclick="loadSampleData()">🎲 Drop the Sample</button>
             </div>
           </div>
         </div>
@@ -428,6 +430,7 @@ body.empty #emptyState{display:flex;}
         <p class="sec-head">About CREAM</p>
         <div class="ins-card">
           <h3>What it does</h3>
+          <span class="ins-tag">cash rules. so we count it.</span>
           <p style="font-size:0.65rem;color:var(--text);line-height:1.55;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, and pattern detection across decades of data. Pair with the <span style="color:var(--col-color)">CREAM COL companion</span> to overlay your personal cost of living directly on the chart.</p>
         </div>
         <div class="ins-card">
@@ -781,7 +784,7 @@ function renderLegend(){
 function renderInsights(){
   const el=document.getElementById('insightCards');
   const yrs=sortedYrs();
-  if(!yrs.length){el.innerHTML='<div class="ins-card" style="text-align:center;color:var(--muted);font-size:0.7rem;padding:1.4rem">Add a year of income to unlock CREAM insights.</div>';return;}
+  if(!yrs.length){el.innerHTML='<div class="ins-card" style="text-align:center;padding:1.6rem"><div style="font-family:\'Playfair Display\',serif;font-style:italic;font-size:var(--fs-lg);color:var(--accent);margin-bottom:0.4rem">Mathematics</div><div style="color:var(--muted);font-size:var(--fs-sm)">Add a year — let the bills speak.</div></div>';return;}
   const real=realSalaries();
   const cum=cumEarnings();
   const proj=projectSalaries();
@@ -836,6 +839,7 @@ function renderInsights(){
   let h='';
   h+=`<div class="ins-card">
     <h3>Peak Percentile Power</h3>
+    <span class="ins-tag">your apex. your moment.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.75rem">Exact salary needed to reclaim your all-time percentile rank</div>
 
     <div style="text-align:center;margin-bottom:0.7rem;padding:0.5rem 0;border:1px solid var(--border);background:var(--bg)">
@@ -927,6 +931,7 @@ function renderInsights(){
   const trendColor=tailDelta>1.5?'var(--pos)':tailDelta<-1.5?'var(--neg)':'var(--muted)';
   h+=`<div class="ins-card">
     <h3>Class Mobility</h3>
+    <span class="ins-tag">watch how the things change.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.55rem">Years spent in each US income class</div>
     <div style="display:flex;width:100%;height:22px;border:1px solid var(--border);overflow:hidden;margin-bottom:0.5rem">
       ${CLASS_ORDER.filter(c=>classYears[c.label]>0).map(c=>{
@@ -961,6 +966,7 @@ function renderInsights(){
   const verdictColor=velAvg>0.5?'var(--pos)':velAvg<-0.5?'var(--neg)':'var(--muted)';
   h+=`<div class="ins-card">
     <h3>Percentile Velocity</h3>
+    <span class="ins-tag">slope of the come-up.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Average percentile movement — last ${nVel} year${nVel>1?'s':''}</div>
     <div style="text-align:center;margin-bottom:0.5rem;padding:0.6rem 0;border:1px solid var(--border);background:var(--bg)">
       <div style="font-size:1.55rem;font-family:'Playfair Display',serif;color:${verdictColor};line-height:1">${velAvg>=0?'+':''}${velAvg.toFixed(1)}<span style="font-size:0.85rem"> pts/yr</span> ${velAvg>0.5?'↑':velAvg<-0.5?'↓':'→'}</div>
@@ -996,6 +1002,7 @@ function renderInsights(){
   const eventsTrim=events.slice(0,6);
   h+=`<div class="ins-card">
     <h3>Inflection Points</h3>
+    <span class="ins-tag">moments the script flipped.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Career accelerations and stagnant runs (real $)</div>
     ${eventsTrim.length?eventsTrim.map(ev=>{
       const icon=ev.type==='up'?'↑':'━';
@@ -1021,6 +1028,7 @@ function renderInsights(){
   });
   const decadeKeys=Object.keys(decades).map(Number).sort((a,b)=>a-b);
   h+=`<div class="ins-card"><h3>Decade Ledger</h3>
+    <span class="ins-tag">the chambers, by era.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Nominal · real · avg percentile per decade</div>
     <div style="display:grid;grid-template-columns:2.6rem 1fr 1fr 2.3rem;gap:0.25rem;font-size:0.52rem;color:var(--muted);padding-bottom:0.2rem;border-bottom:1px solid var(--border);margin-bottom:0.32rem;letter-spacing:0.08em;text-transform:uppercase">
       <span>Era</span><span>Nominal</span><span>Real</span><span style="text-align:right">Avg</span>
@@ -1052,6 +1060,7 @@ function renderInsights(){
   ghostYears.sort((a,b)=>a.real-b.real);
   const worstGhost=ghostYears.slice(0,3);
   h+=`<div class="ins-card"><h3>Inflation Drag</h3>
+    <span class="ins-tag">ghosts in the raise.</span>
     <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Lifetime purchasing power lost to inflation</div>
     <div style="text-align:center;margin-bottom:0.55rem;padding:0.55rem 0;border:1px solid var(--border);background:var(--bg)">
       <div style="font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Erased by inflation</div>
@@ -1085,6 +1094,7 @@ function renderInsights(){
     const wageMinusCol=(wageCagr!=null)?wageCagr-colCagr:null;
     h+=`<div class="ins-card">
       <h3>Your COL vs Inflation</h3>
+      <span class="ins-tag">what the bills really cost.</span>
       <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Personal cost-of-living growth vs official CPI · ${cFirst}–${cLast}${_hasUserCfg?'':' · using default profile'}</div>
 
       <div class="kpi-mini" style="margin-bottom:0.5rem">
