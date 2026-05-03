@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Insight</title>
+<title>CREAM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -14,7 +14,7 @@
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#f5a97e;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#d4a96a;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;
+  --inf-color:#d4a96a;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;
   /* Layout */
   --sidebar-w:300px;--drawer-w:320px;--topbar-h:48px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -120,6 +120,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 .cbtn.on-evt{border-color:var(--evt-color)!important;color:var(--evt-color)!important;}
 .cbtn.on-cuminf{border-color:var(--cuminf-color)!important;color:var(--cuminf-color)!important;}
 .cbtn.on-classBands{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--s2);}
+.cbtn.on-col{border-color:var(--col-color)!important;color:var(--col-color)!important;}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
 
@@ -290,7 +291,7 @@ body.empty #emptyState{display:flex;}
 <!-- TOPBAR -->
 <div id="topbar">
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-  <h1>Insight</h1>
+  <h1>CREAM</h1>
   <div class="tbsep"></div>
   <div class="tb-stats">
     <div class="tb-stat"><label>Total Earned</label><value id="sTotal">—</value></div>
@@ -347,6 +348,7 @@ body.empty #emptyState{display:flex;}
         </div>
         <div class="ctrl-group">
           <span class="ctrl-lbl">Lines</span>
+          <button class="cbtn" id="ov-col"  onclick="toggleOv('col')"  title="Personal cost of living from CREAM COL companion — configure in companion app">COL</button>
           <button class="cbtn" id="ov-real" onclick="toggleOv('real')" title="Inflation-adjusted salary in base-year dollars">Real $</button>
           <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')"  title="Your percentile rank vs all US individual earners">Percentile</button>
           <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')"  title="Cumulative lifetime earnings">Cumulative</button>
@@ -367,7 +369,7 @@ body.empty #emptyState{display:flex;}
         <div id="emptyState">
           <div class="es-inner">
             <h2>Begin your ledger</h2>
-            <p>Add your first year of income and Insight will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
+            <p>Add your first year of income and CREAM will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
             <div class="es-btns">
               <button onclick="openAddYear()">+ Add First Year</button>
               <button class="secondary" onclick="loadSampleData()">⚡ Try Sample Data</button>
@@ -409,10 +411,10 @@ body.empty #emptyState{display:flex;}
         </div>
       </div>
       <div class="dsec" id="ds-about">
-        <p class="sec-head">About Insight</p>
+        <p class="sec-head">About CREAM</p>
         <div class="ins-card">
           <h3>What it does</h3>
-          <p style="font-size:0.65rem;color:var(--text);line-height:1.55;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, and pattern detection across decades of data.</p>
+          <p style="font-size:0.65rem;color:var(--text);line-height:1.55;margin-bottom:0.55rem">A personal earnings ledger that turns year-by-year salary data into a forensic career picture — percentile rank vs all US earners, social-class mobility over time, inflation-adjusted purchasing power, and pattern detection across decades of data. Pair with the <span style="color:var(--col-color)">CREAM COL companion</span> to overlay your personal cost of living directly on the chart.</p>
         </div>
         <div class="ins-card">
           <h3>Features</h3>
@@ -450,6 +452,7 @@ body.empty #emptyState{display:flex;}
               <span style="color:var(--accent)">Fonts</span><span>Playfair Display + IBM Plex Mono (Google Fonts)</span>
               <span style="color:var(--accent)">Hosting</span><span>GitHub Pages (static)</span>
               <span style="color:var(--accent)">Source</span><span>github.com/seeholmes/Insight</span>
+              <span style="color:var(--col-color)">Companion</span><span>CREAM COL — cost-of-living model (localStorage bridge)</span>
             </div>
             <p style="margin-top:0.5rem;padding-top:0.4rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.58rem;font-style:italic">All data stays on your device.</p>
           </div>
@@ -663,7 +666,7 @@ MACRO=_s.macro;
 let EVENTS=_s.events||[];
 let eventNextId=_s.eventNextId||1;
 if(_s.events==null){migrateEventsFromMacro();}
-let ov={real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,crosshair:true};
+let ov={col:false,real:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -754,7 +757,7 @@ function renderLegend(){
 function renderInsights(){
   const el=document.getElementById('insightCards');
   const yrs=sortedYrs();
-  if(!yrs.length){el.innerHTML='<div class="ins-card" style="text-align:center;color:var(--muted);font-size:0.7rem;padding:1.4rem">Add a year of income to unlock Insights.</div>';return;}
+  if(!yrs.length){el.innerHTML='<div class="ins-card" style="text-align:center;color:var(--muted);font-size:0.7rem;padding:1.4rem">Add a year of income to unlock CREAM insights.</div>';return;}
   const real=realSalaries();
   const cum=cumEarnings();
   const proj=projectSalaries();
@@ -1174,6 +1177,42 @@ function setSmoothing(s){
   drawChart();
 }
 
+// ── CREAM COL COMPANION BRIDGE ───────────────────────────────────────────────
+const _COL_ZONES={0:{housing:1.65,food:1.35,transport:1.15},1:{housing:1.55,food:1.30,transport:1.12},2:{housing:1.20,food:1.15,transport:1.08},3:{housing:1.10,food:1.08,transport:1.05},4:{housing:0.88,food:0.95,transport:0.97},5:{housing:0.85,food:0.92,transport:0.96},6:{housing:1.02,food:1.00,transport:1.00},7:{housing:0.95,food:0.98,transport:1.00},8:{housing:1.15,food:1.05,transport:1.06},9:{housing:1.80,food:1.42,transport:1.22}};
+const _COL_INF_GEN={2000:0.665,2001:0.680,2002:0.691,2003:0.703,2004:0.720,2005:0.754,2006:0.778,2007:0.800,2008:0.831,2009:0.827,2010:0.843,2011:0.868,2012:0.885,2013:0.900,2014:0.913,2015:0.916,2016:0.921,2017:0.940,2018:0.960,2019:0.988,2020:1.000,2021:1.047,2022:1.131,2023:1.171,2024:1.200,2025:1.228,2026:1.258};
+const _COL_INF_RENT={2000:0.535,2001:0.553,2002:0.569,2003:0.583,2004:0.597,2005:0.614,2006:0.633,2007:0.653,2008:0.672,2009:0.683,2010:0.690,2011:0.700,2012:0.718,2013:0.741,2014:0.769,2015:0.806,2016:0.843,2017:0.879,2018:0.912,2019:0.955,2020:1.000,2021:1.080,2022:1.200,2023:1.280,2024:1.320,2025:1.355,2026:1.385};
+const _COL_INF_FI={2000:0.658,2001:0.678,2002:0.692,2003:0.706,2004:0.731,2005:0.748,2006:0.765,2007:0.800,2008:0.878,2009:0.855,2010:0.857,2011:0.910,2012:0.931,2013:0.941,2014:0.973,2015:0.973,2016:0.957,2017:0.965,2018:0.980,2019:0.988,2020:1.000,2021:1.035,2022:1.145,2023:1.205,2024:1.230,2025:1.255,2026:1.288};
+const _COL_INF_FO={2000:0.599,2001:0.622,2002:0.641,2003:0.657,2004:0.676,2005:0.700,2006:0.720,2007:0.743,2008:0.770,2009:0.784,2010:0.796,2011:0.814,2012:0.833,2013:0.851,2014:0.874,2015:0.896,2016:0.917,2017:0.940,2018:0.961,2019:0.980,2020:1.000,2021:1.042,2022:1.135,2023:1.205,2024:1.240,2025:1.272,2026:1.308};
+const _COL_HVI={2000:0.444,2001:0.471,2002:0.490,2003:0.505,2004:0.545,2005:0.622,2006:0.646,2007:0.609,2008:0.541,2009:0.512,2010:0.520,2011:0.491,2012:0.520,2013:0.588,2014:0.630,2015:0.660,2016:0.694,2017:0.750,2018:0.794,2019:0.825,2020:1.000,2021:1.165,2022:1.487,2023:1.432,2024:1.448,2025:1.467,2026:1.485};
+const _COL_GAS={2000:1.51,2001:1.46,2002:1.36,2003:1.59,2004:1.88,2005:2.30,2006:2.59,2007:2.80,2008:3.27,2009:2.35,2010:2.79,2011:3.53,2012:3.64,2013:3.53,2014:3.37,2015:2.45,2016:2.14,2017:2.42,2018:2.72,2019:2.60,2020:2.17,2021:3.01,2022:3.96,2023:3.53,2024:3.45,2025:3.30,2026:3.38};
+const _COL_ELEC={2000:0.082,2001:0.086,2002:0.084,2003:0.086,2004:0.090,2005:0.099,2006:0.104,2007:0.107,2008:0.115,2009:0.115,2010:0.119,2011:0.120,2012:0.120,2013:0.122,2014:0.125,2015:0.125,2016:0.126,2017:0.127,2018:0.129,2019:0.130,2020:0.137,2021:0.140,2022:0.150,2023:0.160,2024:0.165,2025:0.168,2026:0.171};
+const _COL_CHARGE={standard:1.00,offpeak:0.52,free:0.00};
+function calcColForYear(cfg,y){
+  if(y<2000||y>2026)return null;
+  const zone=(_COL_ZONES[parseInt((cfg.zip||'')[0])])||{housing:1,food:1,transport:1};
+  const inf=_COL_INF_GEN[y]??1;
+  let housing;
+  if(cfg.housing==='rent'){
+    housing=15600*zone.housing*(_COL_INF_RENT[y]??1);
+  } else {
+    const loan=cfg.homePrice*0.80,r=(cfg.interestRate/100)/12;
+    const annPI=(r===0?loan/360:loan*(r*Math.pow(1+r,360))/(Math.pow(1+r,360)-1))*12;
+    const purHVI=_COL_HVI[cfg.purchaseYear]??1;
+    const curVal=cfg.homePrice*((_COL_HVI[y]??_COL_HVI[2026])/purHVI);
+    housing=annPI+curVal*0.011+(cfg.homePrice*0.005)*(inf/(_COL_INF_GEN[cfg.purchaseYear]??1))+curVal*0.010;
+  }
+  const food=cfg.eatInRatio*(5200*zone.food*(_COL_INF_FI[y]??1))+(1-cfg.eatInRatio)*(12500*zone.food*(_COL_INF_FO[y]??1));
+  const gp=(_COL_GAS[y]??_COL_GAS[2020])*zone.transport;
+  const ep=(_COL_ELEC[y]??_COL_ELEC[2020])*(_COL_CHARGE[cfg.chargingMode]??1);
+  const gas=(cfg.milesPerYear/cfg.mpg)*gp+cfg.milesPerYear*0.082*inf;
+  const ev=(cfg.milesPerYear/3.5)*ep+cfg.milesPerYear*0.038*inf;
+  const transport=cfg.evRatio*ev+(1-cfg.evRatio)*gas;
+  return Math.round(housing+food+transport+3480*inf+5400*inf+4200*inf);
+}
+function loadColData(){
+  try{const s=localStorage.getItem('cream_cfg');return s?JSON.parse(s):null;}catch{return null;}
+}
+
 function drawChart(){
   const W=wrap.clientWidth,H=wrap.clientHeight;
   if(!W||!H)return;
@@ -1369,6 +1408,18 @@ function drawChart(){
     ctx.strokeStyle='rgba(245,233,126,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
     ctx.beginPath();pjYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),ys(pjVals[i])):ctx.lineTo(xp(xi),ys(pjVals[i]));});ctx.stroke();ctx.setLineDash([]);
   }
+  if(ov.col){
+    const colCfg=loadColData();
+    if(colCfg){
+      const colYrs=allYrs.filter(y=>y>=2000&&y<=2026);
+      const colVals=colYrs.map(y=>calcColForYear(colCfg,y));
+      ctx.strokeStyle='rgba(240,168,0,0.9)';ctx.lineWidth=2;ctx.setLineDash([5,3]);
+      ctx.beginPath();colYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);const v=colVals[i];if(v==null)return;i===0||colVals.slice(0,i).every(v=>v==null)?ctx.moveTo(xp(xi),ys(v)):ctx.lineTo(xp(xi),ys(v));});ctx.stroke();ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle='rgba(240,168,0,0.4)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='center';
+      ctx.fillText('COL: open CREAM companion to configure',pad.left+cW/2,pad.top+16);
+    }
+  }
 
   // Dots
   yrs.forEach(yr=>{
@@ -1560,6 +1611,7 @@ function toggleOv(k){
 // ── OVERLAY LEGEND (HTML overlay over canvas) ────────────────────────────────
 const _cssVar=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
 const OV_META={
+  col:{label:'Cost of Living',color:_cssVar('--col-color')||'#f0a800'},
   real:{label:'Real $',color:_cssVar('--real')||'#7eb8f5'},
   pct:{label:'Percentile',color:_cssVar('--pct')||'#c47ef5'},
   cum:{label:'Cumulative',color:_cssVar('--cum')||'#f5a97e'},
