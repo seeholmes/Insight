@@ -1066,6 +1066,54 @@ function renderInsights(){
       </div>`).join('')}`:'<div style="font-size:0.58rem;color:var(--muted);text-align:center">No ghost-raise years detected.</div>'}
   </div>`;
 
+  // ── Your COL vs CPI ─────────────────────────────────────────────────────────
+  const _colCfgIns=getEffectiveColCfg();
+  const _hasUserCfg=!!loadColData();
+  const _colYrs=yrs.filter(y=>y>=2000&&y<=2026);
+  if(_colYrs.length>=2){
+    const cFirst=_colYrs[0],cLast=_colYrs[_colYrs.length-1],cSpan=cLast-cFirst;
+    const colA=calcColForYear(_colCfgIns,cFirst),colB=calcColForYear(_colCfgIns,cLast);
+    const colCagr=(colA&&colB&&cSpan>0)?Math.pow(colB/colA,1/cSpan)-1:0;
+    let cpiIdx=1;for(let y=cFirst+1;y<=cLast;y++){cpiIdx*=1+(MACRO[y]?.inf??0);}
+    const cpiCagr=cSpan>0?Math.pow(cpiIdx,1/cSpan)-1:0;
+    const gap=colCagr-cpiCagr;
+    const gapColor=gap>0.005?'var(--neg)':(gap<-0.005?'var(--pos)':'var(--muted)');
+    const gapWord=gap>0.005?'Your lifestyle outpaces CPI':(gap<-0.005?'Your lifestyle below CPI':'Tracking CPI');
+    // Wage growth comparison: how much faster you'd need to earn just to keep up with COL
+    const wageStart=salaries[cFirst]??0,wageEnd=salaries[cLast]??0;
+    const wageCagr=(wageStart>0&&wageEnd>0&&cSpan>0)?Math.pow(wageEnd/wageStart,1/cSpan)-1:null;
+    const wageMinusCol=(wageCagr!=null)?wageCagr-colCagr:null;
+    h+=`<div class="ins-card">
+      <h3>Your COL vs Inflation</h3>
+      <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Personal cost-of-living growth vs official CPI · ${cFirst}–${cLast}${_hasUserCfg?'':' · using default profile'}</div>
+
+      <div class="kpi-mini" style="margin-bottom:0.5rem">
+        <div class="kpi-m">
+          <label>Your COL</label>
+          <value style="color:var(--col-color)">${colCagr>=0?'+':''}${(colCagr*100).toFixed(2)}%/yr</value>
+        </div>
+        <div class="kpi-m">
+          <label>US CPI</label>
+          <value style="color:var(--inf-color)">${cpiCagr>=0?'+':''}${(cpiCagr*100).toFixed(2)}%/yr</value>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:0.6rem 0;border:1px solid var(--border);background:var(--bg);margin-bottom:0.55rem">
+        <div style="font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.18rem">COL ${gap>=0?'above':'below'} CPI</div>
+        <div style="font-size:1.4rem;font-family:'Playfair Display',serif;font-style:italic;color:${gapColor};line-height:1">${gap>=0?'+':''}${(gap*100).toFixed(2)}<span style="font-size:0.7rem"> pts/yr</span></div>
+        <div style="font-size:0.6rem;color:${gapColor};margin-top:0.22rem">${gapWord}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr auto;gap:0.3rem 0.5rem;font-size:0.62rem;line-height:1.5;padding-top:0.45rem;border-top:1px solid var(--border)">
+        <span style="color:var(--muted)">${cFirst} COL</span><span>${fmt(colA)}/yr</span>
+        <span style="color:var(--muted)">${cLast} COL</span><span style="color:var(--col-color)">${fmt(colB)}/yr <span style="color:var(--muted)">(+${(((colB/colA)-1)*100).toFixed(0)}%)</span></span>
+        <span style="color:var(--muted)">${cFirst}→${cLast} CPI</span><span style="color:var(--inf-color)">+${((cpiIdx-1)*100).toFixed(0)}% cumulative</span>
+        ${wageCagr!=null?`<span style="color:var(--muted);padding-top:0.3rem;border-top:1px dashed var(--border);grid-column:1/-1;margin-top:0.15rem"></span><span style="color:var(--muted)">Your wage growth</span><span>${(wageCagr*100).toFixed(2)}%/yr</span>
+        <span style="color:var(--muted)">Wage − COL gap</span><span style="color:${wageMinusCol>=0?'var(--pos)':'var(--neg)'}">${wageMinusCol>=0?'+':''}${(wageMinusCol*100).toFixed(2)}%/yr ${wageMinusCol>=0?'(getting ahead)':'(falling behind)'}</span>`:''}
+      </div>
+    </div>`;
+  }
+
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
     <table class="jst">
