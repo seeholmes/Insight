@@ -1724,9 +1724,35 @@ canvas.addEventListener('mousemove',e=>{
     const yoyTxt=colYoy!=null?` <span style="color:${colYoy>=0?'var(--pos)':'var(--neg)'}">${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%</span>`:'';
     return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">COL ${fmt(v)}/yr</span>${yoyTxt}${gapHint}</div>`;
   })();
+  // Net raise vs COL and CPI — the $-figure punchline
+  const netLine=(()=>{
+    if(isProj)return'';
+    const yrsList=sortedYrs();
+    const idx=yrsList.indexOf(yr);
+    if(idx<=0)return'';
+    const prevYr=yrsList[idx-1],prevSal=salaries[prevYr];
+    if(!prevSal)return'';
+    const salDelta=sal-prevSal;
+    // Net vs CPI — raise minus what CPI would have eroded from prior salary
+    const cpiRate=MACRO[yr]?.inf;
+    const netVsCpi=cpiRate!=null?salDelta-prevSal*cpiRate:null;
+    // Net vs COL — raise minus the dollar growth in your personal cost of living
+    let netVsCol=null;
+    if(yr>=2000&&yr<=2026&&prevYr>=2000&&prevYr<=2026){
+      const cfg=getEffectiveColCfg();
+      const colA=calcColForYear(cfg,prevYr),colB=calcColForYear(cfg,yr);
+      if(colA!=null&&colB!=null)netVsCol=salDelta-(colB-colA);
+    }
+    if(netVsCol==null&&netVsCpi==null)return'';
+    const fmtNet=v=>`<span style="color:${v>=0?'var(--pos)':'var(--neg)'}">${v>=0?'+':'−'}${fmt(Math.abs(v))}</span>`;
+    const parts=[];
+    if(netVsCol!=null)parts.push(`vs COL ${fmtNet(netVsCol)}`);
+    if(netVsCpi!=null)parts.push(`vs CPI ${fmtNet(netVsCpi)}`);
+    return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">Net raise</span>${parts.join(' <span style="color:var(--muted)">·</span> ')}</div>`;
+  })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${secondaryLine}${colLine}${jobLine}${evLine}`;
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${secondaryLine}${colLine}${netLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
