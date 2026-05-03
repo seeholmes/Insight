@@ -1607,10 +1607,34 @@ function drawChart(){
     ctx.fillText('+'+Math.round((maxIdx-1)*100)+'% total',lx+4,ly+3);
   }
   if(ov.gdp){
-    ctx.strokeStyle='rgba(111,207,151,0.28)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
-    ctx.beginPath();let fg=true;
-    yrs.forEach(yr=>{const g=MACRO[yr]?.gdp;if(g==null)return;const xi=allYrs.indexOf(yr);const py=pad.top+cH-((g+4)/12)*cH*0.4-cH*0.08;fg?(ctx.moveTo(xp(xi),py),fg=false):ctx.lineTo(xp(xi),py);});
-    ctx.stroke();ctx.setLineDash([]);
+    // GDP plotted in the lower 40% strip of the chart, scaled -4% to +8%
+    const gdpY=g=>pad.top+cH-((g+4)/12)*cH*0.4-cH*0.08;
+    const zeroY=gdpY(0);
+    // Zero baseline guide so the line has context
+    ctx.strokeStyle='rgba(111,207,151,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(111,207,151,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText('GDP 0%',pad.left+cW+4,zeroY+3);
+    // Build point list once so we can fill + stroke
+    const pts=[];
+    yrs.forEach(yr=>{const g=MACRO[yr]?.gdp;if(g==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),gdpY(g),g]);});
+    if(pts.length){
+      // Filled area between line and zero — green when positive, faded red when negative is conveyed by line color
+      ctx.fillStyle='rgba(111,207,151,0.12)';
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0],zeroY);
+      pts.forEach(([x,y])=>ctx.lineTo(x,y));
+      ctx.lineTo(pts[pts.length-1][0],zeroY);
+      ctx.closePath();ctx.fill();
+      // Stroke line — bumped opacity 0.28 → 0.9 and width 1.5 → 2.2
+      ctx.strokeStyle='rgba(111,207,151,0.9)';ctx.lineWidth=2.2;ctx.setLineDash([5,3]);
+      ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      // Dot markers at each year so it reads as discrete data
+      pts.forEach(([x,y,g])=>{
+        ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);
+        ctx.fillStyle=g<0?'rgba(235,87,87,0.95)':'rgba(111,207,151,0.95)';ctx.fill();
+      });
+    }
   }
 
   // Bars
