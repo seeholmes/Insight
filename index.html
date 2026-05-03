@@ -1763,10 +1763,14 @@ canvas.addEventListener('mousemove',e=>{
       if(colA!=null&&colB!=null)netVsCol=salDelta-(colB-colA);
     }
     if(netVsCol==null&&netVsCpi==null)return'';
-    const fmtNet=v=>`<span style="color:${v>=0?'var(--pos)':'var(--neg)'}">${v>=0?'+':'−'}${fmt(Math.abs(v))}</span>`;
+    const fmtNet=(v,base)=>{
+      const pct=base>0?(v/base)*100:0;
+      const sign=v>=0?'+':'−';
+      return `<span style="color:${v>=0?'var(--pos)':'var(--neg)'}">${sign}${fmt(Math.abs(v))} (${sign}${Math.abs(pct).toFixed(1)}%)</span>`;
+    };
     const parts=[];
-    if(netVsCol!=null)parts.push(`vs COL ${fmtNet(netVsCol)}`);
-    if(netVsCpi!=null)parts.push(`vs CPI ${fmtNet(netVsCpi)}`);
+    if(netVsCol!=null)parts.push(`vs COL ${fmtNet(netVsCol,prevSal)}`);
+    if(netVsCpi!=null)parts.push(`vs CPI ${fmtNet(netVsCpi,prevSal)}`);
     return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">Net raise</span>${parts.join(' <span style="color:var(--muted)">·</span> ')}</div>`;
   })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
