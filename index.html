@@ -1316,14 +1316,34 @@ function saveColCfg(cfg){
 function getEffectiveColCfg(){return loadColData()||{...DEFAULT_COL_CFG};}
 function updateColField(field,raw){
   const cfg=getEffectiveColCfg();
+  const wasSaved=!!loadColData();
   let v=raw;
   if(['eatInRatio','evRatio'].includes(field))v=Math.max(0,Math.min(1,parseFloat(raw)||0));
   else if(['milesPerYear','mpg','homePrice','purchaseYear'].includes(field))v=parseFloat(raw)||0;
   else if(field==='interestRate')v=parseFloat(raw)||0;
   cfg[field]=v;
   saveColCfg(cfg);
-  renderColPanel();
+  // Housing toggle changes which fields appear/disappear → full re-render
+  if(field==='housing'){renderColPanel();drawChart();return;}
+  // Other fields: surgical inline updates so focused input keeps focus
+  if(field==='chargingMode'){
+    document.querySelectorAll('[data-charge]').forEach(b=>b.classList.toggle('primary',b.dataset.charge===v));
+  }
+  if(field==='eatInRatio'){const lbl=document.getElementById('colEatLbl');if(lbl)lbl.textContent=Math.round(v*100)+'%';}
+  if(field==='evRatio'){const lbl=document.getElementById('colEvLbl');if(lbl)lbl.textContent=Math.round(v*100)+'%';}
+  if(!wasSaved){const s=document.getElementById('colStatus');if(s)s.innerHTML='<span style="color:var(--pos)">●</span> Saved profile';}
+  updateColPreview(cfg);
   drawChart();
+}
+function updateColPreview(cfg){
+  const pv=document.getElementById('colPreview');if(!pv)return;
+  const yr=new Date().getFullYear()<=2026?new Date().getFullYear():2026;
+  const v=calcColForYear(cfg,yr);
+  pv.innerHTML=`
+    <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">Live preview · ${yr}</div>
+    <div style="font-size:1.4rem;font-family:'Playfair Display',serif;font-style:italic;color:var(--col-color);line-height:1">${v?fmt(v)+'/yr':'—'}</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:0.4rem;line-height:1.5">Toggle the <span style="color:var(--col-color)">COL</span> button above the chart to see this rendered as a line across all years 2000–2026.</div>
+  `;
 }
 function resetColCfg(){
   saveColCfg({...DEFAULT_COL_CFG});
@@ -1341,7 +1361,7 @@ function renderColPanel(){
   const isOwning=cfg.housing==='own';
   const sourceTag=stored?'<span style="color:var(--pos)">●</span> Saved profile':'<span style="color:var(--muted)">○</span> Default profile (not yet saved — edit any field to save)';
   el.innerHTML=`
-    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;letter-spacing:0.06em;text-transform:uppercase">Status: ${sourceTag}</div>
+    <div id="colStatus" style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;letter-spacing:0.06em;text-transform:uppercase">Status: ${sourceTag}</div>
 
     <div class="frow"><span class="flbl" style="width:80px">ZIP</span>
       <input class="finput" type="text" maxlength="5" value="${cfg.zip||''}" placeholder="e.g. 60601" oninput="updateColField('zip',this.value)">
@@ -1367,7 +1387,7 @@ function renderColPanel(){
 
     <div class="frow"><span class="flbl" style="width:80px">Eat in %</span>
       <input class="finput" type="range" min="0" max="1" step="0.05" value="${cfg.eatInRatio||0}" oninput="updateColField('eatInRatio',this.value)" style="flex:1">
-      <span style="font-size:var(--fs-sm);color:var(--accent);width:38px;text-align:right">${Math.round((cfg.eatInRatio||0)*100)}%</span>
+      <span id="colEatLbl" style="font-size:var(--fs-sm);color:var(--accent);width:38px;text-align:right">${Math.round((cfg.eatInRatio||0)*100)}%</span>
     </div>
 
     <div class="frow"><span class="flbl" style="width:80px">Miles/yr</span>
@@ -1380,26 +1400,16 @@ function renderColPanel(){
 
     <div class="frow"><span class="flbl" style="width:80px">EV ratio</span>
       <input class="finput" type="range" min="0" max="1" step="0.05" value="${cfg.evRatio||0}" oninput="updateColField('evRatio',this.value)" style="flex:1">
-      <span style="font-size:var(--fs-sm);color:var(--accent);width:38px;text-align:right">${Math.round((cfg.evRatio||0)*100)}%</span>
+      <span id="colEvLbl" style="font-size:var(--fs-sm);color:var(--accent);width:38px;text-align:right">${Math.round((cfg.evRatio||0)*100)}%</span>
     </div>
 
     <div class="frow"><span class="flbl" style="width:80px">Charging</span>
-      <button class="btn-sm ${cfg.chargingMode==='standard'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','standard')">Std</button>
-      <button class="btn-sm ${cfg.chargingMode==='offpeak'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','offpeak')">Off-peak</button>
-      <button class="btn-sm ${cfg.chargingMode==='free'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','free')">Free</button>
+      <button data-charge="standard" class="btn-sm ${cfg.chargingMode==='standard'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','standard')">Std</button>
+      <button data-charge="offpeak" class="btn-sm ${cfg.chargingMode==='offpeak'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','offpeak')">Off-peak</button>
+      <button data-charge="free" class="btn-sm ${cfg.chargingMode==='free'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','free')">Free</button>
     </div>
   `;
-  // Live preview: this year's COL with breakdown
-  const pv=document.getElementById('colPreview');
-  if(pv){
-    const yr=new Date().getFullYear()<=2026?new Date().getFullYear():2026;
-    const v=calcColForYear(cfg,yr);
-    pv.innerHTML=`
-      <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">Live preview · ${yr}</div>
-      <div style="font-size:1.4rem;font-family:'Playfair Display',serif;font-style:italic;color:var(--col-color);line-height:1">${v?fmt(v)+'/yr':'—'}</div>
-      <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:0.4rem;line-height:1.5">Toggle the <span style="color:var(--col-color)">COL</span> button above the chart to see this rendered as a line across all years 2000–2026.</div>
-    `;
-  }
+  updateColPreview(cfg);
 }
 
 function drawChart(){
