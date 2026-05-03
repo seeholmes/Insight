@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CREAM</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'><rect x='1.5' y='1.5' width='33' height='33' rx='5' fill='%230b0c0e' stroke='%23d4a96a' stroke-width='1.6'/><text x='9' y='26.5' font-family='Georgia,serif' font-style='italic' font-size='22' font-weight='700' fill='%23d4a96a'>$</text><circle cx='22.5' cy='25.5' r='1.7' fill='%23d4a96a' opacity='0.4'/><circle cx='26' cy='20' r='1.7' fill='%23d4a96a' opacity='0.7'/><circle cx='29.5' cy='14' r='1.7' fill='%23d4a96a'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -36,7 +37,9 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   border-bottom:1px solid var(--border);background:var(--s1);
   position:relative;z-index:10;
 }
-#cream-brand{display:flex;flex-direction:column;justify-content:center;white-space:nowrap;margin-right:0.5rem;line-height:1;}
+#cream-brand{display:inline-flex;align-items:center;gap:0.55rem;white-space:nowrap;margin-right:0.5rem;line-height:1;}
+.cream-mark{flex-shrink:0;display:block;}
+.cream-words{display:flex;flex-direction:column;justify-content:center;line-height:1;}
 #cream-brand h1{font-family:'Bebas Neue',cursive;font-size:1.9rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
 #cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.44rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:1px;}
 .tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
@@ -294,8 +297,17 @@ body.empty #emptyState{display:flex;}
 <div id="topbar">
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
   <div id="cream-brand">
-    <h1>CREAM</h1>
-    <span class="cream-sub">Cash Rules Everything Around Me</span>
+    <svg class="cream-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="34" height="34" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="33" height="33" rx="5" fill="var(--bg)" stroke="var(--accent)" stroke-width="1.6"/>
+      <text x="9" y="26.5" font-family="Playfair Display,Georgia,serif" font-style="italic" font-size="22" font-weight="700" fill="var(--accent)">$</text>
+      <circle cx="22.5" cy="25.5" r="1.7" fill="var(--accent)" opacity="0.4"/>
+      <circle cx="26"   cy="20"   r="1.7" fill="var(--accent)" opacity="0.7"/>
+      <circle cx="29.5" cy="14"   r="1.7" fill="var(--accent)"/>
+    </svg>
+    <div class="cream-words">
+      <h1>CREAM</h1>
+      <span class="cream-sub">Cash Rules Everything Around Me</span>
+    </div>
   </div>
   <div class="tbsep"></div>
   <div class="tb-stats">
@@ -373,6 +385,13 @@ body.empty #emptyState{display:flex;}
         <div id="ovLegend"></div>
         <div id="emptyState">
           <div class="es-inner">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="76" height="76" aria-hidden="true" style="display:block;margin:0 auto 1.1rem">
+              <rect x="1.5" y="1.5" width="33" height="33" rx="5" fill="var(--bg)" stroke="var(--accent)" stroke-width="1.6"/>
+              <text x="9" y="26.5" font-family="Playfair Display,Georgia,serif" font-style="italic" font-size="22" font-weight="700" fill="var(--accent)">$</text>
+              <circle cx="22.5" cy="25.5" r="1.7" fill="var(--accent)" opacity="0.4"/>
+              <circle cx="26"   cy="20"   r="1.7" fill="var(--accent)" opacity="0.7"/>
+              <circle cx="29.5" cy="14"   r="1.7" fill="var(--accent)"/>
+            </svg>
             <h2>Begin your ledger</h2>
             <p>Add your first year of income and CREAM will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
             <div class="es-btns">
