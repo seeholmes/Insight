@@ -18,7 +18,7 @@
   /* Chart overlay colors (consolidated; was hardcoded inline) */
   --inf-color:#d4a96a;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;
   /* Layout */
-  --sidebar-w:300px;--drawer-w:320px;--topbar-h:64px;--tap:44px;--gap:12px;
+  --sidebar-w:300px;--drawer-w:320px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
   --fs-xs:0.65rem;   /* 10.4px — tiny labels (uppercase) */
   --fs-sm:0.72rem;   /* 11.5px — UI controls */
@@ -38,11 +38,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   border-bottom:1px solid var(--border);background:var(--s1);
   position:relative;z-index:10;
 }
-#cream-brand{display:inline-flex;align-items:center;gap:0.7rem;white-space:nowrap;margin-right:0.6rem;line-height:1;}
-.cream-mark{flex-shrink:0;display:block;width:56px;height:56px;}
+#cream-brand{display:inline-flex;align-items:center;gap:0.9rem;white-space:nowrap;margin-right:0.7rem;line-height:1;}
+.cream-mark{flex-shrink:0;display:block;width:112px;height:112px;}
 .cream-words{display:flex;flex-direction:column;justify-content:center;line-height:1;}
-#cream-brand h1{font-family:'Bebas Neue',cursive;font-size:2.4rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
-#cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.55rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:3px;}
+#cream-brand h1{font-family:'Bebas Neue',cursive;font-size:3.6rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
+#cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:6px;}
 .tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
 .tb-stats{display:flex;gap:0;flex:1;}
 .tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);}
@@ -298,7 +298,7 @@ body.empty #emptyState{display:flex;}
 <div id="topbar">
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
   <div id="cream-brand">
-    <img class="cream-mark" src="cream-logo-96.png" srcset="cream-logo-96.png 1x, cream-logo-256.png 2x" alt="CREAM" width="56" height="56">
+    <img class="cream-mark" src="cream-logo-256.png" srcset="cream-logo-256.png 1x, cream-logo-512.png 2x" alt="CREAM" width="112" height="112">
     <div class="cream-words">
       <h1>CREAM</h1>
       <span class="cream-sub">Cash Rules Everything Around Me</span>
@@ -380,7 +380,7 @@ body.empty #emptyState{display:flex;}
         <div id="ovLegend"></div>
         <div id="emptyState">
           <div class="es-inner">
-            <img src="cream-logo-256.png" alt="CREAM" width="180" height="180" style="display:block;margin:0 auto 1.4rem">
+            <img src="cream-logo-512.png" alt="CREAM" width="360" height="360" style="display:block;margin:0 auto 1.5rem;max-width:80vw;height:auto">
             <h2>Begin your ledger</h2>
             <p>Add your first year of income and CREAM will surface your earning story — percentile rank, social class, inflation drag, and forensic trend detection. Or load sample data to explore first.</p>
             <div class="es-btns">
