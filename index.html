@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CREAM</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -36,7 +36,9 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   border-bottom:1px solid var(--border);background:var(--s1);
   position:relative;z-index:10;
 }
-#topbar h1{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent);font-style:italic;white-space:nowrap;margin-right:0.5rem;}
+#cream-brand{display:flex;flex-direction:column;justify-content:center;white-space:nowrap;margin-right:0.5rem;line-height:1;}
+#cream-brand h1{font-family:'Bebas Neue',cursive;font-size:1.9rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
+#cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.44rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:1px;}
 .tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
 .tb-stats{display:flex;gap:0;flex:1;}
 .tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);}
@@ -291,7 +293,10 @@ body.empty #emptyState{display:flex;}
 <!-- TOPBAR -->
 <div id="topbar">
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-  <h1>CREAM</h1>
+  <div id="cream-brand">
+    <h1>CREAM</h1>
+    <span class="cream-sub">Cash Rules Everything Around Me</span>
+  </div>
   <div class="tbsep"></div>
   <div class="tb-stats">
     <div class="tb-stat"><label>Total Earned</label><value id="sTotal">—</value></div>
