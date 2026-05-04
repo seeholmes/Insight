@@ -1568,13 +1568,27 @@ function drawChart(){
   // Overlays
   if(ov.inf){
     const infPts=yrs.map(yr=>{const v=(MACRO[yr]?.inf??0)/0.08*cH*0.42;return[xp(allYrs.indexOf(yr)),pad.top+cH-v];});
-    // filled area
-    ctx.fillStyle='rgba(212,169,106,0.18)';ctx.beginPath();
+    // filled area (bumped 0.18 → 0.22)
+    ctx.fillStyle='rgba(212,169,106,0.22)';ctx.beginPath();
     infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
     ctx.lineTo(infPts[infPts.length-1][0],pad.top+cH);ctx.lineTo(infPts[0][0],pad.top+cH);ctx.closePath();ctx.fill();
-    // stroke line on top
-    ctx.strokeStyle='rgba(212,169,106,0.85)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+    // stroke line (0.85 → 0.95, 1.5 → 2.2)
+    ctx.strokeStyle='rgba(212,169,106,0.95)';ctx.lineWidth=2.2;ctx.setLineDash([3,3]);
     ctx.beginPath();infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    // Per-year dots — red for high-inflation years (≥4%)
+    infPts.forEach(([x,y],i)=>{
+      const r=MACRO[yrs[i]]?.inf??0;
+      ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);
+      ctx.fillStyle=r>=0.04?'rgba(235,87,87,0.95)':'rgba(212,169,106,0.95)';
+      ctx.fill();
+    });
+    // End label — current inflation rate
+    const lastInf=MACRO[yrs[yrs.length-1]]?.inf;
+    if(lastInf!=null){
+      const [lx,ly]=infPts[infPts.length-1];
+      ctx.fillStyle='rgba(212,169,106,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+      ctx.fillText((lastInf*100).toFixed(1)+'%',lx+5,ly+3);
+    }
   }
   if(ov.cuminf){
     // Build cumulative index: 1.0 at first year, compounding each year's inflation
@@ -1589,22 +1603,24 @@ function drawChart(){
     const ticks=[1.0,1.25,1.5,1.75,2.0,2.25,2.5].filter(v=>v<=maxIdx+0.05);
     ticks.forEach(v=>{
       const y=yCI(v);
-      ctx.strokeStyle='rgba(255,127,127,0.12)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+      ctx.strokeStyle='rgba(255,127,127,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
       ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='rgba(255,127,127,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-      ctx.fillText(Math.round((v-1)*100)+'%',pad.left+cW+4,y+3);
+      ctx.fillStyle='rgba(255,127,127,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+      ctx.fillText('+'+Math.round((v-1)*100)+'%',pad.left+cW+4,y+3);
     });
-    // filled area
-    ctx.fillStyle='rgba(255,127,127,0.10)';ctx.beginPath();
+    // Filled area (0.10 → 0.15)
+    ctx.fillStyle='rgba(255,127,127,0.15)';ctx.beginPath();
     cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
     ctx.lineTo(cumPts[cumPts.length-1][0],pad.top+cH);ctx.lineTo(cumPts[0][0],pad.top+cH);ctx.closePath();ctx.fill();
-    // stroke line
-    ctx.strokeStyle='rgba(255,127,127,0.9)';ctx.lineWidth=2;ctx.setLineDash([5,3]);
+    // Stroke line (0.9 → 0.95, 2 → 2.4)
+    ctx.strokeStyle='rgba(255,127,127,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([5,3]);
     ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
-    // end label
+    // Per-year dots
+    cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(255,127,127,0.95)';ctx.fill();});
+    // End label
     const[lx,ly]=cumPts[cumPts.length-1];
-    ctx.fillStyle='rgba(255,127,127,0.9)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText('+'+Math.round((maxIdx-1)*100)+'% total',lx+4,ly+3);
+    ctx.fillStyle='rgba(255,127,127,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText('+'+Math.round((maxIdx-1)*100)+'% total',lx+5,ly+3);
   }
   if(ov.gdp){
     // GDP plotted in the lower 40% strip of the chart, scaled -4% to +8%
@@ -1664,21 +1680,60 @@ function drawChart(){
   ctx.stroke();
 
   if(ov.real){
-    ctx.strokeStyle='rgba(126,184,245,0.8)';ctx.lineWidth=1.8;ctx.setLineDash([6,3]);
-    ctx.beginPath();yrs.forEach((yr,i)=>{const p=[xp(allYrs.indexOf(yr)),pad.top+cH*(1-realVals[i]/maxNom)];i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);});ctx.stroke();ctx.setLineDash([]);
+    const realPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-realVals[i]/maxNom)]);
+    ctx.strokeStyle='rgba(126,184,245,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([6,3]);
+    ctx.beginPath();realPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    realPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(126,184,245,0.95)';ctx.fill();});
+    // End label — current real $
+    const [lx,ly]=realPts[realPts.length-1];
+    ctx.fillStyle='rgba(126,184,245,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText(fmtK(realVals[realVals.length-1]),lx+5,ly+3);
   }
   if(ov.cum){
-    ctx.strokeStyle='rgba(245,169,126,0.7)';ctx.lineWidth=1.8;ctx.setLineDash([3,3]);
-    ctx.beginPath();yrs.forEach(yr=>{const p=[xp(allYrs.indexOf(yr)),pad.top+cH*(1-cum[yr]/maxCum)];const i=yrs.indexOf(yr);i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);});ctx.stroke();ctx.setLineDash([]);
-    // right axis label
-    ctx.fillStyle='rgba(245,169,126,0.5)';ctx.textAlign='left';ctx.font='9px IBM Plex Mono,monospace';
-    ctx.fillText(fmtK(maxCum),pad.left+cW+4,pad.top+8);
+    const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-cum[yr]/maxCum)]);
+    // Filled area below the line (cum is monotonic — looks great as a mass)
+    ctx.fillStyle='rgba(245,169,126,0.14)';ctx.beginPath();
+    ctx.moveTo(cumPts[0][0],pad.top+cH);
+    cumPts.forEach(([x,y])=>ctx.lineTo(x,y));
+    ctx.lineTo(cumPts[cumPts.length-1][0],pad.top+cH);ctx.closePath();ctx.fill();
+    // Stroke
+    ctx.strokeStyle='rgba(245,169,126,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([3,3]);
+    ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    // Per-year dots
+    cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(245,169,126,0.95)';ctx.fill();});
+    // End label — total earned to date
+    const lastCum=cum[yrs[yrs.length-1]];
+    const [lx,ly]=cumPts[cumPts.length-1];
+    ctx.fillStyle='rgba(245,169,126,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText(fmtK(lastCum),lx+5,ly+3);
+    // Right axis ceiling label
+    ctx.fillStyle='rgba(245,169,126,0.55)';ctx.font='9px IBM Plex Mono,monospace';
+    ctx.fillText(fmtK(maxCum),pad.left+cW+4,pad.top+10);
   }
   if(ov.pct){
-    ctx.strokeStyle='rgba(196,126,245,0.75)';ctx.lineWidth=1.8;ctx.setLineDash([5,4]);
-    ctx.beginPath();yrs.forEach((yr,i)=>{const p=[xp(allYrs.indexOf(yr)),pad.top+cH*(1-pcts[i]/100)];i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);});ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(196,126,245,0.55)';ctx.textAlign='left';ctx.font='9px IBM Plex Mono,monospace';
-    ctx.fillText('100th',pad.left+cW+4,pad.top+20);ctx.fillText('50th',pad.left+cW+4,pad.top+cH/2+4);
+    const pctPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-pcts[i]/100)]);
+    // Right-axis percentile guide ticks
+    [25,50,75,100].forEach(p=>{
+      const y=pad.top+cH*(1-p/100);
+      ctx.strokeStyle='rgba(196,126,245,0.10)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='rgba(196,126,245,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+      ctx.fillText(p+'th',pad.left+cW+4,y+3);
+    });
+    // Stroke
+    ctx.strokeStyle='rgba(196,126,245,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([5,4]);
+    ctx.beginPath();pctPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    // Per-year dots — color by class tier for richer info-density
+    pctPts.forEach(([x,y],i)=>{
+      const sc=getSocialClass(pcts[i]);
+      ctx.beginPath();ctx.arc(x,y,2.6,0,Math.PI*2);
+      ctx.fillStyle=sc.color;ctx.fill();
+    });
+    // End label — current percentile
+    const [lx,ly]=pctPts[pctPts.length-1];
+    const lastPct=pcts[pcts.length-1];
+    ctx.fillStyle='rgba(196,126,245,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText(lastPct.toFixed(0)+'th',lx+5,ly+3);
   }
   if(ov.proj){
     const pjYrs=[yrs[yrs.length-1],...Object.keys(projData).map(Number)];
@@ -1693,45 +1748,51 @@ function drawChart(){
     if(colYrs.length){
       const colVals=colYrs.map(y=>calcColForYear(colCfg,y));
       const isPct=colCfg.displayMode==='pctSalary';
-      // For % mode, plot ratio on its own y-axis spanning 0–100%
       const yPct=p=>pad.top+cH*(1-Math.max(0,Math.min(1.5,p))/1.5);
-      ctx.strokeStyle='rgba(240,168,0,0.95)';ctx.lineWidth=2.2;ctx.setLineDash([5,3]);
-      ctx.beginPath();
-      let started=false,lastDrawnVal=null,lastDrawnY=null,lastDrawnX=null;
+      // Collect points first so we can fill + stroke + dot
+      const colPts=[];let lastDrawnVal=null;
       colYrs.forEach((yr,i)=>{
         const xi=allYrs.indexOf(yr);
         const v=colVals[i];if(v==null)return;
-        let plotY;
+        let plotY,plotV;
         if(isPct){
           const sal=salaries[yr];if(!sal||sal<=0)return;
-          const ratio=v/sal;
-          plotY=yPct(ratio);
-          lastDrawnVal=ratio;
+          plotV=v/sal;plotY=yPct(plotV);
         }else{
-          plotY=ys(v);
-          lastDrawnVal=v;
+          plotV=v;plotY=ys(v);
         }
-        lastDrawnY=plotY;lastDrawnX=xp(xi);
-        if(!started){ctx.moveTo(xp(xi),plotY);started=true;}else{ctx.lineTo(xp(xi),plotY);}
+        colPts.push([xp(xi),plotY,plotV]);
+        lastDrawnVal=plotV;
       });
-      ctx.stroke();ctx.setLineDash([]);
-      // Right-axis ticks for % mode
-      if(isPct&&started){
-        const ticks=[0.25,0.50,0.75,1.0];
-        ticks.forEach(t=>{
+      // Right-axis ticks for % mode (drawn first so line sits on top)
+      if(isPct&&colPts.length){
+        [0.25,0.50,0.75,1.0].forEach(t=>{
           const y=yPct(t);
-          ctx.strokeStyle='rgba(240,168,0,0.10)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+          ctx.strokeStyle='rgba(240,168,0,0.14)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
           ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-          ctx.fillStyle='rgba(240,168,0,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+          ctx.fillStyle='rgba(240,168,0,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
           ctx.fillText(Math.round(t*100)+'%',pad.left+cW+4,y+3);
         });
       }
+      // Filled area in dollar mode (line is monotonic-ish, fill reads as cost mass)
+      if(!isPct&&colPts.length){
+        ctx.fillStyle='rgba(240,168,0,0.10)';ctx.beginPath();
+        ctx.moveTo(colPts[0][0],pad.top+cH);
+        colPts.forEach(([x,y])=>ctx.lineTo(x,y));
+        ctx.lineTo(colPts[colPts.length-1][0],pad.top+cH);ctx.closePath();ctx.fill();
+      }
+      // Stroke
+      ctx.strokeStyle='rgba(240,168,0,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([5,3]);
+      ctx.beginPath();colPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      // Per-year dots
+      colPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(240,168,0,0.95)';ctx.fill();});
       // End-of-line label
-      if(lastDrawnVal!=null&&lastDrawnY!=null){
+      if(colPts.length){
+        const [lx,ly]=colPts[colPts.length-1];
         ctx.fillStyle='rgba(240,168,0,0.95)';
         ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
         const txt=isPct?(Math.round(lastDrawnVal*100)+'% of pay'):(fmtK(lastDrawnVal)+'/yr');
-        ctx.fillText(txt,lastDrawnX+5,lastDrawnY+3);
+        ctx.fillText(txt,lx+5,ly+3);
       }
       // Hint when using default cfg
       if(!userCfg){
