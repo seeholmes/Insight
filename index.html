@@ -14,9 +14,9 @@
   --border:#252630;--border2:#32333f;
   --text:#dddbe4;--muted:#5e5d6e;--accent:#d4a96a;
   --pos:#6fcf97;--neg:#eb5757;
-  --real:#7eb8f5;--pct:#c47ef5;--cum:#f5a97e;--proj:#f5e97e;
+  --real:#7eb8f5;--pct:#c47ef5;--cum:#ff9b4d;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#d4a96a;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;
+  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;
   /* Layout */
   --sidebar-w:300px;--drawer-w:320px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -1568,25 +1568,25 @@ function drawChart(){
   // Overlays
   if(ov.inf){
     const infPts=yrs.map(yr=>{const v=(MACRO[yr]?.inf??0)/0.08*cH*0.42;return[xp(allYrs.indexOf(yr)),pad.top+cH-v];});
-    // filled area (bumped 0.18 → 0.22)
-    ctx.fillStyle='rgba(212,169,106,0.22)';ctx.beginPath();
+    // filled area
+    ctx.fillStyle='rgba(240,192,96,0.28)';ctx.beginPath();
     infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
     ctx.lineTo(infPts[infPts.length-1][0],pad.top+cH);ctx.lineTo(infPts[0][0],pad.top+cH);ctx.closePath();ctx.fill();
-    // stroke line (0.85 → 0.95, 1.5 → 2.2)
-    ctx.strokeStyle='rgba(212,169,106,0.95)';ctx.lineWidth=2.2;ctx.setLineDash([3,3]);
+    // stroke line — brighter color, thicker width
+    ctx.strokeStyle='rgba(240,192,96,1)';ctx.lineWidth=3;ctx.setLineDash([4,2]);
     ctx.beginPath();infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
     // Per-year dots — red for high-inflation years (≥4%)
     infPts.forEach(([x,y],i)=>{
       const r=MACRO[yrs[i]]?.inf??0;
-      ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);
-      ctx.fillStyle=r>=0.04?'rgba(235,87,87,0.95)':'rgba(212,169,106,0.95)';
+      ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+      ctx.fillStyle=r>=0.04?'rgba(235,87,87,1)':'rgba(240,192,96,1)';
       ctx.fill();
     });
     // End label — current inflation rate
     const lastInf=MACRO[yrs[yrs.length-1]]?.inf;
     if(lastInf!=null){
       const [lx,ly]=infPts[infPts.length-1];
-      ctx.fillStyle='rgba(212,169,106,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+      ctx.fillStyle='rgba(240,192,96,1)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
       ctx.fillText((lastInf*100).toFixed(1)+'%',lx+5,ly+3);
     }
   }
@@ -1691,23 +1691,23 @@ function drawChart(){
   }
   if(ov.cum){
     const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-cum[yr]/maxCum)]);
-    // Filled area below the line (cum is monotonic — looks great as a mass)
-    ctx.fillStyle='rgba(245,169,126,0.14)';ctx.beginPath();
+    // Filled area below the line — brighter, bumped 0.14 → 0.20
+    ctx.fillStyle='rgba(255,155,77,0.20)';ctx.beginPath();
     ctx.moveTo(cumPts[0][0],pad.top+cH);
     cumPts.forEach(([x,y])=>ctx.lineTo(x,y));
     ctx.lineTo(cumPts[cumPts.length-1][0],pad.top+cH);ctx.closePath();ctx.fill();
-    // Stroke
-    ctx.strokeStyle='rgba(245,169,126,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([3,3]);
+    // Stroke — brighter color, thicker width
+    ctx.strokeStyle='rgba(255,155,77,1)';ctx.lineWidth=3;ctx.setLineDash([4,2]);
     ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
     // Per-year dots
-    cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(245,169,126,0.95)';ctx.fill();});
+    cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle='rgba(255,155,77,1)';ctx.fill();});
     // End label — total earned to date
     const lastCum=cum[yrs[yrs.length-1]];
     const [lx,ly]=cumPts[cumPts.length-1];
-    ctx.fillStyle='rgba(245,169,126,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillStyle='rgba(255,155,77,1)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText(fmtK(lastCum),lx+5,ly+3);
     // Right axis ceiling label
-    ctx.fillStyle='rgba(245,169,126,0.55)';ctx.font='9px IBM Plex Mono,monospace';
+    ctx.fillStyle='rgba(255,155,77,0.6)';ctx.font='9px IBM Plex Mono,monospace';
     ctx.fillText(fmtK(maxCum),pad.left+cW+4,pad.top+10);
   }
   if(ov.pct){
