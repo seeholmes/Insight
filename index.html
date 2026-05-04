@@ -1539,7 +1539,7 @@ function drawChart(){
         const top0=clampY(cd.top(t0)),top1=clampY(cd.top(t1));
         const bot0=clampY(cd.bot(t0)),bot1=clampY(cd.bot(t1));
         if(bot0-top0<0.5&&bot1-top1<0.5)return;
-        ctx.fillStyle=cd.color;ctx.globalAlpha=0.08;
+        ctx.fillStyle=cd.color;ctx.globalAlpha=0.34;
         ctx.beginPath();ctx.moveTo(x0,top0);ctx.lineTo(x1,top1);ctx.lineTo(x1,bot1);ctx.lineTo(x0,bot0);ctx.closePath();ctx.fill();
       });
     }
