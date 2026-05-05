@@ -1017,17 +1017,17 @@ function renderInsights(){
   // Replace each placeholder below with whatever bar you want in that slot.
   // Array is Fisher-Yates shuffled on every render, so order is random per load.
   const _BARS=[
-“Deep in the dark with the art to rip charts apart”,
-“The Rebel, I make more noise than heavy metal”,
-“Word up, look out for the cops though”, 
-“Yeah, check this old fly shit out, word up”,
-“Here we, here we go, check this shit, yo”,
-“I grew up on the crime side, the New York Times side”,
-“Stayin' alive was no jive”,
-“No question, I would flow off and try to get the dough all”,
-“Cash rules everything around me”,
-“C.R.E.A.M., get the money”,
-“Dollar, dollar bill, y'all”,
+"Deep in the dark with the art to rip charts apart",
+"The Rebel, I make more noise than heavy metal",
+"Word up, look out for the cops though", 
+"Yeah, check this old fly shit out, word up",
+"Here we, here we go, check this shit, yo",
+"I grew up on the crime side, the New York Times side",
+"Stayin' alive was no jive",
+"No question, I would flow off and try to get the dough all",
+"Cash rules everything around me",
+"C.R.E.A.M., get the money",
+"Dollar, dollar bill, y'all",
   ];
   const _shuffledBars=[..._BARS];
   for(let _i=_shuffledBars.length-1;_i>0;_i--){const _j=Math.floor(Math.random()*(_i+1));[_shuffledBars[_i],_shuffledBars[_j]]=[_shuffledBars[_j],_shuffledBars[_i]];}
