@@ -886,6 +886,143 @@ function renderInsights(){
     <div style="font-family:'Bebas Neue',cursive;font-size:1.55rem;color:var(--accent);letter-spacing:0.16em;line-height:1">36 CHAMBERS</div>
     <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:var(--fs-xs);color:var(--muted);letter-spacing:0.12em;margin-top:0.3rem">liquid swords. mathematics. real talk.</div>
   </div>`;
+
+  // ── 36 CHAMBERS · THE INDEX ─────────────────────────────────────────────────
+  // Exactly 36 distinct metrics — the easter egg. Hidden in plain sight.
+  const _idxYrs=yrs;
+  const _firstYr=_idxYrs[0],_lastYr=_idxYrs[_idxYrs.length-1];
+  const _curSal=salaries[_lastYr]||0,_peakSal=Math.max(...Object.values(salaries));
+  const _peakSalYr=_idxYrs.reduce((b,y)=>salaries[y]>salaries[b]?y:b,_idxYrs[0]);
+  const _avgSal=Object.values(salaries).reduce((a,b)=>a+b,0)/(_idxYrs.length||1);
+  const _totalEarn=Object.values(salaries).reduce((a,b)=>a+b,0);
+  const _careerSpan=Math.max(1,_lastYr-_firstYr);
+  const _careerCagr=salaries[_firstYr]>0?Math.pow(_curSal/salaries[_firstYr],1/_careerSpan)-1:0;
+  // YoY array
+  const _yoys=_idxYrs.map((y,i)=>i===0?null:(salaries[y]-salaries[_idxYrs[i-1]])/salaries[_idxYrs[i-1]]);
+  const _bestRaiseIdx=_yoys.reduce((b,v,i)=>(v!=null&&(b<0||v>_yoys[b]))?i:b,-1);
+  const _bestRaisePct=_bestRaiseIdx>0?_yoys[_bestRaiseIdx]:0;
+  // Inflation drag
+  const _realArr=_idxYrs.map(y=>real[y]);
+  const _cumNominal=_totalEarn,_cumReal=_realArr.reduce((a,b)=>a+b,0);
+  const _drag=_cumNominal-_cumReal;
+  const _realGrowth=(_realArr[_realArr.length-1]/_realArr[0]-1)*100;
+  // CPI CAGR over career span
+  let _cpiIdx=1;for(let i=1;i<_idxYrs.length;i++)_cpiIdx*=1+(MACRO[_idxYrs[i]]?.inf??0);
+  const _cpiCagr=_careerSpan>0?Math.pow(_cpiIdx,1/_careerSpan)-1:0;
+  // Best & worst real years (nominal up vs real down for ghost)
+  let _worstGhost={yr:'—',val:0},_bestReal={yr:'—',val:0};
+  for(let i=1;i<_idxYrs.length;i++){
+    const y=_idxYrs[i],pY=_idxYrs[i-1];
+    const realDelta=real[y]-real[pY],nomDelta=salaries[y]-salaries[pY];
+    if(nomDelta>0&&realDelta<_worstGhost.val){_worstGhost={yr:y,val:realDelta};}
+    if(realDelta>_bestReal.val){_bestReal={yr:y,val:realDelta};}
+  }
+  // Percentile / class
+  const _pctSeries=_idxYrs.map(y=>getPercentile(salaries[y],y));
+  const _peakPct=Math.max(..._pctSeries),_peakPctYrIdx=_pctSeries.indexOf(_peakPct);
+  const _peakPctYrIns=_idxYrs[_peakPctYrIdx];
+  const _curPct=_pctSeries[_pctSeries.length-1];
+  const _yrsAbove50=_pctSeries.filter(p=>p>=50).length;
+  const _yrsUpperClass=_pctSeries.filter(p=>p>=90).length;
+  // most-common class
+  const _classCount={};_pctSeries.forEach(p=>{const c=getSocialClass(p).label;_classCount[c]=(_classCount[c]||0)+1;});
+  const _topClass=Object.keys(_classCount).reduce((b,c)=>_classCount[c]>(_classCount[b]||0)?c:b,'—');
+  // Job stats
+  const _jobRowsLocal=jobRows;
+  const _bestTrans=transitions.reduce((b,t)=>(b==null||t.delta>b.delta)?t:b,null);
+  const _bestTransPctRow=transitions.reduce((b,t)=>(b==null||t.pct>b.pct)?t:b,null);
+  const _topCagrJob=_jobRowsLocal.reduce((b,r)=>(b==null||(r.cagr??-1)>(b.cagr??-1))?r:b,null);
+  const _longestJob=_jobRowsLocal.reduce((b,r)=>(b==null||r.sy.length>b.sy.length)?r:b,null);
+  const _avgTenure=_jobRowsLocal.length?_jobRowsLocal.reduce((a,r)=>a+r.sy.length,0)/_jobRowsLocal.length:0;
+  // COL chambers (last year in 1993-2026)
+  const _colCfgIdx=getEffectiveColCfg();
+  const _colYrIns=Math.max(1993,Math.min(2026,_lastYr));
+  const _colNow=calcColForYear(_colCfgIdx,_colYrIns);
+  const _colPctPay=(_colNow&&_curSal>0)?(_colNow/_curSal*100):null;
+  const _colYrsIns=_idxYrs.filter(y=>y>=1993&&y<=2026);
+  let _colCagrIns=0,_colCpiGap=0,_wageColGap=0,_cumCol=0;
+  if(_colYrsIns.length>=2){
+    const a=calcColForYear(_colCfgIdx,_colYrsIns[0]),b=calcColForYear(_colCfgIdx,_colYrsIns[_colYrsIns.length-1]);
+    const span=_colYrsIns[_colYrsIns.length-1]-_colYrsIns[0];
+    if(a&&b&&span>0){_colCagrIns=Math.pow(b/a,1/span)-1;}
+    let cpi=1;for(let i=_idxYrs.indexOf(_colYrsIns[0])+1;i<=_idxYrs.indexOf(_colYrsIns[_colYrsIns.length-1]);i++)cpi*=1+(MACRO[_idxYrs[i]]?.inf??0);
+    const cpiCAGRcol=span>0?Math.pow(cpi,1/span)-1:0;
+    _colCpiGap=_colCagrIns-cpiCAGRcol;
+    const wageA=salaries[_colYrsIns[0]],wageB=salaries[_colYrsIns[_colYrsIns.length-1]];
+    if(wageA>0&&wageB>0){_wageColGap=Math.pow(wageB/wageA,1/span)-1-_colCagrIns;}
+  }
+  _colYrsIns.forEach(y=>{const v=calcColForYear(_colCfgIdx,y);if(v)_cumCol+=v;});
+  // Inflection / stagnation — re-derive (events array is defined later in renderInsights)
+  let _inflectionN=0,_stagN=0;
+  const _realYoYIdx=_idxYrs.map((y,i)=>i===0?null:(real[y]-real[_idxYrs[i-1]])/real[_idxYrs[i-1]]);
+  let _runStart=null,_runLen=0;
+  _idxYrs.forEach((y,i)=>{
+    const r=_realYoYIdx[i];
+    if(r!=null&&r>0.15)_inflectionN++;
+    if(r!=null&&Math.abs(r)<0.01){if(_runStart==null){_runStart=y;_runLen=1;}else _runLen++;}
+    else{if(_runLen>=3)_stagN++;_runStart=null;_runLen=0;}
+  });
+  if(_runLen>=3)_stagN++;
+  // Projection (already computed above as projFinal/cumProj)
+  const _projFinal=projFinal||0,_cumProj=cumProj||0;
+  // Decades — re-derive (decades obj defined later)
+  const _decadeSet=new Set(_idxYrs.map(y=>Math.floor(y/10)*10));
+  const _decadeN=_decadeSet.size;
+
+  const fmtPct=v=>(v>=0?'+':'')+(v*100).toFixed(1)+'%';
+  const fmtPts=v=>(v>=0?'+':'')+(v*100).toFixed(2);
+  const fmtNum=v=>v==null?'—':v.toString();
+  const chambers=[
+    {n:'01',l:'Total Earned',v:fmtK(_totalEarn)},
+    {n:'02',l:'Peak Salary',v:fmtK(_peakSal),sub:_peakSalYr},
+    {n:'03',l:'Avg Salary',v:fmtK(_avgSal)},
+    {n:'04',l:'Current',v:fmtK(_curSal)},
+    {n:'05',l:'Years Tracked',v:_idxYrs.length},
+    {n:'06',l:'Jobs Held',v:jobs.length},
+    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr)},
+    {n:'08',l:'Best Raise',v:fmtPct(_bestRaisePct)},
+    {n:'09',l:'Real Growth',v:fmtPct(_realGrowth/100)},
+    {n:'10',l:'Inflation Drag',v:fmtK(_drag)},
+    {n:'11',l:'Drag % of Nom',v:_cumNominal?((_drag/_cumNominal)*100).toFixed(1)+'%':'—'},
+    {n:'12',l:'CPI CAGR',v:fmtPct(_cpiCagr)},
+    {n:'13',l:'Worst Ghost Yr',v:_worstGhost.yr,sub:fmtK(_worstGhost.val)},
+    {n:'14',l:'Best Real Yr',v:_bestReal.yr,sub:'+'+fmtK(_bestReal.val)},
+    {n:'15',l:'Peak Pctile',v:_peakPct.toFixed(1)+'th'},
+    {n:'16',l:'Peak Yr',v:_peakPctYrIns},
+    {n:'17',l:'Current Pctile',v:_curPct.toFixed(1)+'th'},
+    {n:'18',l:'Yrs ≥ 50th',v:_yrsAbove50},
+    {n:'19',l:'Yrs Upper (≥90)',v:_yrsUpperClass},
+    {n:'20',l:'Top Class',v:_topClass},
+    {n:'21',l:'Best Trans $',v:_bestTrans?fmtK(_bestTrans.delta):'—'},
+    {n:'22',l:'Best Trans %',v:_bestTransPctRow?(_bestTransPctRow.pct*100).toFixed(0)+'%':'—'},
+    {n:'23',l:'Top CAGR Job',v:_topCagrJob?_topCagrJob.j.name:'—',sub:_topCagrJob&&_topCagrJob.cagr!=null?fmtPct(_topCagrJob.cagr):''},
+    {n:'24',l:'Longest Tenure',v:_longestJob?_longestJob.sy.length+'y':'—'},
+    {n:'25',l:'Avg Tenure',v:_avgTenure.toFixed(1)+'y'},
+    {n:'26',l:'Latest COL',v:_colNow?fmtK(_colNow):'—'},
+    {n:'27',l:'COL % of Pay',v:_colPctPay!=null?_colPctPay.toFixed(0)+'%':'—'},
+    {n:'28',l:'COL CAGR',v:fmtPct(_colCagrIns)},
+    {n:'29',l:'COL − CPI Gap',v:fmtPts(_colCpiGap)+' pts'},
+    {n:'30',l:'Wage − COL Gap',v:fmtPts(_wageColGap)+' pts'},
+    {n:'31',l:'Cum COL',v:_cumCol?fmtK(_cumCol):'—'},
+    {n:'32',l:'Inflections',v:_inflectionN},
+    {n:'33',l:'Stagnant Runs',v:_stagN},
+    {n:'34',l:'Proj +5y Sal',v:_projFinal?fmtK(_projFinal):'—'},
+    {n:'35',l:'Cum + Proj',v:_cumProj?fmtK(_cumProj):'—'},
+    {n:'36',l:'Decades',v:_decadeN},
+  ];
+  h+=`<div class="ins-card">
+    <h3>The Index</h3>
+    <span class="ins-tag">all 36 chambers, one glance.</span>
+    <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:0.6rem;line-height:1.4">Every discrete metric the app tracks. Hover any of the 12 deep-dive cards below for the story behind each number.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem">
+      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.4rem 0.45rem;min-width:0">
+        <div style="font-family:'Bebas Neue',cursive;font-size:0.55rem;color:var(--accent);letter-spacing:0.1em;line-height:1">${c.n}</div>
+        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin:0.15rem 0 0.18rem;line-height:1.15;min-height:1.2em">${c.l}</div>
+        <div style="font-size:var(--fs-sm);color:var(--text);font-weight:500;line-height:1.1;word-break:break-word">${c.v}</div>
+        ${c.sub?`<div style="font-size:0.5rem;color:var(--muted);margin-top:0.12rem">${c.sub}</div>`:''}
+      </div>`).join('')}
+    </div>
+  </div>`;
   h+=`<div class="ins-card">
     <h3>Peak Percentile Power</h3>
     <span class="ins-tag">your apex. your moment.</span>
