@@ -1013,8 +1013,27 @@ function renderInsights(){
     {n:'35',l:'Cum + Proj',v:_cumProj?fmtK(_cumProj):'—'},
     {n:'36',l:'Decades',v:_decadeN},
   ];
-  // Divider — small CREAM bar between cards
-  const _DIV='<div class="cream-divider"><span>C·R·E·A·M</span></div>';
+  // Divider bars — 12 short strings shown between Insights cards.
+  // Replace each placeholder below with whatever bar you want in that slot.
+  // Array is Fisher-Yates shuffled on every render, so order is random per load.
+  const _BARS=[
+    "bar 01",
+    "bar 02",
+    "bar 03",
+    "bar 04",
+    "bar 05",
+    "bar 06",
+    "bar 07",
+    "bar 08",
+    "bar 09",
+    "bar 10",
+    "bar 11",
+    "bar 12",
+  ];
+  const _shuffledBars=[..._BARS];
+  for(let _i=_shuffledBars.length-1;_i>0;_i--){const _j=Math.floor(Math.random()*(_i+1));[_shuffledBars[_i],_shuffledBars[_j]]=[_shuffledBars[_j],_shuffledBars[_i]];}
+  let _bIdx=0;
+  const _DIV=()=>`<div class="cream-divider"><span>${_shuffledBars[_bIdx++%_shuffledBars.length]}</span></div>`;
   h+=`<div class="ins-card">
     <h3>Peak Percentile Power</h3>
     <span class="ins-tag">your apex. your moment.</span>
@@ -1085,7 +1104,7 @@ function renderInsights(){
     ${isCurrentYear?`<div style="font-size:0.6rem;color:var(--pos);margin-top:0.5rem;text-align:center">★ Peak percentile is this year — no deficit</div>`:''}
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // ── Class Mobility Timeline ──────────────────────────────────────────────────
   const CLASS_ORDER=[
     {label:'Top 1%',     color:'#f5e97e',min:99},
@@ -1133,7 +1152,7 @@ function renderInsights(){
     </div>
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // ── Percentile Velocity ──────────────────────────────────────────────────────
   const pctDeltas=[];
   for(let i=1;i<pctSeries.length;i++)pctDeltas.push(pctSeries[i]-pctSeries[i-1]);
@@ -1158,7 +1177,7 @@ function renderInsights(){
     </div>
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // ── Stagnation / Inflection Detector ─────────────────────────────────────────
   const realArr=yrs.map(y=>real[y]);
   const realYoY=yrs.map((y,i)=>i===0?null:(realArr[i]-realArr[i-1])/realArr[i-1]);
@@ -1197,7 +1216,7 @@ function renderInsights(){
     }).join(''):'<div style="font-size:0.62rem;color:var(--muted);text-align:center;padding:0.4rem 0">No jumps or stagnant runs detected.</div>'}
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // ── Decade Ledger ────────────────────────────────────────────────────────────
   const decades={};
   yrs.forEach((y,i)=>{
@@ -1226,7 +1245,7 @@ function renderInsights(){
     }).join('')}
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // ── Inflation Drag ───────────────────────────────────────────────────────────
   const cumNominalTotal=yrs.reduce((a,y)=>a+salaries[y],0);
   const cumRealTotal=yrs.reduce((a,y)=>a+real[y],0);
@@ -1258,7 +1277,7 @@ function renderInsights(){
       </div>`).join('')}`:'<div style="font-size:0.58rem;color:var(--muted);text-align:center">No ghost-raise years detected.</div>'}
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // ── Your COL vs CPI ─────────────────────────────────────────────────────────
   const _colCfgIns=getEffectiveColCfg();
   const _hasUserCfg=!!loadColData();
@@ -1308,7 +1327,7 @@ function renderInsights(){
     </div>`;
   }
 
-  h+=_DIV;
+  h+=_DIV();
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
     <span class="ins-tag">every chapter, every chamber.</span>
@@ -1326,7 +1345,7 @@ function renderInsights(){
   });
   h+=`</table></div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // Velocity bars
   h+=`<div class="ins-card"><h3>Salary Velocity</h3>
     <span class="ins-tag">the come-up, by job.</span>
@@ -1343,7 +1362,7 @@ function renderInsights(){
   });
   h+=`</div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // Transitions
   h+=`<div class="ins-card"><h3>Job Transitions</h3>
     <span class="ins-tag">the leap, the gain, the loss.</span>`;
@@ -1361,7 +1380,7 @@ function renderInsights(){
   });
   h+=`</div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // Real vs Nominal
   h+=`<div class="ins-card"><h3>Real vs Nominal</h3>
     <span class="ins-tag">what's left after the world takes its cut.</span>
@@ -1378,7 +1397,7 @@ function renderInsights(){
   h+=`<div style="font-size:0.55rem;color:var(--muted);margin-top:0.3rem">Nominal · <span style="color:var(--real)">Real</span> · <span style="color:var(--neg)">Inflation loss</span></div>
   </div>`;
 
-  h+=_DIV;
+  h+=_DIV();
   // Projection KPIs
   h+=`<div class="ins-card"><h3>Cumulative & Projection</h3>
     <span class="ins-tag">the pile. the path forward.</span>
@@ -1393,7 +1412,7 @@ function renderInsights(){
   </div>`;
 
   // ── 36 CHAMBERS · THE INDEX (bottom of panel) ────────────────────────────────
-  h+=_DIV;
+  h+=_DIV();
   h+=`<div class="ins-card">
     <h3>The Index</h3>
     <span class="ins-tag">all 36 chambers, one glance.</span>
