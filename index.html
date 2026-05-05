@@ -84,6 +84,9 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 .ins-card{background:var(--s2);border:1px solid var(--border);padding:var(--sp-3);margin-bottom:var(--sp-2);}
 .ins-card h3{font-family:'Playfair Display',serif;font-size:var(--fs-lg);color:var(--accent);margin-bottom:0.18rem;font-style:italic;}
 .ins-tag{display:block;font-family:'Playfair Display',serif;font-style:italic;font-size:var(--fs-xs);color:var(--muted);letter-spacing:0.05em;margin-bottom:var(--sp-2);opacity:0.9;}
+.cream-divider{display:flex;align-items:center;gap:0.55rem;margin:0.4rem 0 0.55rem;padding:0;}
+.cream-divider::before,.cream-divider::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.45;}
+.cream-divider span{font-family:'Bebas Neue',cursive;font-size:0.7rem;letter-spacing:0.35em;color:var(--accent);opacity:0.75;white-space:nowrap;}
 .jst{width:100%;border-collapse:collapse;font-size:var(--fs-sm);}
 .jst th{text-align:left;padding:0.3rem 0.45rem;font-size:var(--fs-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
 .jst td{padding:0.3rem 0.45rem;border-bottom:1px solid var(--border);}
@@ -1010,19 +1013,8 @@ function renderInsights(){
     {n:'35',l:'Cum + Proj',v:_cumProj?fmtK(_cumProj):'—'},
     {n:'36',l:'Decades',v:_decadeN},
   ];
-  h+=`<div class="ins-card">
-    <h3>The Index</h3>
-    <span class="ins-tag">all 36 chambers, one glance.</span>
-    <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:0.6rem;line-height:1.4">Every discrete metric the app tracks. Hover any of the 12 deep-dive cards below for the story behind each number.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem">
-      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.4rem 0.45rem;min-width:0">
-        <div style="font-family:'Bebas Neue',cursive;font-size:0.55rem;color:var(--accent);letter-spacing:0.1em;line-height:1">${c.n}</div>
-        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin:0.15rem 0 0.18rem;line-height:1.15;min-height:1.2em">${c.l}</div>
-        <div style="font-size:var(--fs-sm);color:var(--text);font-weight:500;line-height:1.1;word-break:break-word">${c.v}</div>
-        ${c.sub?`<div style="font-size:0.5rem;color:var(--muted);margin-top:0.12rem">${c.sub}</div>`:''}
-      </div>`).join('')}
-    </div>
-  </div>`;
+  // Divider — small CREAM bar between cards
+  const _DIV='<div class="cream-divider"><span>C·R·E·A·M</span></div>';
   h+=`<div class="ins-card">
     <h3>Peak Percentile Power</h3>
     <span class="ins-tag">your apex. your moment.</span>
@@ -1093,6 +1085,7 @@ function renderInsights(){
     ${isCurrentYear?`<div style="font-size:0.6rem;color:var(--pos);margin-top:0.5rem;text-align:center">★ Peak percentile is this year — no deficit</div>`:''}
   </div>`;
 
+  h+=_DIV;
   // ── Class Mobility Timeline ──────────────────────────────────────────────────
   const CLASS_ORDER=[
     {label:'Top 1%',     color:'#f5e97e',min:99},
@@ -1140,6 +1133,7 @@ function renderInsights(){
     </div>
   </div>`;
 
+  h+=_DIV;
   // ── Percentile Velocity ──────────────────────────────────────────────────────
   const pctDeltas=[];
   for(let i=1;i<pctSeries.length;i++)pctDeltas.push(pctSeries[i]-pctSeries[i-1]);
@@ -1164,6 +1158,7 @@ function renderInsights(){
     </div>
   </div>`;
 
+  h+=_DIV;
   // ── Stagnation / Inflection Detector ─────────────────────────────────────────
   const realArr=yrs.map(y=>real[y]);
   const realYoY=yrs.map((y,i)=>i===0?null:(realArr[i]-realArr[i-1])/realArr[i-1]);
@@ -1202,6 +1197,7 @@ function renderInsights(){
     }).join(''):'<div style="font-size:0.62rem;color:var(--muted);text-align:center;padding:0.4rem 0">No jumps or stagnant runs detected.</div>'}
   </div>`;
 
+  h+=_DIV;
   // ── Decade Ledger ────────────────────────────────────────────────────────────
   const decades={};
   yrs.forEach((y,i)=>{
@@ -1230,6 +1226,7 @@ function renderInsights(){
     }).join('')}
   </div>`;
 
+  h+=_DIV;
   // ── Inflation Drag ───────────────────────────────────────────────────────────
   const cumNominalTotal=yrs.reduce((a,y)=>a+salaries[y],0);
   const cumRealTotal=yrs.reduce((a,y)=>a+real[y],0);
@@ -1261,6 +1258,7 @@ function renderInsights(){
       </div>`).join('')}`:'<div style="font-size:0.58rem;color:var(--muted);text-align:center">No ghost-raise years detected.</div>'}
   </div>`;
 
+  h+=_DIV;
   // ── Your COL vs CPI ─────────────────────────────────────────────────────────
   const _colCfgIns=getEffectiveColCfg();
   const _hasUserCfg=!!loadColData();
@@ -1310,6 +1308,7 @@ function renderInsights(){
     </div>`;
   }
 
+  h+=_DIV;
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
     <span class="ins-tag">every chapter, every chamber.</span>
@@ -1327,6 +1326,7 @@ function renderInsights(){
   });
   h+=`</table></div>`;
 
+  h+=_DIV;
   // Velocity bars
   h+=`<div class="ins-card"><h3>Salary Velocity</h3>
     <span class="ins-tag">the come-up, by job.</span>
@@ -1343,6 +1343,7 @@ function renderInsights(){
   });
   h+=`</div>`;
 
+  h+=_DIV;
   // Transitions
   h+=`<div class="ins-card"><h3>Job Transitions</h3>
     <span class="ins-tag">the leap, the gain, the loss.</span>`;
@@ -1360,6 +1361,7 @@ function renderInsights(){
   });
   h+=`</div>`;
 
+  h+=_DIV;
   // Real vs Nominal
   h+=`<div class="ins-card"><h3>Real vs Nominal</h3>
     <span class="ins-tag">what's left after the world takes its cut.</span>
@@ -1376,6 +1378,7 @@ function renderInsights(){
   h+=`<div style="font-size:0.55rem;color:var(--muted);margin-top:0.3rem">Nominal · <span style="color:var(--real)">Real</span> · <span style="color:var(--neg)">Inflation loss</span></div>
   </div>`;
 
+  h+=_DIV;
   // Projection KPIs
   h+=`<div class="ins-card"><h3>Cumulative & Projection</h3>
     <span class="ins-tag">the pile. the path forward.</span>
@@ -1386,6 +1389,22 @@ function renderInsights(){
     <div class="kpi-mini">
       <div class="kpi-m"><label>Cum. incl. proj.</label><value style="color:var(--cum)">${fmtK(cumProj)}</value></div>
       <div class="kpi-m"><label>Based on</label><value style="color:var(--muted);font-size:0.7rem">Last 5 yrs</value></div>
+    </div>
+  </div>`;
+
+  // ── 36 CHAMBERS · THE INDEX (bottom of panel) ────────────────────────────────
+  h+=_DIV;
+  h+=`<div class="ins-card">
+    <h3>The Index</h3>
+    <span class="ins-tag">all 36 chambers, one glance.</span>
+    <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:0.6rem;line-height:1.4">Every discrete metric the app tracks. The count stays locked at 36 — adding jobs or years updates individual chamber values (06 jobs, 21 best transition, 23 top-CAGR, 24 longest tenure) but never adds new chambers.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem">
+      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.4rem 0.45rem;min-width:0">
+        <div style="font-family:'Bebas Neue',cursive;font-size:0.55rem;color:var(--accent);letter-spacing:0.1em;line-height:1">${c.n}</div>
+        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin:0.15rem 0 0.18rem;line-height:1.15;min-height:1.2em">${c.l}</div>
+        <div style="font-size:var(--fs-sm);color:var(--text);font-weight:500;line-height:1.1;word-break:break-word">${c.v}</div>
+        ${c.sub?`<div style="font-size:0.5rem;color:var(--muted);margin-top:0.12rem">${c.sub}</div>`:''}
+      </div>`).join('')}
     </div>
   </div>`;
 
