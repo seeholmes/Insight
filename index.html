@@ -320,7 +320,7 @@ body.empty #emptyState{display:flex;}
     <div style="display:flex;gap:0;">
       <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs')">Hustles</button>
       <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">36</button>
-      <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Percentile</button>
+      <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Status</button>
     </div>
     <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇ Stash It</button>
     <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆ Pull It<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
@@ -1428,8 +1428,9 @@ function renderInsights(){
 function renderPctPanel(){
   const el=document.getElementById('pctPanel');
   const yrs=sortedYrs();
-  let h=`<div class="ins-card"><h3>Income Percentile by Year</h3>
-    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Relative to all US earners that year</div>`;
+  let h=`<div class="ins-card"><h3>Status</h3>
+    <span class="ins-tag">where you sat, year by year.</span>
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.6rem">Income percentile vs all US earners that year</div>`;
   yrs.forEach(yr=>{
     const pct=getPercentile(salaries[yr],yr);
     const sc=getSocialClass(pct);
