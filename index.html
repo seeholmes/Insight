@@ -318,13 +318,13 @@ body.empty #emptyState{display:flex;}
   </div>
   <div class="tb-right">
     <div style="display:flex;gap:0;">
-      <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs')">Jobs</button>
-      <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">Insights</button>
+      <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs')">Hustles</button>
+      <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">36</button>
       <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Percentile</button>
     </div>
     <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇ Stash It</button>
     <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆ Import<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
-    <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ Settings</button>
+    <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ The Vault</button>
   </div>
 </div>
 
@@ -336,7 +336,7 @@ body.empty #emptyState{display:flex;}
     <div id="sidebar-body">
       <!-- Jobs panel -->
       <div class="spanel vis" id="sp-jobs">
-        <p class="sec-head">Jobs</p>
+        <p class="sec-head">Hustles</p>
         <div id="legendList"></div>
       </div>
       <!-- Insights panel -->
@@ -406,7 +406,7 @@ body.empty #emptyState{display:flex;}
   <!-- RIGHT DRAWER -->
   <div id="drawer">
     <div class="dtabs">
-      <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Jobs</button>
+      <button class="dtab active" id="dt-jobs"   onclick="setDTab('jobs')">Hustles</button>
       <button class="dtab"        id="dt-salary" onclick="setDTab('salary')">Salary</button>
       <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
       <button class="dtab"        id="dt-events" onclick="setDTab('events')">Events</button>
@@ -416,9 +416,9 @@ body.empty #emptyState{display:flex;}
     </div>
     <div class="dbody">
       <div class="dsec vis" id="ds-jobs">
-        <p class="sec-head">Manage Jobs</p>
+        <p class="sec-head">Manage Hustles</p>
         <div id="jobCards"></div>
-        <button id="addJobBtn" onclick="addJob()">+ Add Job</button>
+        <button id="addJobBtn" onclick="addJob()">+ Add Hustle</button>
       </div>
       <div class="dsec" id="ds-salary">
         <p class="sec-head">Edit Salaries by Year</p>
@@ -466,11 +466,11 @@ body.empty #emptyState{display:flex;}
         </div>
 
         <div class="ins-card">
-          <h3>Settings drawer</h3>
-          <span class="ins-tag">the vault — six tabs, total control.</span>
+          <h3>The Vault</h3>
+          <span class="ins-tag">six tabs, total control.</span>
           <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
             <div style="display:grid;grid-template-columns:4.5rem 1fr;gap:0.3rem 0.5rem">
-              <span style="color:var(--accent)">Jobs</span><span>Add, rename, color-code, and assign years to each role.</span>
+              <span style="color:var(--accent)">Hustles</span><span>Add, rename, color-code, and assign years to each role you've worked.</span>
               <span style="color:var(--accent)">Salary</span><span>Per-year salary editor.</span>
               <span style="color:var(--accent)">Macro</span><span>Inflation and GDP per year (BLS / BEA defaults provided, fully editable).</span>
               <span style="color:var(--accent)">Events</span><span>Multi-year economic events with start/end years; 28 curated US events 1993–2026.</span>
