@@ -1410,18 +1410,13 @@ function renderInsights(){
     </div>
   </div>`;
 
-  // ── 36 CHAMBERS · THE INDEX (bottom of panel) ────────────────────────────────
+  // ── 36 CHAMBERS · THE INDEX (bottom of panel — vague catalog, not explicit) ──
   h+=_DIV();
-  h+=`<div class="ins-card">
-    <h3>The Index</h3>
-    <span class="ins-tag">all 36 chambers, one glance.</span>
-    <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:0.6rem;line-height:1.4">Every discrete metric the app tracks. The count stays locked at 36 — adding jobs or years updates individual chamber values (06 jobs, 21 best transition, 23 top-CAGR, 24 longest tenure) but never adds new chambers.</div>
+  h+=`<div class="ins-card" style="padding:var(--sp-3) var(--sp-2)">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem">
-      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.4rem 0.45rem;min-width:0">
-        <div style="font-family:'Bebas Neue',cursive;font-size:0.55rem;color:var(--accent);letter-spacing:0.1em;line-height:1">${c.n}</div>
-        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin:0.15rem 0 0.18rem;line-height:1.15;min-height:1.2em">${c.l}</div>
-        <div style="font-size:var(--fs-sm);color:var(--text);font-weight:500;line-height:1.1;word-break:break-word">${c.v}</div>
-        ${c.sub?`<div style="font-size:0.5rem;color:var(--muted);margin-top:0.12rem">${c.sub}</div>`:''}
+      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.5rem 0.5rem 0.55rem">
+        <div style="font-family:'Bebas Neue',cursive;font-size:0.85rem;color:var(--accent);letter-spacing:0.12em;line-height:1">${c.n}</div>
+        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.3rem;line-height:1.2;min-height:1.4em">${c.l}</div>
       </div>`).join('')}
     </div>
   </div>`;
