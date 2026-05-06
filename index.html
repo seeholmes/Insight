@@ -322,8 +322,8 @@ body.empty #emptyState{display:flex;}
       <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">36</button>
       <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Status</button>
     </div>
-    <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇ Stash It</button>
-    <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆ Pull It<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
+    <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇ Cop It</button>
+    <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆ Drop It<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
     <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ The Vault</button>
   </div>
 </div>
@@ -495,7 +495,7 @@ body.empty #emptyState{display:flex;}
           <h3>Quick tips</h3>
           <span class="ins-tag">protect ya net worth.</span>
           <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
-            <p style="margin-bottom:0.4rem">⌘ <span style="color:var(--accent)">Stash It</span> regularly — exports a JSON backup of everything. <span style="color:var(--accent)">Pull It</span> to restore on a new device.</p>
+            <p style="margin-bottom:0.4rem">⌘ <span style="color:var(--accent)">Cop It</span> regularly — grabs a JSON backup of everything. <span style="color:var(--accent)">Drop It</span> to restore on a new device.</p>
             <p style="margin-bottom:0.4rem">⌘ Toggle <span style="color:var(--col-color)">COL</span> overlay then flip its mode in Settings → COL between dollars and "% of salary" — the % view reveals if your lifestyle is winning or losing the race against your raises.</p>
             <p style="margin-bottom:0.4rem">⌘ Click an event band on the chart to jump straight to the Events tab and edit it.</p>
             <p style="margin-bottom:0.4rem">⌘ Click a job in the sidebar legend to highlight only that job's years on the chart; click again to deselect.</p>
