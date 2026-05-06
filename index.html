@@ -1414,9 +1414,9 @@ function renderInsights(){
   h+=_DIV();
   h+=`<div class="ins-card" style="padding:var(--sp-3) var(--sp-2)">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem">
-      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.5rem 0.5rem 0.55rem">
-        <div style="font-family:'Bebas Neue',cursive;font-size:0.85rem;color:var(--accent);letter-spacing:0.12em;line-height:1">${c.n}</div>
-        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.3rem;line-height:1.2;min-height:1.4em">${c.l}</div>
+      ${chambers.map(c=>`<div style="background:var(--bg);border:1px solid var(--border);padding:0.6rem 0.5rem 0.65rem;text-align:center">
+        <div style="font-family:'Bebas Neue',cursive;font-size:1.35rem;color:var(--accent);letter-spacing:0.12em;line-height:1">${c.n}</div>
+        <div style="font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.4rem;line-height:1.2;min-height:1.4em">${c.l}</div>
       </div>`).join('')}
     </div>
   </div>`;
