@@ -366,8 +366,8 @@ body.empty #emptyState{display:flex;}
         <div class="ctrl-group">
           <span class="ctrl-lbl">Lines</span>
           <button class="cbtn" id="ov-col"  onclick="toggleOv('col')"  title="Personal cost of living from CREAM COL companion — configure in companion app">COL</button>
-          <button class="cbtn" id="ov-real" onclick="toggleOv('real')" title="Inflation-adjusted salary in base-year dollars (looks back — what your old paychecks bought in old money)">Real $</button>
-          <button class="cbtn" id="ov-today" onclick="toggleOv('today')" title="Each year's salary inflated to today's dollars (looks forward — what your old paychecks would be worth now)">Today $</button>
+          <button class="cbtn" id="ov-real" onclick="toggleOv('real')" title="Every year's salary expressed in your first-year (base) dollars — what your paychecks bought back then">Old Money</button>
+          <button class="cbtn" id="ov-today" onclick="toggleOv('today')" title="Every year's salary inflated forward to today's dollars — what your old paychecks would be worth now">New Money</button>
           <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')"  title="Your percentile rank vs all US individual earners">Percentile</button>
           <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')"  title="Cumulative lifetime earnings">Cumulative</button>
           <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')" title="5-year linear projection from recent trend">Projection</button>
@@ -452,7 +452,7 @@ body.empty #emptyState{display:flex;}
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Inflation Drag</span> — lifetime purchasing power erased, plus worst "ghost raise" years.</p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--col-color)">Your COL vs Inflation</span> — personal cost-of-living growth rate vs official CPI; gap tells you if your lifestyle inflates faster than the country.</p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--accent)">Per-Job Summary, Salary Velocity, Job Transitions</span> — tabular breakdown of every role you've held.</p>
-            <p><span style="color:var(--accent)">Real vs Nominal · Cumulative & Projection</span> — inflation-adjusted earnings and 5-yr regression forecast.</p>
+            <p><span style="color:var(--accent)">Old Money · Cumulative & Projection</span> — sampled years in base-year dollars (with inflation loss flagged) plus a 5-yr regression forecast.</p>
           </div>
         </div>
 
@@ -460,7 +460,7 @@ body.empty #emptyState{display:flex;}
           <h3>Chart overlays</h3>
           <span class="ins-tag">layer the math on the come-up.</span>
           <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--muted)">
-            <p style="margin-bottom:0.4rem"><span style="color:var(--real)">Real $</span> (base-year dollars, looks back) · <span style="color:var(--today-color)">Today $</span> (latest-year dollars, looks forward) · <span style="color:var(--pct)">Percentile</span> · <span style="color:var(--cum)">Cumulative</span> · <span style="color:var(--proj)">Projection</span></p>
+            <p style="margin-bottom:0.4rem"><span style="color:var(--real)">Old Money</span> (base-year dollars — looks back) · <span style="color:var(--today-color)">New Money</span> (today's dollars — looks forward) · <span style="color:var(--pct)">Percentile</span> · <span style="color:var(--cum)">Cumulative</span> · <span style="color:var(--proj)">Projection</span></p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--col-color)">COL</span> in dollar or % of salary mode (toggle in Settings → COL) · <span style="color:var(--inf-color)">Inflation</span> + <span style="color:var(--cuminf-color)">Cum. Inflation</span> · <span style="color:var(--gdp-color)">GDP</span></p>
             <p style="margin-bottom:0.4rem"><span style="color:var(--evt-color)">Events</span> render as multi-year colored bands · <span style="color:var(--accent)">Class Bands</span> shade the chart by US income tier</p>
             <p>Hover any year for a dense tooltip: salary, percentile, social class, YoY · real · CPI, COL with personal vs CPI gap, Net raise after COL and CPI in $ and %, plus active job and events. Click an event band to jump to the Events tab.</p>
@@ -1391,10 +1391,10 @@ function renderInsights(){
   h+=`</div>`;
 
   h+=_DIV();
-  // Real vs Nominal
-  h+=`<div class="ins-card"><h3>Real vs Nominal</h3>
+  // Old Money vs Nominal
+  h+=`<div class="ins-card"><h3>Old Money</h3>
     <span class="ins-tag">what's left after the world takes its cut.</span>
-    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Inflation-adjusted to ${yrs[0]} dollars</div>`;
+    <div style="font-size:0.57rem;color:var(--muted);margin-bottom:0.5rem">Every year's salary expressed in ${yrs[0]} dollars — the gap is what inflation ate.</div>`;
   yrs.filter((_,i)=>i%4===0||i===yrs.length-1).forEach(yr=>{
     const nom=salaries[yr],r=real[yr],loss=nom-r;
     h+=`<div style="display:grid;grid-template-columns:2.5rem 1fr 1fr 1fr;gap:0.3rem;margin-bottom:0.28rem;font-size:0.6rem;align-items:baseline;">
@@ -1404,7 +1404,7 @@ function renderInsights(){
       <span style="color:var(--neg)">-${fmt(loss)}</span>
     </div>`;
   });
-  h+=`<div style="font-size:0.55rem;color:var(--muted);margin-top:0.3rem">Nominal · <span style="color:var(--real)">Real</span> · <span style="color:var(--neg)">Inflation loss</span></div>
+  h+=`<div style="font-size:0.55rem;color:var(--muted);margin-top:0.3rem">Nominal · <span style="color:var(--real)">Old $</span> · <span style="color:var(--neg)">Inflation loss</span></div>
   </div>`;
 
   h+=_DIV();
@@ -1884,7 +1884,7 @@ function drawChart(){
     // End label — first year's value in today's $ (most dramatic comparison)
     const [fx,fy]=todayPts[0];
     ctx.fillStyle='rgba(78,205,196,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText(fmtK(todayVals[0])+' today',fx+5,fy-4);
+    ctx.fillText(fmtK(todayVals[0])+' new$',fx+5,fy-4);
   }
   if(ov.cum){
     const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-cum[yr]/maxCum)]);
@@ -2098,10 +2098,10 @@ canvas.addEventListener('mousemove',e=>{
   // Secondary line: YoY · Real · Today · Inflation (compact, separated by middots)
   const secondary=[];
   if(!isProj&&chg!=null)secondary.push(`<span style="color:${chg>=0?'var(--pos)':'var(--neg)'}">${cs}</span>`);
-  if(real[yr]&&real[yr]!==sal)secondary.push(`<span style="color:var(--real)">${fmt(real[yr])} real</span>`);
-  // Today $ — inflated to last-year purchasing power; hidden when essentially equal to nominal (current/recent year)
+  if(real[yr]&&real[yr]!==sal)secondary.push(`<span style="color:var(--real)">${fmt(real[yr])} old$</span>`);
+  // New money — inflated to last-year purchasing power; hidden when essentially equal to nominal (current/recent year)
   const _todayMap=(yrs.length>1)?todaysSalaries():null;
-  if(_todayMap&&_todayMap[yr]&&Math.abs(_todayMap[yr]-sal)>500)secondary.push(`<span style="color:var(--today-color)">${fmt(_todayMap[yr])} today</span>`);
+  if(_todayMap&&_todayMap[yr]&&Math.abs(_todayMap[yr]-sal)>500)secondary.push(`<span style="color:var(--today-color)">${fmt(_todayMap[yr])} new$</span>`);
   if(m?.inf!=null)secondary.push(`<span style="color:var(--muted)">${(m.inf*100).toFixed(1)}% inf</span>`);
   const secondaryLine=secondary.length?`<div style="font-size:var(--fs-sm)">${secondary.join(' <span style="color:var(--muted)">·</span> ')}</div>`:'';
   // COL row: this year's cost-of-living, mode-aware ($/yr or % of salary)
@@ -2249,8 +2249,8 @@ function toggleOv(k){
 const _cssVar=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
 const OV_META={
   col:{label:'Cost of Living',color:_cssVar('--col-color')||'#f0a800'},
-  real:{label:'Real $',color:_cssVar('--real')||'#7eb8f5'},
-  today:{label:'Today $',color:_cssVar('--today-color')||'#4ecdc4'},
+  real:{label:'Old Money',color:_cssVar('--real')||'#7eb8f5'},
+  today:{label:'New Money',color:_cssVar('--today-color')||'#4ecdc4'},
   pct:{label:'Percentile',color:_cssVar('--pct')||'#c47ef5'},
   cum:{label:'Cumulative',color:_cssVar('--cum')||'#f5a97e'},
   proj:{label:'Projection',color:_cssVar('--proj')||'#f5e97e'},
