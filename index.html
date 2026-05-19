@@ -1921,12 +1921,13 @@ function drawChart(){
     }
   }
 
-  // Bars
+  // Bars — fade to ghost-context when a smoothing mode is on so the line dominates
   const bw=Math.max(2,cW/(n*1.5));
+  const _barAlpha=smoothing==='none'?0.72:0.18;
   yrs.forEach(yr=>{
     const xi=allYrs.indexOf(yr);
     const j=getJob(yr),act=activeJob===null||activeJob===j?.id;
-    ctx.fillStyle=j?j.color:'#555';ctx.globalAlpha=act?0.72:0.05;
+    ctx.fillStyle=j?j.color:'#555';ctx.globalAlpha=act?_barAlpha:0.04;
     const top=ys(salaries[yr]);ctx.fillRect(xp(xi)-bw/2,top,bw,pad.top+cH-top);
   });ctx.globalAlpha=1;
   if(ov.proj){
@@ -2176,6 +2177,19 @@ canvas.addEventListener('mousemove',e=>{
   const sc=pct!=null?getSocialClass(pct):null;
   const heroSal=`<div style="font-size:1.05rem;font-weight:500;margin-bottom:0.1rem">${fmt(sal)}</div>`;
   const heroPct=pct!=null?`<div style="font-size:var(--fs-md);color:${sc.color};margin-bottom:0.35rem">${pct.toFixed(0)}th percentile · ${sc.label}</div>`:'';
+  // Smoothing line: when 3-yr / 5-yr MA is active, show the moving-average value
+  // for the hovered year. Spline passes through actual points so adds no number.
+  const smoothLine=(()=>{
+    if(isProj||smoothing==='none'||smoothing==='spline'||!yrs.includes(yr))return'';
+    const w=smoothing==='ma3'?3:smoothing==='ma5'?5:0;if(w===0)return'';
+    const i=yrs.indexOf(yr),h=Math.floor(w/2);
+    const slice=yrs.slice(Math.max(0,i-h),Math.min(yrs.length,i+h+1));
+    const ma=slice.reduce((s,y)=>s+(salaries[y]||0),0)/slice.length;
+    const delta=ma-sal,pct2=sal>0?(delta/sal)*100:0;
+    const dColor=delta>=0?'var(--pos)':'var(--neg)';
+    const sign=delta>=0?'+':'−';
+    return `<div style="margin-bottom:0.35rem;font-size:var(--fs-sm);color:var(--accent)">${w}-yr avg ${fmt(ma)} <span style="color:${dColor};font-size:var(--fs-xs)">(${sign}${fmt(Math.abs(delta))} vs raw)</span></div>`;
+  })();
   // Secondary line: YoY · Real · Today · Inflation (compact, separated by middots)
   const secondary=[];
   if(!isProj&&chg!=null)secondary.push(`<span style="color:${chg>=0?'var(--pos)':'var(--neg)'}">${cs}</span>`);
@@ -2240,7 +2254,7 @@ canvas.addEventListener('mousemove',e=>{
   })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${secondaryLine}${colLine}${netLine}${jobLine}${evLine}`;
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${smoothLine}${secondaryLine}${colLine}${netLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
