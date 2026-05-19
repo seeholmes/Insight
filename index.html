@@ -795,6 +795,20 @@ function jobCAGR(j){
   const s=salaries[sy[0]],e=salaries[sy[sy.length-1]],n=sy.length-1;
   return(!s||!e)?null:Math.pow(e/s,1/n)-1;
 }
+// Trend CAGR — log-linear regression slope across every year of the job,
+// converted back to a compound annual growth rate. Less sensitive to
+// endpoint noise (signing bonuses, severance, RSU vests, mid-year starts)
+// than the endpoint-to-endpoint jobCAGR. Returns null if <3 data points.
+function jobTrendCAGR(j){
+  const sy=j.years.filter(y=>salaries[y]&&salaries[y]>0).sort((a,b)=>a-b);
+  if(sy.length<3)return null;
+  const xs=sy.map((_,i)=>i),ls=sy.map(y=>Math.log(salaries[y]));
+  const n=xs.length,sx=xs.reduce((a,b)=>a+b,0),sl=ls.reduce((a,b)=>a+b,0);
+  const sxl=xs.reduce((a,x,i)=>a+x*ls[i],0),sxx=xs.reduce((a,x)=>a+x*x,0);
+  const denom=n*sxx-sx*sx;if(denom===0)return null;
+  const slope=(n*sxl-sx*sl)/denom;
+  return Math.exp(slope)-1;
+}
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
 function updateStats(){
@@ -820,7 +834,11 @@ function renderLegend(){
   jobs.forEach(j=>{
     const yr=j.years.slice().sort((a,b)=>a-b);
     const lbl=yr.length?(yr[0]+(yr.length>1?'–'+yr[yr.length-1]:'')):'—';
-    const cagr=jobCAGR(j);const cagrStr=cagr!=null?((cagr*100).toFixed(1)+'% CAGR'):'';
+    // Prefer Trend (regression) over raw CAGR — less noise from sign-on / severance
+    const trend=jobTrendCAGR(j),cagr=jobCAGR(j);
+    const rate=trend??cagr;
+    const rateLabel=trend!=null?'trend':(cagr!=null?'CAGR':'');
+    const rateStr=rate!=null?((rate*100).toFixed(1)+'% '+rateLabel):'';
     const jVals=yr.filter(y=>salaries[y]).map(y=>salaries[y]);
     const avg=jVals.length?jVals.reduce((a,b)=>a+b,0)/jVals.length:0;
     const d=document.createElement('div');
@@ -832,7 +850,7 @@ function renderLegend(){
         <div style="font-size:0.57rem;color:var(--muted)">${lbl} · avg ${fmtK(avg)}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:0.6rem;color:${cagr>=0?'var(--pos)':'var(--neg)'}">${cagrStr}</div>
+        <div style="font-size:0.6rem;color:${rate>=0?'var(--pos)':'var(--neg)'}">${rateStr}</div>
       </div>`;
     d.onclick=()=>{activeJob=(activeJob===j.id)?null:j.id;renderLegend();drawChart();};
     el.appendChild(d);
@@ -854,8 +872,9 @@ function renderInsights(){
     const jv=sy.map(y=>salaries[y]);
     const total=jv.reduce((a,b)=>a+b,0),avg=total/jv.length,peak=Math.max(...jv);
     const cagr=jobCAGR(j);
+    const trend=jobTrendCAGR(j);
     const slope=sy.length>1?(jv[jv.length-1]-jv[0])/(sy.length-1):0;
-    return{j,sy,total,avg,peak,cagr,slope};
+    return{j,sy,total,avg,peak,cagr,trend,slope};
   }).filter(Boolean);
 
   const transitions=[];
@@ -945,7 +964,14 @@ function renderInsights(){
   const _jobRowsLocal=jobRows;
   const _bestTrans=transitions.reduce((b,t)=>(b==null||t.delta>b.delta)?t:b,null);
   const _bestTransPctRow=transitions.reduce((b,t)=>(b==null||t.pct>b.pct)?t:b,null);
-  const _topCagrJob=_jobRowsLocal.reduce((b,r)=>(b==null||(r.cagr??-1)>(b.cagr??-1))?r:b,null);
+  // Top growth job — prefer the regression Trend (noise-robust); fall back to
+  // raw CAGR when a job has <3 years of data (no trend computable).
+  const _topCagrJob=_jobRowsLocal.reduce((b,r)=>{
+    const rate=r.trend??r.cagr??-1;
+    const best=b?(b.trend??b.cagr??-1):-Infinity;
+    return rate>best?r:b;
+  },null);
+  const _topCagrRate=_topCagrJob?(_topCagrJob.trend??_topCagrJob.cagr):null;
   const _longestJob=_jobRowsLocal.reduce((b,r)=>(b==null||r.sy.length>b.sy.length)?r:b,null);
   const _avgTenure=_jobRowsLocal.length?_jobRowsLocal.reduce((a,r)=>a+r.sy.length,0)/_jobRowsLocal.length:0;
   // COL chambers (last year in 1993-2026)
@@ -1009,7 +1035,7 @@ function renderInsights(){
     {n:'20',l:'Top Class',v:_topClass},
     {n:'21',l:'Best Trans $',v:_bestTrans?fmtK(_bestTrans.delta):'—'},
     {n:'22',l:'Best Trans %',v:_bestTransPctRow?(_bestTransPctRow.pct*100).toFixed(0)+'%':'—'},
-    {n:'23',l:'Top CAGR Job',v:_topCagrJob?_topCagrJob.j.name:'—',sub:_topCagrJob&&_topCagrJob.cagr!=null?fmtPct(_topCagrJob.cagr):''},
+    {n:'23',l:'Top Growth Job',v:_topCagrJob?_topCagrJob.j.name:'—',sub:_topCagrRate!=null?fmtPct(_topCagrRate):''},
     {n:'24',l:'Longest Tenure',v:_longestJob?_longestJob.sy.length+'y':'—'},
     {n:'25',l:'Avg Tenure',v:_avgTenure.toFixed(1)+'y'},
     {n:'26',l:'Latest COL',v:_colNow?fmtK(_colNow):'—'},
@@ -1341,16 +1367,19 @@ function renderInsights(){
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
     <span class="ins-tag">every chapter, every chamber.</span>
+    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.4rem;line-height:1.4"><span style="color:var(--accent)">CAGR</span> uses first-to-last salary (noisy if year 1 / last year include signing or severance). <span style="color:var(--pos)">Trend</span> fits a regression through every year — the underlying growth rate.</div>
     <table class="jst">
-      <tr><th>Job</th><th>Yrs</th><th>Avg</th><th>Peak</th><th>Total</th><th>CAGR</th></tr>`;
-  jobRows.forEach(({j,sy,avg,peak,total,cagr})=>{
+      <tr><th>Job</th><th>Yrs</th><th>Avg</th><th>Peak</th><th>Total</th><th>CAGR</th><th>Trend</th></tr>`;
+  jobRows.forEach(({j,sy,avg,peak,total,cagr,trend})=>{
     const cs=cagr!=null?((cagr*100).toFixed(1)+'%'):'—';
+    const ts=trend!=null?((trend*100).toFixed(1)+'%'):'—';
     h+=`<tr>
       <td><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</td>
       <td class="tddim">${sy.length}</td>
       <td>${fmtK(avg)}</td><td>${fmtK(peak)}</td>
       <td style="color:var(--accent)">${fmtK(total)}</td>
       <td style="color:${cagr>=0?'var(--pos)':'var(--neg)'}">${cs}</td>
+      <td style="color:${trend==null?'var(--muted)':(trend>=0?'var(--pos)':'var(--neg)')}">${ts}</td>
     </tr>`;
   });
   h+=`</table></div>`;
