@@ -2188,8 +2188,9 @@ canvas.addEventListener('click',e=>{
 // ── TABLE (always visible below chart) ───────────────────────────────────────
 function buildTable(){
   const yrs=sortedYrs(),real=realSalaries();
+  const today=(yrs.length>1)?todaysSalaries():{};
   const cum=cumEarnings();
-  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Real $</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Year</th><th>Job</th><th>Salary</th><th>Old Money</th><th>New Money</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
   let cards='';
   yrs.forEach(yr=>{
     const j=getJob(yr),chg=yoy(yr);
@@ -2204,6 +2205,7 @@ function buildTable(){
       <td>${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:''}</td>
       <td>${fmt(salaries[yr])}</td>
       <td style="color:var(--real)">${fmt(real[yr])}</td>
+      <td style="color:var(--today-color)">${today[yr]!=null?fmt(today[yr]):'—'}</td>
       <td class="${cc}">${cs}</td>
       <td style="color:var(--pct)">${pct.toFixed(0)}th</td>
       <td style="color:${sc.color}">${sc.label}</td>
@@ -2223,7 +2225,8 @@ function buildTable(){
         <span class="yc-arr">▾</span>
       </div>
       <div class="yc-body">
-        <div class="yc-row"><span class="l">Real $</span><span style="color:var(--real)">${fmt(real[yr])}</span></div>
+        <div class="yc-row"><span class="l">Old Money</span><span style="color:var(--real)">${fmt(real[yr])}</span></div>
+        <div class="yc-row"><span class="l">New Money</span><span style="color:var(--today-color)">${today[yr]!=null?fmt(today[yr]):'—'}</span></div>
         <div class="yc-row"><span class="l">Cum. earned</span><span style="color:var(--cum)">${fmtK(cum[yr])}</span></div>
         <div class="yc-row"><span class="l">Class</span><span style="color:${sc.color}">${sc.label}</span></div>
         <div class="yc-row"><span class="l">Inflation</span><span class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':'—'}</span></div>
