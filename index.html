@@ -326,6 +326,7 @@ body.empty #emptyState{display:flex;}
     <div class="tb-stat"><label>Peak</label><value id="sPeak">—</value></div>
     <div class="tb-stat"><label>Avg / yr</label><value id="sAvg">—</value></div>
     <div class="tb-stat"><label>Real Growth</label><value id="sReal">—</value></div>
+    <div class="tb-stat" title="Career Trend — log-linear regression through every year. Less noise than endpoint CAGR; reflects underlying growth rate."><label>Trend</label><value id="sTrend">—</value></div>
     <div class="tb-stat"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
   </div>
   <div class="tb-right">
@@ -826,17 +827,21 @@ function jobTrendCAGR(j){
 function updateStats(){
   const yrs=sortedYrs(),vals=yrs.map(y=>salaries[y]);
   if(!yrs.length){
-    ['sTotal','sPeak','sAvg','sReal'].forEach(id=>document.getElementById(id).textContent='—');
+    ['sTotal','sPeak','sAvg','sReal','sTrend'].forEach(id=>document.getElementById(id).textContent='—');
     document.getElementById('sYJ').textContent='0 · '+jobs.length;
     return;
   }
   const total=vals.reduce((a,b)=>a+b,0);
   const real=realSalaries(),rv=yrs.map(y=>real[y]);
   const rg=((rv[rv.length-1]/rv[0]-1)*100).toFixed(0);
+  // Career Trend — regression slope across every year of the career, less
+  // sensitive than endpoint-to-endpoint to first-year / final-year noise.
+  const careerTrend=jobTrendCAGR({years:yrs});
   document.getElementById('sTotal').textContent=fmtK(total);
   document.getElementById('sPeak').textContent=fmtK(Math.max(...vals));
   document.getElementById('sAvg').textContent=fmtK(total/vals.length);
   document.getElementById('sReal').textContent=(rg>0?'+':'')+rg+'%';
+  document.getElementById('sTrend').textContent=careerTrend!=null?((careerTrend>=0?'+':'')+(careerTrend*100).toFixed(1)+'%'):'—';
   document.getElementById('sYJ').textContent=yrs.length+' · '+jobs.length;
 }
 
@@ -942,6 +947,9 @@ function renderInsights(){
   const _totalEarn=Object.values(salaries).reduce((a,b)=>a+b,0);
   const _careerSpan=Math.max(1,_lastYr-_firstYr);
   const _careerCagr=salaries[_firstYr]>0?Math.pow(_curSal/salaries[_firstYr],1/_careerSpan)-1:0;
+  // Career Trend — same regression-based rate we use per-job (and now in the
+  // topbar Trend stat). Surfaces as the sub-line under chamber 07.
+  const _careerTrend=jobTrendCAGR({years:_idxYrs});
   // YoY array
   const _yoys=_idxYrs.map((y,i)=>i===0?null:(salaries[y]-salaries[_idxYrs[i-1]])/salaries[_idxYrs[i-1]]);
   const _bestRaiseIdx=_yoys.reduce((b,v,i)=>(v!=null&&(b<0||v>_yoys[b]))?i:b,-1);
@@ -1031,7 +1039,7 @@ function renderInsights(){
     {n:'04',l:'Current',v:fmtK(_curSal)},
     {n:'05',l:'Years Tracked',v:_idxYrs.length},
     {n:'06',l:'Jobs Held',v:jobs.length},
-    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr)},
+    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr),sub:_careerTrend!=null?'trend '+fmtPct(_careerTrend):''},
     {n:'08',l:'Best Raise',v:fmtPct(_bestRaisePct)},
     {n:'09',l:'Real Growth',v:fmtPct(_realGrowth/100)},
     {n:'10',l:'Inflation Drag',v:fmtK(_drag)},
