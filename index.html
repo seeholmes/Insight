@@ -1171,10 +1171,45 @@ function renderLab(){
       <span class="lab-label">Your COL</span>
       <input type="range" id="labCol" min="-2" max="20" step="0.1" value="${v.col.toFixed(1)}">
       <span class="lab-val" id="labColVal" style="color:var(--col-color)">${v.col>=0?'+':''}${v.col.toFixed(1)}%</span>
+    </div>
+    <div id="labColGap" style="font-size:var(--fs-xs);color:var(--muted);text-align:right;margin:-0.45rem 0 0.35rem 0;font-variant-numeric:tabular-nums">—</div>
+    ${(()=>{
+      // Recent personal COL trail — last 3 actual years
+      const trail=[];const cfg=getEffectiveColCfg();
+      for(let i=Math.max(0,yrs.length-3);i<yrs.length;i++){
+        const y=yrs[i];if(y<2001||y>2026)continue;
+        const a=calcColForYear(cfg,y-1),b=calcColForYear(cfg,y);
+        if(a&&b){const yy=(b-a)/a;trail.push(`${y} ${yy>=0?'+':''}${(yy*100).toFixed(1)}%`);}
+      }
+      return trail.length?`<div style="font-size:var(--fs-xs);color:var(--muted);margin:0 0 0.55rem 5.75rem;letter-spacing:0.04em">Recent: ${trail.join(' · ')}</div>`:'';
+    })()}
+    <div style="display:flex;gap:0.35rem;margin:-0.15rem 0 0.6rem 5.75rem;flex-wrap:wrap">
+      <button class="btn-sm" onclick="labSetCol('cpi')" style="padding:0.18rem 0.5rem;font-size:0.55rem" title="Snap COL to match current CPI slider">Track CPI</button>
+      <button class="btn-sm" onclick="labSetCol('last')" style="padding:0.18rem 0.5rem;font-size:0.55rem" title="Snap COL to your last actual year's personal COL growth">Last actual</button>
+      <button class="btn-sm" onclick="labSetCol('surge')" style="padding:0.18rem 0.5rem;font-size:0.55rem" title="CPI + 1 pt — typical for inflation-surge years">+1pt surge</button>
     </div>`;
   ['labRaise','labCpi','labCol'].forEach(id=>{
     document.getElementById(id).addEventListener('input',updateLabOutput);
   });
+  updateLabOutput();
+}
+function labSetCol(mode){
+  const cpi=parseFloat(document.getElementById('labCpi').value);
+  let target=cpi;
+  if(mode==='last'){
+    const yrs=sortedYrs();
+    const lastYr=yrs[yrs.length-1];
+    if(lastYr>=2001&&lastYr<=2026){
+      const cfg=getEffectiveColCfg();
+      const a=calcColForYear(cfg,lastYr-1),b=calcColForYear(cfg,lastYr);
+      if(a&&b)target=((b-a)/a)*100;
+    }
+  }else if(mode==='surge'){
+    target=cpi+1;
+  }
+  // clamp to slider range
+  target=Math.max(-2,Math.min(20,target));
+  document.getElementById('labCol').value=target.toFixed(1);
   updateLabOutput();
 }
 function updateLabOutput(){
@@ -1186,6 +1221,16 @@ function updateLabOutput(){
   document.getElementById('labRaiseVal').textContent=`${r>=0?'+':''}${(r*100).toFixed(1)}%`;
   document.getElementById('labCpiVal').textContent=`${c>=0?'+':''}${(c*100).toFixed(1)}%`;
   document.getElementById('labColVal').textContent=`${co>=0?'+':''}${(co*100).toFixed(1)}%`;
+  // Live vs-CPI gap indicator under the COL slider — the only metric that
+  // actually matters for the math is the gap, so surface it directly.
+  const gap=document.getElementById('labColGap');
+  if(gap){
+    const g=(co-c)*100;
+    const gColor=Math.abs(g)<0.1?'var(--muted)':(g>0?'var(--neg)':'var(--pos)');
+    const gWord=Math.abs(g)<0.1?'≈ CPI':(g>0?`+${g.toFixed(1)} pts vs CPI (your COL outpaces)`:`${g.toFixed(1)} pts vs CPI (your COL runs cooler)`);
+    gap.style.color=gColor;
+    gap.textContent=gWord;
+  }
   const p=modelPulse(r,c,co);
   if(!p){out.innerHTML='<div style="color:var(--muted)">Need salary data to model.</div>';return;}
   const tierColor=TIER_COLORS[p.level]||'var(--muted)';
