@@ -241,6 +241,31 @@ tr:hover td{background:var(--s1);}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);}
 
+/* ── ALARM CHIP — topbar career-health summary ── */
+.tb-stat.tb-alarm{padding:0 1.1rem;}
+#alarmChip{display:inline-flex;align-items:center;gap:0.45rem;padding:0.32rem 0.65rem;border:1px solid var(--border);cursor:help;white-space:nowrap;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;color:var(--muted);transition:all .15s;}
+#alarmChip:hover{filter:brightness(1.15);}
+.alarm-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;box-shadow:0 0 6px transparent;transition:all .2s;}
+#alarmChip[data-level="green"]{color:var(--pos);border-color:var(--pos);}
+#alarmChip[data-level="green"] .alarm-dot{background:var(--pos);box-shadow:0 0 7px rgba(111,207,151,0.55);}
+#alarmChip[data-level="amber"]{color:var(--accent);border-color:var(--accent);}
+#alarmChip[data-level="amber"] .alarm-dot{background:var(--accent);box-shadow:0 0 7px rgba(212,169,106,0.65);}
+#alarmChip[data-level="red"]{color:var(--neg);border-color:var(--neg);}
+#alarmChip[data-level="red"] .alarm-dot{background:var(--neg);box-shadow:0 0 9px rgba(235,87,87,0.75);animation:alarmPulse 1.8s ease-in-out infinite;}
+@keyframes alarmPulse{0%,100%{box-shadow:0 0 9px rgba(235,87,87,0.75);}50%{box-shadow:0 0 14px rgba(235,87,87,1);}}
+
+#alarmTip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.85rem 1rem 0.95rem;font-size:var(--fs-sm);z-index:400;opacity:0;pointer-events:none;transition:opacity .15s;box-shadow:0 6px 28px rgba(0,0,0,0.55);max-width:380px;min-width:280px;}
+#alarmTip.show{opacity:1;}
+#alarmTip h4{font-family:'Playfair Display',serif;font-style:italic;font-size:var(--fs-md);color:var(--accent);margin-bottom:0.6rem;}
+#alarmTip .ar-sub{font-size:var(--fs-xs);color:var(--muted);margin-bottom:0.55rem;text-transform:uppercase;letter-spacing:0.08em;}
+.alarm-row{display:grid;grid-template-columns:auto 1fr auto;gap:0.55rem;padding:0.42rem 0;border-top:1px solid var(--border);align-items:start;line-height:1.4;}
+.alarm-row:first-of-type{border-top:none;padding-top:0.2rem;}
+.alarm-row .ar-dot{width:7px;height:7px;border-radius:50%;margin-top:0.32rem;flex-shrink:0;}
+.alarm-row .ar-mid{min-width:0;}
+.alarm-row .ar-label{font-size:var(--fs-sm);color:var(--text);}
+.alarm-row .ar-where{font-size:var(--fs-xs);color:var(--muted);margin-top:0.15rem;font-style:italic;}
+.alarm-row .ar-val{font-size:var(--fs-sm);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+
 /* ── EMPTY STATE ── */
 #emptyState{display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:5;}
 #emptyState.vis{display:flex;}
@@ -327,6 +352,10 @@ body.empty #emptyState{display:flex;}
     <div class="tb-stat"><label>Avg / yr</label><value id="sAvg">—</value></div>
     <div class="tb-stat"><label>Real Growth</label><value id="sReal">—</value></div>
     <div class="tb-stat" title="Career Trend — log-linear regression through every year. Less noise than endpoint CAGR; reflects underlying growth rate."><label>Trend</label><value id="sTrend">—</value></div>
+    <div class="tb-stat tb-alarm">
+      <label>Health</label>
+      <span id="alarmChip" data-level="unknown"><span class="alarm-dot"></span><span id="alarmLabel">—</span></span>
+    </div>
     <div class="tb-stat"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
   </div>
   <div class="tb-right">
@@ -591,6 +620,7 @@ body.empty #emptyState{display:flex;}
 </div>
 
 <div id="tip"></div>
+<div id="alarmTip"></div>
 <div id="scrim" onclick="closeAll()"></div>
 
 <script>
@@ -823,12 +853,145 @@ function jobTrendCAGR(j){
   return Math.exp(slope)-1;
 }
 
+// ── CAREER HEALTH ALARM ───────────────────────────────────────────────────────
+// Runs five forensic checks and returns the worst severity across them, plus
+// per-check detail so the hover panel can explain exactly what triggered.
+function assessAlarmState(){
+  const yrs=sortedYrs();
+  if(yrs.length<2)return{level:'unknown',label:'NEED DATA',checks:[],passing:0,total:0};
+  const lastYr=yrs[yrs.length-1],prevYr=yrs[yrs.length-2];
+  const sal=salaries[lastYr],prevSal=salaries[prevYr];
+  const real=realSalaries();
+  const checks=[];
+  // 1. YoY vs CPI
+  const yoy=prevSal>0?(sal-prevSal)/prevSal:null;
+  const cpi=MACRO[lastYr]?.inf;
+  if(yoy!=null&&cpi!=null){
+    let lvl='green';
+    if(yoy<0)lvl='red';
+    else if(yoy<cpi)lvl='amber';
+    checks.push({label:'YoY vs CPI',level:lvl,
+      detail:`${yoy>=0?'+':''}${(yoy*100).toFixed(1)}% vs ${(cpi*100).toFixed(1)}%`,
+      where:'Hover the latest year on the chart'});
+  }
+  // 2. YoY vs personal COL
+  if(yoy!=null&&lastYr>=2000&&lastYr<=2026&&prevYr>=2000){
+    const cfg=getEffectiveColCfg();
+    const colA=calcColForYear(cfg,prevYr),colB=calcColForYear(cfg,lastYr);
+    if(colA&&colB){
+      const colYoy=(colB-colA)/colA;
+      let lvl='green';
+      if(yoy<0)lvl='red';
+      else if(yoy<colYoy)lvl='amber';
+      checks.push({label:'YoY vs your COL',level:lvl,
+        detail:`${yoy>=0?'+':''}${(yoy*100).toFixed(1)}% vs ${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%`,
+        where:'Hover chart → Net raise line'});
+    }
+  }
+  // 3. Stagnant run — current trailing streak of <1% real YoY
+  let runLen=0;
+  for(let i=yrs.length-1;i>0;i--){
+    const r=real[yrs[i-1]]>0?(real[yrs[i]]-real[yrs[i-1]])/real[yrs[i-1]]:0;
+    if(Math.abs(r)<0.01)runLen++;else break;
+  }
+  {
+    let lvl='green';
+    if(runLen>=3)lvl='red';
+    else if(runLen>=2)lvl='amber';
+    checks.push({label:'Stagnant run',level:lvl,
+      detail:runLen===0?'none active':`${runLen}-yr flat`,
+      where:'36 → Inflection Points'});
+  }
+  // 4. 5-yr percentile drift
+  if(yrs.length>=6){
+    const baseYr=yrs[yrs.length-6];
+    const pctNow=getPercentile(sal,lastYr);
+    const pctThen=getPercentile(salaries[baseYr],baseYr);
+    const drift=pctNow-pctThen;
+    let lvl='green';
+    if(drift<-3)lvl='red';
+    else if(drift<-1)lvl='amber';
+    checks.push({label:'5-yr pctile drift',level:lvl,
+      detail:`${drift>=0?'+':''}${drift.toFixed(1)} pts`,
+      where:'36 → Percentile Velocity'});
+  }
+  // 5. Career wage CAGR vs personal COL CAGR
+  const wageTrend=jobTrendCAGR({years:yrs});
+  const colCfg=getEffectiveColCfg();
+  const colYrsAlarm=yrs.filter(y=>y>=1993&&y<=2026);
+  if(colYrsAlarm.length>=3&&wageTrend!=null){
+    const firstY=colYrsAlarm[0],lastY=colYrsAlarm[colYrsAlarm.length-1];
+    const a=calcColForYear(colCfg,firstY),b=calcColForYear(colCfg,lastY);
+    const span=lastY-firstY;
+    if(a&&b&&span>0){
+      const colCagr=Math.pow(b/a,1/span)-1;
+      const gap=wageTrend-colCagr;
+      let lvl='green';
+      if(gap<-0.01)lvl='red';
+      else if(gap<-0.005)lvl='amber';
+      checks.push({label:'Career wage vs COL',level:lvl,
+        detail:`${gap>=0?'+':''}${(gap*100).toFixed(2)} pts`,
+        where:'36 → Your COL vs Inflation'});
+    }
+  }
+  // Overall level
+  let level='green';
+  if(checks.some(c=>c.level==='red'))level='red';
+  else if(checks.some(c=>c.level==='amber'))level='amber';
+  const labels={green:'STEADY',amber:'WATCH',red:'ATTENTION'};
+  const passing=checks.filter(c=>c.level==='green').length;
+  return{level,label:labels[level],checks,passing,total:checks.length};
+}
+function renderAlarmChip(){
+  const chip=document.getElementById('alarmChip');if(!chip)return;
+  const a=assessAlarmState();
+  chip.dataset.level=a.level;
+  document.getElementById('alarmLabel').textContent=a.label;
+}
+// Hover panel
+(()=>{
+  const chip=document.getElementById('alarmChip');
+  const panel=document.getElementById('alarmTip');
+  if(!chip||!panel)return;
+  function show(){
+    const a=assessAlarmState();
+    if(a.checks.length===0){
+      panel.innerHTML=`<h4>Career Health</h4><div class="ar-sub">Add at least 2 years of salary data to activate the alarm.</div>`;
+    }else{
+      const dotColor={green:'var(--pos)',amber:'var(--accent)',red:'var(--neg)'};
+      const overallColor=dotColor[a.level]||'var(--muted)';
+      panel.innerHTML=`<h4 style="color:${overallColor}">${a.label} <span style="color:var(--muted);font-style:normal;font-size:var(--fs-xs)">· ${a.passing}/${a.total} passing</span></h4>
+        <div class="ar-sub">five forensic checks · click through to investigate any failing</div>
+        ${a.checks.map(c=>`<div class="alarm-row">
+          <span class="ar-dot" style="background:${dotColor[c.level]}"></span>
+          <div class="ar-mid">
+            <div class="ar-label">${c.label}</div>
+            <div class="ar-where">→ ${c.where}</div>
+          </div>
+          <div class="ar-val" style="color:${dotColor[c.level]}">${c.detail}</div>
+        </div>`).join('')}`;
+    }
+    panel.classList.add('show');
+    const r=chip.getBoundingClientRect();
+    const w=Math.min(380,window.innerWidth-20);
+    let left=r.left+r.width/2-w/2;
+    left=Math.max(10,Math.min(window.innerWidth-w-10,left));
+    panel.style.left=left+'px';
+    panel.style.top=(r.bottom+8)+'px';
+  }
+  function hide(){panel.classList.remove('show');}
+  chip.addEventListener('mouseenter',show);
+  chip.addEventListener('mouseleave',hide);
+  chip.addEventListener('click',()=>{panel.classList.toggle('show');if(panel.classList.contains('show'))show();});
+})();
+
 // ── STATS ─────────────────────────────────────────────────────────────────────
 function updateStats(){
   const yrs=sortedYrs(),vals=yrs.map(y=>salaries[y]);
   if(!yrs.length){
     ['sTotal','sPeak','sAvg','sReal','sTrend'].forEach(id=>document.getElementById(id).textContent='—');
     document.getElementById('sYJ').textContent='0 · '+jobs.length;
+    renderAlarmChip();
     return;
   }
   const total=vals.reduce((a,b)=>a+b,0);
@@ -843,6 +1006,7 @@ function updateStats(){
   document.getElementById('sReal').textContent=(rg>0?'+':'')+rg+'%';
   document.getElementById('sTrend').textContent=careerTrend!=null?((careerTrend>=0?'+':'')+(careerTrend*100).toFixed(1)+'%'):'—';
   document.getElementById('sYJ').textContent=yrs.length+' · '+jobs.length;
+  renderAlarmChip();
 }
 
 // ── SIDEBAR: JOBS LEGEND ──────────────────────────────────────────────────────
