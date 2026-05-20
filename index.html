@@ -2367,34 +2367,6 @@ function drawChart(){
     ctx.fillText('Bands: US income percentile classes',pad.left+6,pad.top+12);
   }
 
-  // NBER recession bands — shaded vertical regions over recession years.
-  // Drawn after class bands but before everything else so bars/lines render
-  // on top while the macro context shows through.
-  if(ov.recession){
-    NBER_RECESSIONS.forEach(rec=>{
-      const sIdx=allYrs.indexOf(rec.startYear);
-      let eIdx=allYrs.indexOf(rec.endYear);
-      if(sIdx<0&&eIdx<0)return;
-      const s=sIdx>=0?sIdx:eIdx;
-      const e=eIdx>=0?eIdx:sIdx;
-      const bandPad=Math.max(2,bw*0.5);
-      const x0=xp(s)-bandPad;
-      const x1=xp(e)+bandPad;
-      const w=x1-x0;
-      ctx.fillStyle='rgba(235,87,87,0.10)';
-      ctx.fillRect(x0,pad.top,w,cH);
-      // Top + bottom edge accents for definition
-      ctx.fillStyle='rgba(235,87,87,0.35)';
-      ctx.fillRect(x0,pad.top,w,1);
-      ctx.fillRect(x0,pad.top+cH-1,w,1);
-      // Tiny label inside the band at top
-      ctx.fillStyle='rgba(235,87,87,0.8)';
-      ctx.font='italic 9px IBM Plex Mono,monospace';
-      ctx.textAlign='center';
-      ctx.fillText(rec.label,x0+w/2,pad.top+11);
-    });
-  }
-
   // Job boundary lines
   jobs.forEach(j=>{
     const sy=j.years.filter(y=>yrs.includes(y)).sort((a,b)=>a-b);
@@ -2501,6 +2473,28 @@ function drawChart(){
 
   // Bars — fade to ghost-context when a smoothing mode is on so the line dominates
   const bw=Math.max(2,cW/(n*1.5));
+  // NBER recession bands — drawn here (after bw is in scope, before bars) so
+  // shaded regions sit beneath the data while still using bw for sizing.
+  if(ov.recession){
+    NBER_RECESSIONS.forEach(rec=>{
+      const sIdx=allYrs.indexOf(rec.startYear);
+      let eIdx=allYrs.indexOf(rec.endYear);
+      if(sIdx<0&&eIdx<0)return;
+      const s=sIdx>=0?sIdx:eIdx;
+      const e=eIdx>=0?eIdx:sIdx;
+      const bandPad=Math.max(2,bw*0.5);
+      const x0=xp(s)-bandPad,x1=xp(e)+bandPad,w=x1-x0;
+      ctx.fillStyle='rgba(235,87,87,0.10)';
+      ctx.fillRect(x0,pad.top,w,cH);
+      ctx.fillStyle='rgba(235,87,87,0.35)';
+      ctx.fillRect(x0,pad.top,w,1);
+      ctx.fillRect(x0,pad.top+cH-1,w,1);
+      ctx.fillStyle='rgba(235,87,87,0.8)';
+      ctx.font='italic 9px IBM Plex Mono,monospace';
+      ctx.textAlign='center';
+      ctx.fillText(rec.label,x0+w/2,pad.top+11);
+    });
+  }
   const _barAlpha=smoothing==='none'?0.72:0.18;
   yrs.forEach(yr=>{
     const xi=allYrs.indexOf(yr);
