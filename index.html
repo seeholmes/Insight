@@ -245,14 +245,17 @@ tr:hover td{background:var(--s1);}
 .tb-stat.tb-alarm{padding:0 1.1rem;}
 #alarmChip{display:inline-flex;align-items:center;gap:0.45rem;padding:0.32rem 0.65rem;border:1px solid var(--border);cursor:help;white-space:nowrap;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;color:var(--muted);transition:all .15s;}
 #alarmChip:hover{filter:brightness(1.15);}
-.alarm-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;box-shadow:0 0 6px transparent;transition:all .2s;}
-#alarmChip[data-level="green"]{color:var(--pos);border-color:var(--pos);}
-#alarmChip[data-level="green"] .alarm-dot{background:var(--pos);box-shadow:0 0 7px rgba(111,207,151,0.55);}
-#alarmChip[data-level="amber"]{color:var(--accent);border-color:var(--accent);}
-#alarmChip[data-level="amber"] .alarm-dot{background:var(--accent);box-shadow:0 0 7px rgba(212,169,106,0.65);}
-#alarmChip[data-level="red"]{color:var(--neg);border-color:var(--neg);}
-#alarmChip[data-level="red"] .alarm-dot{background:var(--neg);box-shadow:0 0 9px rgba(235,87,87,0.75);animation:alarmPulse 1.8s ease-in-out infinite;}
-@keyframes alarmPulse{0%,100%{box-shadow:0 0 9px rgba(235,87,87,0.75);}50%{box-shadow:0 0 14px rgba(235,87,87,1);}}
+.alarm-emoji{font-size:0.95rem;line-height:1;flex-shrink:0;display:inline-block;filter:drop-shadow(0 0 0 transparent);transition:filter .2s;}
+#alarmChip[data-level="hot"]{color:var(--accent);border-color:var(--accent);background:rgba(212,169,106,0.08);}
+#alarmChip[data-level="hot"] .alarm-emoji{filter:drop-shadow(0 0 6px rgba(255,140,40,0.7));animation:alarmHotGlow 2.4s ease-in-out infinite;}
+#alarmChip[data-level="steady"]{color:var(--pos);border-color:var(--pos);}
+#alarmChip[data-level="steady"] .alarm-emoji{filter:drop-shadow(0 0 4px rgba(245,233,126,0.5));}
+#alarmChip[data-level="cool"]{color:#7eb8f5;border-color:#7eb8f5;}
+#alarmChip[data-level="cool"] .alarm-emoji{filter:drop-shadow(0 0 5px rgba(126,184,245,0.55));}
+#alarmChip[data-level="cold"]{color:var(--neg);border-color:var(--neg);}
+#alarmChip[data-level="cold"] .alarm-emoji{filter:drop-shadow(0 0 7px rgba(126,184,245,0.6));animation:alarmPulse 1.8s ease-in-out infinite;}
+@keyframes alarmPulse{0%,100%{filter:drop-shadow(0 0 6px rgba(235,87,87,0.55));}50%{filter:drop-shadow(0 0 12px rgba(235,87,87,0.95));}}
+@keyframes alarmHotGlow{0%,100%{filter:drop-shadow(0 0 5px rgba(255,140,40,0.55));}50%{filter:drop-shadow(0 0 10px rgba(255,180,60,0.85));}}
 
 #alarmTip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.85rem 1rem 0.95rem;font-size:var(--fs-sm);z-index:400;opacity:0;pointer-events:none;transition:opacity .15s;box-shadow:0 6px 28px rgba(0,0,0,0.55);max-width:380px;min-width:280px;}
 #alarmTip.show{opacity:1;}
@@ -353,8 +356,8 @@ body.empty #emptyState{display:flex;}
     <div class="tb-stat"><label>Real Growth</label><value id="sReal">—</value></div>
     <div class="tb-stat" title="Career Trend — log-linear regression through every year. Less noise than endpoint CAGR; reflects underlying growth rate."><label>Trend</label><value id="sTrend">—</value></div>
     <div class="tb-stat tb-alarm">
-      <label>Health</label>
-      <span id="alarmChip" data-level="unknown"><span class="alarm-dot"></span><span id="alarmLabel">—</span></span>
+      <label>Pulse</label>
+      <span id="alarmChip" data-level="unknown"><span class="alarm-emoji" id="alarmEmoji">—</span><span id="alarmLabel">—</span></span>
     </div>
     <div class="tb-stat"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
   </div>
@@ -853,28 +856,34 @@ function jobTrendCAGR(j){
   return Math.exp(slope)-1;
 }
 
-// ── CAREER HEALTH ALARM ───────────────────────────────────────────────────────
-// Runs five forensic checks and returns the worst severity across them, plus
-// per-check detail so the hover panel can explain exactly what triggered.
+// ── CAREER PULSE ──────────────────────────────────────────────────────────────
+// Runs five forensic checks. Each returns a level (green/amber/red) plus a
+// `strong` flag for green-checks that clear the threshold by a comfortable
+// margin. Overall tier:
+//   COLD   any red          🧊
+//   COOL   any amber         ❄️
+//   STEADY all green, ≤2 strong (treading water but holding)  ☀️
+//   HOT    all green, ≥3 strong (or 100% strong when <5 checks apply)  🔥
 function assessAlarmState(){
   const yrs=sortedYrs();
-  if(yrs.length<2)return{level:'unknown',label:'NEED DATA',checks:[],passing:0,total:0};
+  if(yrs.length<2)return{level:'unknown',label:'NEED DATA',checks:[],strong:0,total:0};
   const lastYr=yrs[yrs.length-1],prevYr=yrs[yrs.length-2];
   const sal=salaries[lastYr],prevSal=salaries[prevYr];
   const real=realSalaries();
   const checks=[];
-  // 1. YoY vs CPI
+  // 1. YoY vs CPI — strong when the raise beats CPI by ≥3 pts
   const yoy=prevSal>0?(sal-prevSal)/prevSal:null;
   const cpi=MACRO[lastYr]?.inf;
   if(yoy!=null&&cpi!=null){
     let lvl='green';
     if(yoy<0)lvl='red';
     else if(yoy<cpi)lvl='amber';
-    checks.push({label:'YoY vs CPI',level:lvl,
+    const strong=lvl==='green'&&(yoy-cpi)>=0.03;
+    checks.push({label:'YoY vs CPI',level:lvl,strong,
       detail:`${yoy>=0?'+':''}${(yoy*100).toFixed(1)}% vs ${(cpi*100).toFixed(1)}%`,
       where:'Hover the latest year on the chart'});
   }
-  // 2. YoY vs personal COL
+  // 2. YoY vs personal COL — strong when the raise beats COL by ≥3 pts
   if(yoy!=null&&lastYr>=2000&&lastYr<=2026&&prevYr>=2000){
     const cfg=getEffectiveColCfg();
     const colA=calcColForYear(cfg,prevYr),colB=calcColForYear(cfg,lastYr);
@@ -883,12 +892,13 @@ function assessAlarmState(){
       let lvl='green';
       if(yoy<0)lvl='red';
       else if(yoy<colYoy)lvl='amber';
-      checks.push({label:'YoY vs your COL',level:lvl,
+      const strong=lvl==='green'&&(yoy-colYoy)>=0.03;
+      checks.push({label:'YoY vs your COL',level:lvl,strong,
         detail:`${yoy>=0?'+':''}${(yoy*100).toFixed(1)}% vs ${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%`,
         where:'Hover chart → Net raise line'});
     }
   }
-  // 3. Stagnant run — current trailing streak of <1% real YoY
+  // 3. Stagnant run — strong only when run = 0 (no trailing flat years)
   let runLen=0;
   for(let i=yrs.length-1;i>0;i--){
     const r=real[yrs[i-1]]>0?(real[yrs[i]]-real[yrs[i-1]])/real[yrs[i-1]]:0;
@@ -898,11 +908,12 @@ function assessAlarmState(){
     let lvl='green';
     if(runLen>=3)lvl='red';
     else if(runLen>=2)lvl='amber';
-    checks.push({label:'Stagnant run',level:lvl,
+    const strong=lvl==='green'&&runLen===0;
+    checks.push({label:'Stagnant run',level:lvl,strong,
       detail:runLen===0?'none active':`${runLen}-yr flat`,
       where:'36 → Inflection Points'});
   }
-  // 4. 5-yr percentile drift
+  // 4. 5-yr percentile drift — strong when ≥+3 pts
   if(yrs.length>=6){
     const baseYr=yrs[yrs.length-6];
     const pctNow=getPercentile(sal,lastYr);
@@ -911,11 +922,12 @@ function assessAlarmState(){
     let lvl='green';
     if(drift<-3)lvl='red';
     else if(drift<-1)lvl='amber';
-    checks.push({label:'5-yr pctile drift',level:lvl,
+    const strong=lvl==='green'&&drift>=3;
+    checks.push({label:'5-yr pctile drift',level:lvl,strong,
       detail:`${drift>=0?'+':''}${drift.toFixed(1)} pts`,
       where:'36 → Percentile Velocity'});
   }
-  // 5. Career wage CAGR vs personal COL CAGR
+  // 5. Career wage CAGR vs personal COL CAGR — strong when gap ≥+1.5 pts
   const wageTrend=jobTrendCAGR({years:yrs});
   const colCfg=getEffectiveColCfg();
   const colYrsAlarm=yrs.filter(y=>y>=1993&&y<=2026);
@@ -929,23 +941,30 @@ function assessAlarmState(){
       let lvl='green';
       if(gap<-0.01)lvl='red';
       else if(gap<-0.005)lvl='amber';
-      checks.push({label:'Career wage vs COL',level:lvl,
+      const strong=lvl==='green'&&gap>=0.015;
+      checks.push({label:'Career wage vs COL',level:lvl,strong,
         detail:`${gap>=0?'+':''}${(gap*100).toFixed(2)} pts`,
         where:'36 → Your COL vs Inflation'});
     }
   }
-  // Overall level
-  let level='green';
-  if(checks.some(c=>c.level==='red'))level='red';
-  else if(checks.some(c=>c.level==='amber'))level='amber';
-  const labels={green:'STEADY',amber:'WATCH',red:'ATTENTION'};
-  const passing=checks.filter(c=>c.level==='green').length;
-  return{level,label:labels[level],checks,passing,total:checks.length};
+  // Overall tier — 4 levels keyed by temperature
+  let level='steady';
+  if(checks.some(c=>c.level==='red'))level='cold';
+  else if(checks.some(c=>c.level==='amber'))level='cool';
+  else{
+    const strong=checks.filter(c=>c.strong).length;
+    if(checks.length>0&&(strong>=3||strong===checks.length))level='hot';
+  }
+  const labels={hot:'HOT',steady:'STEADY',cool:'COOL',cold:'COLD'};
+  const strong=checks.filter(c=>c.strong).length;
+  return{level,label:labels[level],checks,strong,total:checks.length};
 }
+const ALARM_EMOJI={hot:'🔥',steady:'☀️',cool:'❄️',cold:'🧊',unknown:'—'};
 function renderAlarmChip(){
   const chip=document.getElementById('alarmChip');if(!chip)return;
   const a=assessAlarmState();
   chip.dataset.level=a.level;
+  document.getElementById('alarmEmoji').textContent=ALARM_EMOJI[a.level]||'—';
   document.getElementById('alarmLabel').textContent=a.label;
 }
 // Hover panel
@@ -956,16 +975,19 @@ function renderAlarmChip(){
   function show(){
     const a=assessAlarmState();
     if(a.checks.length===0){
-      panel.innerHTML=`<h4>Career Health</h4><div class="ar-sub">Add at least 2 years of salary data to activate the alarm.</div>`;
+      panel.innerHTML=`<h4>Career Pulse</h4><div class="ar-sub">Add at least 2 years of salary data to activate the read.</div>`;
     }else{
-      const dotColor={green:'var(--pos)',amber:'var(--accent)',red:'var(--neg)'};
-      const overallColor=dotColor[a.level]||'var(--muted)';
-      panel.innerHTML=`<h4 style="color:${overallColor}">${a.label} <span style="color:var(--muted);font-style:normal;font-size:var(--fs-xs)">· ${a.passing}/${a.total} passing</span></h4>
-        <div class="ar-sub">five forensic checks · click through to investigate any failing</div>
-        ${a.checks.map(c=>`<div class="alarm-row">
+      const tierColor={hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
+      const dotColor={green:'var(--pos)',amber:'#7eb8f5',red:'var(--neg)'};
+      const overallColor=tierColor[a.level]||'var(--muted)';
+      const tierEmoji=ALARM_EMOJI[a.level]||'—';
+      const passing=a.checks.filter(c=>c.level==='green').length;
+      panel.innerHTML=`<h4 style="color:${overallColor}">${tierEmoji} ${a.label} <span style="color:var(--muted);font-style:normal;font-size:var(--fs-xs)">· ${a.strong}/${a.total} strong · ${passing}/${a.total} passing</span></h4>
+        <div class="ar-sub">five forensic checks · strong checks 🔥 push toward HOT</div>
+        ${a.checks.map(c=>`<div class="alarm-row${c.strong?' strong':''}">
           <span class="ar-dot" style="background:${dotColor[c.level]}"></span>
           <div class="ar-mid">
-            <div class="ar-label">${c.label}</div>
+            <div class="ar-label">${c.label}${c.strong?' <span style="color:var(--accent);font-size:var(--fs-xs);margin-left:0.3rem">🔥</span>':''}</div>
             <div class="ar-where">→ ${c.where}</div>
           </div>
           <div class="ar-val" style="color:${dotColor[c.level]}">${c.detail}</div>
