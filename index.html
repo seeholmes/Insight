@@ -234,6 +234,26 @@ tr:hover td{background:var(--s1);}
 .mrow .sinput{padding:0.26rem 0.36rem;font-size:var(--fs-sm);}
 .evyr{padding-right:0.22rem!important;font-variant-numeric:tabular-nums;}
 
+/* ── THE LAB (modeling tool) ── */
+.lab-row{display:grid;grid-template-columns:5.2rem 1fr 3.2rem;gap:0.55rem;align-items:center;margin-bottom:0.65rem;}
+.lab-row .lab-label{font-size:var(--fs-xs);color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;}
+.lab-row input[type=range]{width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer;}
+.lab-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--accent);}
+.lab-row input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--accent);}
+.lab-row .lab-val{font-size:var(--fs-sm);text-align:right;font-variant-numeric:tabular-nums;font-weight:500;}
+.lab-tier{text-align:center;padding:0.8rem 0;border-bottom:1px solid var(--border);margin-bottom:0.65rem;}
+.lab-tier .lab-emoji{font-size:2rem;display:block;margin-bottom:0.25rem;line-height:1;}
+.lab-tier .lab-tier-label{font-family:'Bebas Neue',cursive;font-size:1.65rem;letter-spacing:0.18em;line-height:1;}
+.lab-tier .lab-tier-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:0.35rem;letter-spacing:0.08em;text-transform:uppercase;}
+.lab-check-row{display:grid;grid-template-columns:auto 1fr auto;gap:0.5rem;padding:0.35rem 0;border-top:1px solid var(--border);align-items:center;font-size:var(--fs-sm);}
+.lab-check-row:first-child{border-top:none;padding-top:0.45rem;}
+.lab-check-row .lab-check-dot{width:7px;height:7px;border-radius:50%;}
+.lab-check-row .lab-check-detail{text-align:right;font-variant-numeric:tabular-nums;}
+.lab-money-row{display:grid;grid-template-columns:1fr auto;gap:0.4rem;padding:0.3rem 0;font-size:var(--fs-sm);color:var(--muted);}
+.lab-money-row .lab-money-val{font-variant-numeric:tabular-nums;color:var(--text);}
+.lab-find-row{display:flex;gap:0.4rem;margin-top:0.9rem;}
+.lab-find-row button{flex:1;}
+
 /* TOOLTIP */
 #tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.7rem 0.9rem;font-size:var(--fs-sm);pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:170px;line-height:1.6;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
 #tip strong{display:block;font-size:var(--fs-xl);color:var(--accent);margin-bottom:0.2rem;font-family:'Playfair Display',serif;}
@@ -458,6 +478,7 @@ body.empty #emptyState{display:flex;}
       <button class="dtab"        id="dt-macro"  onclick="setDTab('macro')">Macro</button>
       <button class="dtab"        id="dt-events" onclick="setDTab('events')">Events</button>
       <button class="dtab"        id="dt-col"    onclick="setDTab('col')">COL</button>
+      <button class="dtab"        id="dt-lab"    onclick="setDTab('lab')">Lab</button>
       <button class="dtab"        id="dt-about"  onclick="setDTab('about')">About</button>
       <button id="drawer-close" onclick="toggleDrawer()" aria-label="Close">×</button>
     </div>
@@ -617,6 +638,12 @@ body.empty #emptyState{display:flex;}
           <button class="btn-sm" onclick="resetColCfg()">Reset to Defaults</button>
           <button class="btn-sm danger" onclick="clearColCfg()">Clear</button>
         </div>
+      </div>
+      <div class="dsec" id="ds-lab">
+        <p class="sec-head">The Lab — Model Next Year</p>
+        <div style="font-size:0.6rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.55">Drag the sliders. Pulse and the per-check breakdown update live. Use <span style="color:var(--accent)">Find HOT</span> or <span style="color:var(--pos)">Find STEADY</span> to snap the raise slider to the minimum value needed to hit that tier.</div>
+        <div id="labForm"></div>
+        <div id="labOutput" style="margin-top:0.9rem;padding:0.85rem;background:var(--s2);border:1px solid var(--border)"></div>
       </div>
     </div>
   </div>
@@ -988,6 +1015,213 @@ function renderAlarmChip(){
   chip.dataset.level=a.level;
   document.getElementById('alarmEmoji').textContent=ALARM_EMOJI[a.level]||'—';
   document.getElementById('alarmLabel').textContent=a.label;
+}
+
+// ── THE LAB — model hypothetical next year ───────────────────────────────────
+// Mirrors assessAlarmState's five-check structure but accepts user-supplied
+// inputs (raise, CPI, COL growth) and projects one year past the latest actual
+// data. Bypasses calcColForYear (which caps at 2026) by accepting the COL
+// growth rate directly and projecting forward.
+function modelPulse(raisePct,cpiRate,colYoy){
+  const yrs=sortedYrs();
+  if(yrs.length<1)return null;
+  const lastYr=yrs[yrs.length-1];
+  const prevSal=salaries[lastYr];
+  if(!prevSal)return null;
+  const synthSal=prevSal*(1+raisePct);
+  const synthYr=lastYr+1;
+  const checks=[];
+  // 1. YoY vs CPI
+  let lvl='green';
+  if(raisePct<0)lvl='red';
+  else if(raisePct<cpiRate)lvl='amber';
+  checks.push({label:'YoY vs CPI',level:lvl,
+    strong:lvl==='green'&&(raisePct-cpiRate)>=0.03,
+    detail:`${raisePct>=0?'+':''}${(raisePct*100).toFixed(1)}% vs ${(cpiRate*100).toFixed(1)}%`});
+  // 2. YoY vs personal COL
+  lvl='green';
+  if(raisePct<0)lvl='red';
+  else if(raisePct<colYoy)lvl='amber';
+  checks.push({label:'YoY vs your COL',level:lvl,
+    strong:lvl==='green'&&(raisePct-colYoy)>=0.03,
+    detail:`${raisePct>=0?'+':''}${(raisePct*100).toFixed(1)}% vs ${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%`});
+  // 3. Stagnant run — new year's real YoY = (raise-cpi)/(1+cpi), tail backwards
+  const real=realSalaries();
+  const synthRealYoY=(raisePct-cpiRate)/(1+cpiRate);
+  let runLen=Math.abs(synthRealYoY)<0.01?1:0;
+  if(runLen>0){
+    for(let i=yrs.length-1;i>0;i--){
+      const r=real[yrs[i-1]]>0?(real[yrs[i]]-real[yrs[i-1]])/real[yrs[i-1]]:0;
+      if(Math.abs(r)<0.01)runLen++;else break;
+    }
+  }
+  lvl='green';
+  if(runLen>=3)lvl='red';
+  else if(runLen>=2)lvl='amber';
+  checks.push({label:'Stagnant run',level:lvl,
+    strong:lvl==='green'&&runLen===0,
+    detail:runLen===0?'none active':`${runLen}-yr flat`});
+  // 4. 5-yr percentile drift — compare synth-year pct against 5 years prior
+  if(yrs.length>=5){
+    const baseYr=yrs[yrs.length-5];
+    const pctNow=getPercentile(synthSal,synthYr);
+    const pctThen=getPercentile(salaries[baseYr],baseYr);
+    const drift=pctNow-pctThen;
+    lvl='green';
+    if(drift<-3)lvl='red';
+    else if(drift<-1)lvl='amber';
+    checks.push({label:'5-yr pctile drift',level:lvl,
+      strong:lvl==='green'&&drift>=3,
+      detail:`${drift>=0?'+':''}${drift.toFixed(1)} pts`});
+  }
+  // 5. Career wage trend vs COL trend — regression including synth year
+  const synthYrList=[...yrs,synthYr];
+  if(synthYrList.length>=3){
+    const xs=synthYrList.map((_,i)=>i);
+    const ls=synthYrList.map(y=>Math.log(y===synthYr?synthSal:salaries[y]));
+    const n=xs.length,sx=xs.reduce((a,b)=>a+b,0),sl=ls.reduce((a,b)=>a+b,0);
+    const sxl=xs.reduce((a,x,i)=>a+x*ls[i],0),sxx=xs.reduce((a,x)=>a+x*x,0);
+    const denom=n*sxx-sx*sx;
+    if(denom!==0){
+      const synthWageTrend=Math.exp((n*sxl-sx*sl)/denom)-1;
+      // COL CAGR — historical anchor through last actual year, projected forward via colYoy
+      const colCfg=getEffectiveColCfg();
+      const colYrsM=yrs.filter(y=>y>=1993&&y<=2026);
+      if(colYrsM.length>=3){
+        const firstY=colYrsM[0],lastColY=colYrsM[colYrsM.length-1];
+        const colStart=calcColForYear(colCfg,firstY);
+        const colLast=calcColForYear(colCfg,lastColY);
+        if(colStart&&colLast){
+          const gap=synthYr-lastColY;
+          const colSynth=colLast*Math.pow(1+colYoy,gap);
+          const span=synthYr-firstY;
+          if(span>0){
+            const colCagr=Math.pow(colSynth/colStart,1/span)-1;
+            const trendGap=synthWageTrend-colCagr;
+            lvl='green';
+            if(trendGap<-0.01)lvl='red';
+            else if(trendGap<-0.005)lvl='amber';
+            checks.push({label:'Career wage vs COL',level:lvl,
+              strong:lvl==='green'&&trendGap>=0.015,
+              detail:`${trendGap>=0?'+':''}${(trendGap*100).toFixed(2)} pts`});
+          }
+        }
+      }
+    }
+  }
+  // Overall tier
+  let level='steady';
+  if(checks.some(c=>c.level==='red'))level='cold';
+  else if(checks.some(c=>c.level==='amber'))level='cool';
+  else{
+    const s=checks.filter(c=>c.strong).length;
+    if(checks.length>0&&(s>=3||s===checks.length))level='hot';
+  }
+  const labels={hot:'HOT',steady:'STEADY',cool:'COOL',cold:'COLD'};
+  return{level,label:labels[level],checks,strong:checks.filter(c=>c.strong).length,total:checks.length,synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
+}
+// Reverse calculator — minimum raise to land in (or above) targetTier
+function findRaiseForTier(targetTier,cpi,col){
+  // Search from -5% to +30% in 0.1% increments; return smallest raise that hits
+  const tierRank={cold:0,cool:1,steady:2,hot:3};
+  const want=tierRank[targetTier]||0;
+  for(let r=-5;r<=30.001;r+=0.1){
+    const raisePct=r/100;
+    const p=modelPulse(raisePct,cpi,col);
+    if(!p)continue;
+    if((tierRank[p.level]||0)>=want)return raisePct;
+  }
+  return null;
+}
+function renderLab(){
+  const form=document.getElementById('labForm');if(!form)return;
+  const yrs=sortedYrs();
+  if(yrs.length<1){
+    form.innerHTML='<div style="color:var(--muted);font-size:var(--fs-sm);text-align:center;padding:1rem 0">Add at least 1 year of salary data to use The Lab.</div>';
+    document.getElementById('labOutput').innerHTML='';
+    return;
+  }
+  const lastYr=yrs[yrs.length-1];
+  // Defaults: career trend rate, last actual CPI, last actual personal-COL YoY
+  const trend=jobTrendCAGR({years:yrs}),cagr=jobCAGR({years:yrs});
+  const dRaise=Math.max(-0.05,Math.min(0.3,(trend??cagr??0.04)));
+  const dCpi=MACRO[lastYr]?.inf??0.025;
+  // Derive default COL YoY from last 2 years of COL data if available
+  let dCol=dCpi;
+  if(lastYr>=2001&&lastYr<=2026){
+    const cfg=getEffectiveColCfg();
+    const a=calcColForYear(cfg,lastYr-1),b=calcColForYear(cfg,lastYr);
+    if(a&&b)dCol=(b-a)/a;
+  }
+  // Read existing slider values if present (preserve user's drag state)
+  const cur={raise:parseFloat(document.getElementById('labRaise')?.value),cpi:parseFloat(document.getElementById('labCpi')?.value),col:parseFloat(document.getElementById('labCol')?.value)};
+  const v={raise:isNaN(cur.raise)?(dRaise*100):cur.raise,cpi:isNaN(cur.cpi)?(dCpi*100):cur.cpi,col:isNaN(cur.col)?(dCol*100):cur.col};
+  form.innerHTML=`
+    <div class="lab-row">
+      <span class="lab-label">Raise</span>
+      <input type="range" id="labRaise" min="-10" max="40" step="0.1" value="${v.raise.toFixed(1)}">
+      <span class="lab-val" id="labRaiseVal" style="color:var(--accent)">${v.raise>=0?'+':''}${v.raise.toFixed(1)}%</span>
+    </div>
+    <div class="lab-row">
+      <span class="lab-label">CPI</span>
+      <input type="range" id="labCpi" min="-2" max="15" step="0.1" value="${v.cpi.toFixed(1)}">
+      <span class="lab-val" id="labCpiVal" style="color:var(--inf-color)">${v.cpi>=0?'+':''}${v.cpi.toFixed(1)}%</span>
+    </div>
+    <div class="lab-row">
+      <span class="lab-label">Your COL</span>
+      <input type="range" id="labCol" min="-2" max="20" step="0.1" value="${v.col.toFixed(1)}">
+      <span class="lab-val" id="labColVal" style="color:var(--col-color)">${v.col>=0?'+':''}${v.col.toFixed(1)}%</span>
+    </div>`;
+  ['labRaise','labCpi','labCol'].forEach(id=>{
+    document.getElementById(id).addEventListener('input',updateLabOutput);
+  });
+  updateLabOutput();
+}
+function updateLabOutput(){
+  const out=document.getElementById('labOutput');if(!out)return;
+  const r=parseFloat(document.getElementById('labRaise').value)/100;
+  const c=parseFloat(document.getElementById('labCpi').value)/100;
+  const co=parseFloat(document.getElementById('labCol').value)/100;
+  // Live update slider value labels
+  document.getElementById('labRaiseVal').textContent=`${r>=0?'+':''}${(r*100).toFixed(1)}%`;
+  document.getElementById('labCpiVal').textContent=`${c>=0?'+':''}${(c*100).toFixed(1)}%`;
+  document.getElementById('labColVal').textContent=`${co>=0?'+':''}${(co*100).toFixed(1)}%`;
+  const p=modelPulse(r,c,co);
+  if(!p){out.innerHTML='<div style="color:var(--muted)">Need salary data to model.</div>';return;}
+  const tierColor=TIER_COLORS[p.level]||'var(--muted)';
+  const dotColor={green:'var(--pos)',amber:'#7eb8f5',red:'var(--neg)'};
+  out.innerHTML=`
+    <div class="lab-tier" style="border-color:${tierColor}">
+      <span class="lab-emoji">${ALARM_EMOJI[p.level]}</span>
+      <span class="lab-tier-label" style="color:${tierColor}">${p.label}</span>
+      <div class="lab-tier-sub">${p.strong}/${p.total} strong · ${p.checks.filter(x=>x.level==='green').length}/${p.total} passing</div>
+    </div>
+    <div style="margin-bottom:0.55rem">
+      ${p.checks.map(c=>`<div class="lab-check-row">
+        <span class="lab-check-dot" style="background:${dotColor[c.level]}"></span>
+        <span>${c.label}${c.strong?' <span style="color:var(--accent);font-size:var(--fs-xs);margin-left:0.2rem">🔥</span>':''}</span>
+        <span class="lab-check-detail" style="color:${dotColor[c.level]}">${c.detail}</span>
+      </div>`).join('')}
+    </div>
+    <div style="padding:0.5rem;background:var(--bg);border:1px solid var(--border);font-size:var(--fs-sm);margin-top:0.55rem">
+      <div class="lab-money-row"><span>Projected ${p.synthYr} salary</span><span class="lab-money-val">${fmt(p.synthSal)}</span></div>
+      <div class="lab-money-row"><span>Raise in dollars</span><span class="lab-money-val" style="color:${p.raiseAmount>=0?'var(--pos)':'var(--neg)'}">${p.raiseAmount>=0?'+':''}${fmt(p.raiseAmount)}</span></div>
+      <div class="lab-money-row"><span>Net after CPI erosion</span><span class="lab-money-val">${(()=>{const net=p.raiseAmount-(p.prevSal*c);return `${net>=0?'+':''}${fmt(net)}`})()}</span></div>
+      <div class="lab-money-row"><span>Net after personal COL</span><span class="lab-money-val">${(()=>{const net=p.raiseAmount-(p.prevSal*co);return `${net>=0?'+':''}${fmt(net)}`})()}</span></div>
+    </div>
+    <div class="lab-find-row">
+      <button class="btn-sm" onclick="labFindAndSnap('steady')">☀️ Find STEADY</button>
+      <button class="btn-sm primary" onclick="labFindAndSnap('hot')">🔥 Find HOT</button>
+    </div>`;
+}
+function labFindAndSnap(tier){
+  const c=parseFloat(document.getElementById('labCpi').value)/100;
+  const co=parseFloat(document.getElementById('labCol').value)/100;
+  const r=findRaiseForTier(tier,c,co);
+  if(r==null){alert(`No raise in the slider range gets you to ${tier.toUpperCase()} with these CPI/COL settings.`);return;}
+  const slider=document.getElementById('labRaise');
+  slider.value=(r*100).toFixed(1);
+  updateLabOutput();
 }
 // Hover panel
 (()=>{
@@ -2639,7 +2873,7 @@ function openAddYear(){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
 function setDTab(t){
   curDTab=t;
-  ['jobs','salary','macro','events','col','about'].forEach(s=>{
+  ['jobs','salary','macro','events','col','lab','about'].forEach(s=>{
     document.getElementById('dt-'+s).classList.toggle('active',s===t);
     document.getElementById('ds-'+s).classList.toggle('vis',s===t);
   });
@@ -2648,6 +2882,7 @@ function setDTab(t){
   if(t==='macro')renderMacroList();
   if(t==='events')renderEventsList();
   if(t==='col')renderColPanel();
+  if(t==='lab')renderLab();
 }
 
 // ── DRAWER: JOBS ──────────────────────────────────────────────────────────────
