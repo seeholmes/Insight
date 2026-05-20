@@ -864,8 +864,9 @@ function jobTrendCAGR(j){
 //   COOL   any amber         ❄️
 //   STEADY all green, ≤2 strong (treading water but holding)  ☀️
 //   HOT    all green, ≥3 strong (or 100% strong when <5 checks apply)  🔥
-function assessAlarmState(){
-  const yrs=sortedYrs();
+function assessAlarmState(asOfYear){
+  const all=sortedYrs();
+  const yrs=asOfYear?all.filter(y=>y<=asOfYear):all;
   if(yrs.length<2)return{level:'unknown',label:'NEED DATA',checks:[],strong:0,total:0};
   const lastYr=yrs[yrs.length-1],prevYr=yrs[yrs.length-2];
   const sal=salaries[lastYr],prevSal=salaries[prevYr];
@@ -2371,6 +2372,16 @@ canvas.addEventListener('mousemove',e=>{
   const sc=pct!=null?getSocialClass(pct):null;
   const heroSal=`<div style="font-size:1.05rem;font-weight:500;margin-bottom:0.1rem">${fmt(sal)}</div>`;
   const heroPct=pct!=null?`<div style="font-size:var(--fs-md);color:${sc.color};margin-bottom:0.35rem">${pct.toFixed(0)}th percentile · ${sc.label}</div>`:'';
+  // Pulse for this year — same five checks as the topbar chip, evaluated as of yr
+  const pulseLine=(()=>{
+    if(isProj||!yrs.includes(yr))return'';
+    const a=assessAlarmState(yr);
+    if(a.level==='unknown')return'';
+    const emoji=ALARM_EMOJI[a.level]||'';
+    const tierC={hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
+    const c=tierC[a.level]||'var(--muted)';
+    return `<div style="margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-left:2px solid ${c};font-size:var(--fs-sm);color:${c}">${emoji} ${a.label} <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:0.3rem">${a.strong}/${a.total} strong</span></div>`;
+  })();
   // Smoothing line: when 3-yr / 5-yr MA is active, show the moving-average value
   // for the hovered year. Spline passes through actual points so adds no number.
   const smoothLine=(()=>{
@@ -2448,7 +2459,7 @@ canvas.addEventListener('mousemove',e=>{
   })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${smoothLine}${secondaryLine}${colLine}${netLine}${jobLine}${evLine}`;
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${pulseLine}${smoothLine}${secondaryLine}${colLine}${netLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
