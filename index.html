@@ -139,6 +139,7 @@ body.resizing-sidebar *{cursor:ew-resize!important;}
 .cbtn.on-cuminf{border-color:var(--cuminf-color)!important;color:var(--cuminf-color)!important;}
 .cbtn.on-today{border-color:var(--today-color)!important;color:var(--today-color)!important;}
 .cbtn.on-classBands{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--s2);}
+.cbtn.on-recession{border-color:var(--neg)!important;color:var(--neg)!important;}
 .cbtn.on-col{border-color:var(--col-color)!important;color:var(--col-color)!important;}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
@@ -449,6 +450,7 @@ body.empty #emptyState{display:flex;}
           <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')"    title="Real GDP growth rate">GDP</button>
           <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')"    title="Macro events as colored bands across their date ranges">Events</button>
           <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')" title="US income class bands shaded behind the chart">Class Bands</button>
+          <button class="cbtn" id="ov-recession" onclick="toggleOv('recession')" title="Shade NBER-called US recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)">Recessions</button>
         </div>
       </div>
       <div id="chartWrap">
@@ -714,6 +716,16 @@ const DEFAULT_EVENTS=[
   {startYear:2023,endYear:2023,label:"Banking stress (SVB, Signature)"},
 ];
 
+// NBER-called US recession years — official recession dates that overlap the
+// app's data window. Used as shaded background bands when the "Recessions"
+// overlay is on; lets the user see whether a hard career year had a macro
+// excuse or was company/role specific.
+const NBER_RECESSIONS=[
+  {startYear:2001,endYear:2001,label:"Dot-com"},
+  {startYear:2008,endYear:2009,label:"Great Recession"},
+  {startYear:2020,endYear:2020,label:"COVID"},
+];
+
 const PCTILE_THRESHOLDS={
   1993:[10000,21000,38000,62000,82000,150000],1995:[11000,23000,41000,66000,88000,160000],
   1997:[12500,25000,44000,72000,96000,178000],1999:[14000,28000,49000,80000,107000,200000],
@@ -821,7 +833,7 @@ MACRO=_s.macro;
 let EVENTS=_s.events||[];
 let eventNextId=_s.eventNextId||1;
 if(_s.events==null){migrateEventsFromMacro();}
-let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,recession:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -2355,6 +2367,34 @@ function drawChart(){
     ctx.fillText('Bands: US income percentile classes',pad.left+6,pad.top+12);
   }
 
+  // NBER recession bands — shaded vertical regions over recession years.
+  // Drawn after class bands but before everything else so bars/lines render
+  // on top while the macro context shows through.
+  if(ov.recession){
+    NBER_RECESSIONS.forEach(rec=>{
+      const sIdx=allYrs.indexOf(rec.startYear);
+      let eIdx=allYrs.indexOf(rec.endYear);
+      if(sIdx<0&&eIdx<0)return;
+      const s=sIdx>=0?sIdx:eIdx;
+      const e=eIdx>=0?eIdx:sIdx;
+      const bandPad=Math.max(2,bw*0.5);
+      const x0=xp(s)-bandPad;
+      const x1=xp(e)+bandPad;
+      const w=x1-x0;
+      ctx.fillStyle='rgba(235,87,87,0.10)';
+      ctx.fillRect(x0,pad.top,w,cH);
+      // Top + bottom edge accents for definition
+      ctx.fillStyle='rgba(235,87,87,0.35)';
+      ctx.fillRect(x0,pad.top,w,1);
+      ctx.fillRect(x0,pad.top+cH-1,w,1);
+      // Tiny label inside the band at top
+      ctx.fillStyle='rgba(235,87,87,0.8)';
+      ctx.font='italic 9px IBM Plex Mono,monospace';
+      ctx.textAlign='center';
+      ctx.fillText(rec.label,x0+w/2,pad.top+11);
+    });
+  }
+
   // Job boundary lines
   jobs.forEach(j=>{
     const sy=j.years.filter(y=>yrs.includes(y)).sort((a,b)=>a-b);
@@ -2905,6 +2945,7 @@ const OV_META={
   gdp:{label:'GDP',color:_cssVar('--gdp-color')||'#6fcf97'},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
+  recession:{label:'Recessions',color:_cssVar('--neg')||'#eb5757'},
 };
 function renderOvLegend(){
   const el=document.getElementById('ovLegend');if(!el)return;
