@@ -855,6 +855,27 @@ function jobTrendCAGR(j){
   const slope=(n*sxl-sx*sl)/denom;
   return Math.exp(slope)-1;
 }
+// Per-job Pulse summary — runs assessAlarmState for every year of the job and
+// returns the dominant tier + count. When two tiers tie at the top, returns
+// "mixed" with the top two emojis so the user knows the job had no clear vibe.
+function getJobPulseSummary(j){
+  const sy=(j.years||[]).filter(y=>salaries[y]&&salaries[y]>0).sort((a,b)=>a-b);
+  if(!sy.length)return null;
+  const counts={hot:0,steady:0,cool:0,cold:0};
+  let total=0;
+  sy.forEach(y=>{
+    const a=assessAlarmState(y);
+    if(a.level&&counts[a.level]!==undefined){counts[a.level]++;total++;}
+  });
+  if(total===0)return null;
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const top1=sorted[0],top2=sorted[1];
+  if(top1[1]>top2[1]&&top1[1]*2>=total){
+    return{dominant:top1[0],emoji:ALARM_EMOJI[top1[0]],count:top1[1],total,display:`${ALARM_EMOJI[top1[0]]} ${top1[1]}/${total}`};
+  }
+  return{dominant:'mixed',emoji:`${ALARM_EMOJI[top1[0]]}${ALARM_EMOJI[top2[0]]}`,count:0,total,display:`${ALARM_EMOJI[top1[0]]}${ALARM_EMOJI[top2[0]]} mixed`};
+}
+const TIER_COLORS={hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)',mixed:'var(--muted)'};
 
 // ── CAREER PULSE ──────────────────────────────────────────────────────────────
 // Runs five forensic checks. Each returns a level (green/amber/red) plus a
@@ -1045,6 +1066,8 @@ function renderLegend(){
     const rateStr=rate!=null?((rate*100).toFixed(1)+'% '+rateLabel):'';
     const jVals=yr.filter(y=>salaries[y]).map(y=>salaries[y]);
     const avg=jVals.length?jVals.reduce((a,b)=>a+b,0)/jVals.length:0;
+    const ps=getJobPulseSummary(j);
+    const pulseStr=ps?`<div style="font-size:0.57rem;color:${TIER_COLORS[ps.dominant]};margin-top:0.18rem">${ps.display}</div>`:'';
     const d=document.createElement('div');
     d.className='leg-item'+(activeJob===j.id?' active':'');
     d.innerHTML=`
@@ -1055,6 +1078,7 @@ function renderLegend(){
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-size:0.6rem;color:${rate>=0?'var(--pos)':'var(--neg)'}">${rateStr}</div>
+        ${pulseStr}
       </div>`;
     d.onclick=()=>{activeJob=(activeJob===j.id)?null:j.id;renderLegend();drawChart();};
     el.appendChild(d);
@@ -1242,8 +1266,8 @@ function renderInsights(){
     {n:'20',l:'Top Class',v:_topClass},
     {n:'21',l:'Best Trans $',v:_bestTrans?fmtK(_bestTrans.delta):'—'},
     {n:'22',l:'Best Trans %',v:_bestTransPctRow?(_bestTransPctRow.pct*100).toFixed(0)+'%':'—'},
-    {n:'23',l:'Top Growth Job',v:_topCagrJob?_topCagrJob.j.name:'—',sub:_topCagrRate!=null?fmtPct(_topCagrRate):''},
-    {n:'24',l:'Longest Tenure',v:_longestJob?_longestJob.sy.length+'y':'—'},
+    (()=>{const ps=_topCagrJob?getJobPulseSummary(_topCagrJob.j):null;const parts=[_topCagrRate!=null?fmtPct(_topCagrRate):null,ps?ps.display:null].filter(Boolean);return{n:'23',l:'Top Growth Job',v:_topCagrJob?_topCagrJob.j.name:'—',sub:parts.join(' · ')};})(),
+    (()=>{const ps=_longestJob?getJobPulseSummary(_longestJob.j):null;return{n:'24',l:'Longest Tenure',v:_longestJob?_longestJob.sy.length+'y':'—',sub:ps?ps.display:''};})(),
     {n:'25',l:'Avg Tenure',v:_avgTenure.toFixed(1)+'y'},
     {n:'26',l:'Latest COL',v:_colNow?fmtK(_colNow):'—'},
     {n:'27',l:'COL % of Pay',v:_colPctPay!=null?_colPctPay.toFixed(0)+'%':'—'},
@@ -1574,12 +1598,15 @@ function renderInsights(){
   // Per-job table
   h+=`<div class="ins-card"><h3>Per-Job Summary</h3>
     <span class="ins-tag">every chapter, every chamber.</span>
-    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.4rem;line-height:1.4"><span style="color:var(--accent)">CAGR</span> uses first-to-last salary (noisy if year 1 / last year include signing or severance). <span style="color:var(--pos)">Trend</span> fits a regression through every year — the underlying growth rate.</div>
+    <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.4rem;line-height:1.4"><span style="color:var(--accent)">CAGR</span> uses first-to-last salary (noisy if year 1 / last year include signing or severance). <span style="color:var(--pos)">Trend</span> fits a regression through every year. <span style="color:var(--accent)">Pulse</span> = the job's dominant year-by-year tier.</div>
     <table class="jst">
-      <tr><th>Job</th><th>Yrs</th><th>Avg</th><th>Peak</th><th>Total</th><th>CAGR</th><th>Trend</th></tr>`;
+      <tr><th>Job</th><th>Yrs</th><th>Avg</th><th>Peak</th><th>Total</th><th>CAGR</th><th>Trend</th><th>Pulse</th></tr>`;
   jobRows.forEach(({j,sy,avg,peak,total,cagr,trend})=>{
     const cs=cagr!=null?((cagr*100).toFixed(1)+'%'):'—';
     const ts=trend!=null?((trend*100).toFixed(1)+'%'):'—';
+    const ps=getJobPulseSummary(j);
+    const pulseDisp=ps?ps.display:'—';
+    const pulseCol=ps?TIER_COLORS[ps.dominant]:'var(--muted)';
     h+=`<tr>
       <td><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:${j.color};margin-right:4px;vertical-align:middle"></span>${j.name}</td>
       <td class="tddim">${sy.length}</td>
@@ -1587,6 +1614,7 @@ function renderInsights(){
       <td style="color:var(--accent)">${fmtK(total)}</td>
       <td style="color:${cagr>=0?'var(--pos)':'var(--neg)'}">${cs}</td>
       <td style="color:${trend==null?'var(--muted)':(trend>=0?'var(--pos)':'var(--neg)')}">${ts}</td>
+      <td style="color:${pulseCol};white-space:nowrap">${pulseDisp}</td>
     </tr>`;
   });
   h+=`</table></div>`;
