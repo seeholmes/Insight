@@ -635,6 +635,27 @@ body.empty #emptyState{display:flex;}
             <button class="btn-sm danger" onclick="clearEvents()">Clear All</button>
           </div>
         </div>
+        <div style="margin-top:1rem;border-top:1px solid var(--border2);padding-top:0.7rem">
+          <p class="sec-head" style="color:var(--neg)">Recessions</p>
+          <div style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;line-height:1.5">Red shaded bands on the chart (toggle <span style="color:var(--neg)">Recessions</span> in the chart toolbar). Defaults are the three official <a href="https://www.nber.org/research/business-cycle-dating" target="_blank" rel="noopener" style="color:var(--neg)">NBER</a>-dated US recessions in range. Edit freely — add industry or company-specific downturns NBER would never call.</div>
+          <div style="display:grid;grid-template-columns:3.8rem 3.8rem 1fr 1.4rem;gap:0.3rem;margin-bottom:0.4rem;padding:0 0.1rem;">
+            <span class="mlbl">Start</span><span class="mlbl">End</span><span class="mlbl">Label</span><span></span>
+          </div>
+          <div id="recessionsList"></div>
+          <div style="margin-top:0.6rem">
+            <p class="sec-head" style="margin-bottom:0.4rem">Add Recession</p>
+            <div style="display:grid;grid-template-columns:3.8rem 3.8rem 1fr auto;gap:0.3rem;align-items:center;">
+              <input class="sinput" type="number" id="rcNewStart" placeholder="Start" style="width:100%">
+              <input class="sinput" type="number" id="rcNewEnd"   placeholder="End"   style="width:100%">
+              <input class="sinput" type="text"   id="rcNewLabel" placeholder="Label (e.g. Industry downturn)" style="width:100%">
+              <button class="btn-sm primary" onclick="addRecession()">+</button>
+            </div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.6rem;">
+              <button class="btn-sm" onclick="restoreDefaultRecessions()">Restore NBER</button>
+              <button class="btn-sm danger" onclick="clearRecessions()">Clear All</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="dsec" id="ds-col">
         <p class="sec-head">Cost of Living</p>
@@ -786,6 +807,8 @@ function loadState(){
     const t=localStorage.getItem('insight_uiTab');
     const ev=localStorage.getItem('insight_events');
     const evN=localStorage.getItem('insight_eventNextId');
+    const rc=localStorage.getItem('insight_recessions');
+    const rcN=localStorage.getItem('insight_recessionNextId');
     return{
       salaries:s?JSON.parse(s):DEFAULT_SALARIES,
       jobs:j?JSON.parse(j):DEFAULT_JOBS,
@@ -794,8 +817,10 @@ function loadState(){
       uiTab:t||'jobs',
       events:ev?JSON.parse(ev):null,
       eventNextId:evN?parseInt(evN):1,
+      recessions:rc?JSON.parse(rc):null,
+      recessionNextId:rcN?parseInt(rcN):1,
     };
-  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO,uiTab:'jobs',events:null,eventNextId:1};}
+  }catch(e){return{salaries:DEFAULT_SALARIES,jobs:DEFAULT_JOBS,nextId:8,macro:DEFAULT_MACRO,uiTab:'jobs',events:null,eventNextId:1,recessions:null,recessionNextId:1};}
 }
 function saveState(){
   try{
@@ -806,6 +831,8 @@ function saveState(){
     localStorage.setItem('insight_uiTab',curSTab);
     localStorage.setItem('insight_events',JSON.stringify(EVENTS));
     localStorage.setItem('insight_eventNextId',String(eventNextId));
+    localStorage.setItem('insight_recessions',JSON.stringify(RECESSIONS));
+    localStorage.setItem('insight_recessionNextId',String(recessionNextId));
   }catch(e){}
 }
 // Seed EVENTS from DEFAULT_EVENTS, then layer in any leftover MACRO.evt strings
@@ -833,6 +860,13 @@ MACRO=_s.macro;
 let EVENTS=_s.events||[];
 let eventNextId=_s.eventNextId||1;
 if(_s.events==null){migrateEventsFromMacro();}
+// Recessions — editable list, seeded from NBER_RECESSIONS on first load
+let RECESSIONS=_s.recessions||[];
+let recessionNextId=_s.recessionNextId||1;
+if(_s.recessions==null){
+  RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
+  recessionNextId=RECESSIONS.length+1;
+}
 let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,recession:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
@@ -2476,7 +2510,7 @@ function drawChart(){
   // NBER recession bands — drawn here (after bw is in scope, before bars) so
   // shaded regions sit beneath the data while still using bw for sizing.
   if(ov.recession){
-    NBER_RECESSIONS.forEach(rec=>{
+    RECESSIONS.forEach(rec=>{
       const sIdx=allYrs.indexOf(rec.startYear);
       let eIdx=allYrs.indexOf(rec.endYear);
       if(sIdx<0&&eIdx<0)return;
@@ -3005,7 +3039,7 @@ function setDTab(t){
   if(t==='salary')renderSalaryList();
   if(t==='jobs')renderJobCards();
   if(t==='macro')renderMacroList();
-  if(t==='events')renderEventsList();
+  if(t==='events'){renderEventsList();renderRecessionsList();}
   if(t==='col')renderColPanel();
   if(t==='lab')renderLab();
 }
@@ -3191,9 +3225,61 @@ function restoreDefaultEvents(){
   saveState();renderEventsList();drawChart();
 }
 
+// ── DRAWER: RECESSIONS ────────────────────────────────────────────────────────
+function renderRecessionsList(){
+  const el=document.getElementById('recessionsList');if(!el)return;el.innerHTML='';
+  const sorted=[...RECESSIONS].sort((a,b)=>a.startYear-b.startYear||a.endYear-b.endYear);
+  if(!sorted.length){el.innerHTML='<div style="font-size:0.6rem;color:var(--muted);text-align:center;padding:0.6rem 0">No recessions — add one below or restore the NBER set.</div>';return;}
+  sorted.forEach(rc=>{
+    const row=document.createElement('div');row.className='mrow';row.id='rc'+rc.id;
+    row.style.gridTemplateColumns='3.8rem 3.8rem 1fr 1.4rem';
+    row.style.gap='0.3rem';
+    row.innerHTML=`
+      <input class="sinput evyr" type="number" value="${rc.startYear}" onchange="updateRecession(${rc.id},'startYear',this.value)">
+      <input class="sinput evyr" type="number" value="${rc.endYear}" onchange="updateRecession(${rc.id},'endYear',this.value)">
+      <input class="sinput" type="text" value="${rc.label.replace(/"/g,'&quot;')}" onchange="updateRecession(${rc.id},'label',this.value)">
+      <button class="sdel" onclick="deleteRecession(${rc.id})" title="Remove">×</button>`;
+    el.appendChild(row);
+  });
+}
+function addRecession(){
+  const s=parseInt(document.getElementById('rcNewStart').value);
+  const eRaw=document.getElementById('rcNewEnd').value;
+  const e=eRaw===''?s:parseInt(eRaw);
+  const label=document.getElementById('rcNewLabel').value.trim();
+  if(!s||isNaN(s)){alert('Enter a valid start year.');return;}
+  if(!label){alert('Enter a label.');return;}
+  const startYear=Math.min(s,e),endYear=Math.max(s,e);
+  RECESSIONS.push({id:recessionNextId++,startYear,endYear,label});
+  ['rcNewStart','rcNewEnd','rcNewLabel'].forEach(id=>document.getElementById(id).value='');
+  saveState();renderRecessionsList();drawChart();
+}
+function updateRecession(id,field,val){
+  const rc=RECESSIONS.find(r=>r.id===id);if(!rc)return;
+  if(field==='label'){rc.label=val.trim();}
+  else{const n=parseInt(val);if(isNaN(n))return;rc[field]=n;if(rc.startYear>rc.endYear){const t=rc.startYear;rc.startYear=rc.endYear;rc.endYear=t;}}
+  saveState();renderRecessionsList();drawChart();
+}
+function deleteRecession(id){
+  const rc=RECESSIONS.find(r=>r.id===id);if(!rc)return;
+  if(!confirm('Delete recession: '+rc.label+'?'))return;
+  RECESSIONS=RECESSIONS.filter(r=>r.id!==id);
+  saveState();renderRecessionsList();drawChart();
+}
+function clearRecessions(){
+  if(!confirm('Remove ALL recession bands?'))return;
+  RECESSIONS=[];recessionNextId=1;saveState();renderRecessionsList();drawChart();
+}
+function restoreDefaultRecessions(){
+  if(RECESSIONS.length&&!confirm('Replace recessions with the NBER default set?'))return;
+  RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
+  recessionNextId=RECESSIONS.length+1;
+  saveState();renderRecessionsList();drawChart();
+}
+
 // ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
 function exportData(){
-  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO,events:EVENTS,eventNextId},null,2);
+  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO,events:EVENTS,eventNextId,recessions:RECESSIONS,recessionNextId},null,2);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
   a.download='insight_backup_'+new Date().toISOString().slice(0,10)+'.json';
@@ -3210,6 +3296,8 @@ function importData(input){
       if(d.macro)MACRO=d.macro;
       if(Array.isArray(d.events)){EVENTS=d.events;eventNextId=d.eventNextId||(EVENTS.reduce((m,ev)=>Math.max(m,ev.id+1),1));}
       else{EVENTS=[];eventNextId=1;migrateEventsFromMacro();}
+      if(Array.isArray(d.recessions)){RECESSIONS=d.recessions;recessionNextId=d.recessionNextId||(RECESSIONS.reduce((m,r)=>Math.max(m,r.id+1),1));}
+      else{RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));recessionNextId=RECESSIONS.length+1;}
       saveState();refresh();
       if(drawerOpen)renderJobCards();
     }catch(err){alert('Import failed: '+err.message);}
