@@ -960,24 +960,28 @@ function jobTrendCAGR(j){
   return Math.exp(slope)-1;
 }
 // Per-job Pulse summary — runs assessAlarmState for every year of the job and
-// returns the dominant tier + count. When two tiers tie at the top, returns
-// "mixed" with the top two emojis so the user knows the job had no clear vibe.
+// resolves every job to a single tier by averaging non-linear per-year scores.
+// Non-linear: the cool→steady gap is 2 (the all-clear line) so a job must earn
+// its way out of the warning band. Nearest-tier mapping; ties break DOWN.
+const TIER_SCORE={cold:0,cool:1,steady:3,hot:4,rocket:5};
+const TIER_SCORE_ASC=[['cold',0],['cool',1],['steady',3],['hot',4],['rocket',5]];
+function tierFromScore(avg){
+  let best=TIER_SCORE_ASC[0];
+  for(const t of TIER_SCORE_ASC){if(Math.abs(t[1]-avg)<Math.abs(best[1]-avg))best=t;}
+  return best[0];
+}
 function getJobPulseSummary(j){
   const sy=(j.years||[]).filter(y=>salaries[y]&&salaries[y]>0).sort((a,b)=>a-b);
   if(!sy.length)return null;
-  const counts={rocket:0,hot:0,steady:0,cool:0,cold:0};
-  let total=0;
+  let sum=0,total=0;
   sy.forEach(y=>{
     const a=assessAlarmState(y);
-    if(a.level&&counts[a.level]!==undefined){counts[a.level]++;total++;}
+    if(a.level&&TIER_SCORE[a.level]!==undefined){sum+=TIER_SCORE[a.level];total++;}
   });
   if(total===0)return null;
-  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  const top1=sorted[0],top2=sorted[1];
-  if(top1[1]>top2[1]&&top1[1]*2>=total){
-    return{dominant:top1[0],emoji:ALARM_EMOJI[top1[0]],count:top1[1],total,display:`${ALARM_EMOJI[top1[0]]} ${top1[1]}/${total}`};
-  }
-  return{dominant:'mixed',emoji:'🫤',count:0,total,display:'🫤 mixed'};
+  const avg=sum/total;
+  const tier=tierFromScore(avg);
+  return{dominant:tier,emoji:ALARM_EMOJI[tier],avg,total,display:`${ALARM_EMOJI[tier]} ${total}y`};
 }
 const TIER_COLORS={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)',mixed:'var(--muted)'};
 
