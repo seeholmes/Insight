@@ -963,8 +963,8 @@ function jobTrendCAGR(j){
 // resolves every job to a single tier by averaging non-linear per-year scores.
 // Non-linear: the cool→steady gap is 2 (the all-clear line) so a job must earn
 // its way out of the warning band. Nearest-tier mapping; ties break DOWN.
-const TIER_SCORE={cold:0,cool:1,steady:3,hot:4,rocket:5};
-const TIER_SCORE_ASC=[['cold',0],['cool',1],['steady',3],['hot',4],['rocket',5]];
+const TIER_SCORE={cold:0,cool:1,steady:3,hot:4,rocket:6};
+const TIER_SCORE_ASC=[['cold',0],['cool',1],['steady',3],['hot',4],['rocket',6]];
 function tierFromScore(avg){
   let best=TIER_SCORE_ASC[0];
   for(const t of TIER_SCORE_ASC){if(Math.abs(t[1]-avg)<Math.abs(best[1]-avg))best=t;}
