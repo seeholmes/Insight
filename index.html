@@ -291,7 +291,7 @@ body.resizing-drawer *{cursor:ew-resize!important;}
 .tb-stat.tb-alarm{padding:0 1.1rem;}
 #alarmChip{display:inline-flex;align-items:center;gap:0.45rem;padding:0.32rem 0.65rem;border:1px solid var(--border);cursor:help;white-space:nowrap;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;color:var(--muted);transition:all .15s;}
 #alarmChip:hover{filter:brightness(1.15);}
-.alarm-emoji{font-size:0.95rem;line-height:1;flex-shrink:0;display:inline-block;filter:drop-shadow(0 0 0 transparent);transition:filter .2s;}
+.alarm-emoji{font-size:1.2rem;line-height:1;flex-shrink:0;display:inline-block;filter:drop-shadow(0 0 0 transparent);transition:filter .2s;}
 #alarmChip[data-level="rocket"]{color:#f5e97e;border-color:#f5e97e;background:rgba(245,233,126,0.10);}
 #alarmChip[data-level="rocket"] .alarm-emoji{filter:drop-shadow(0 0 6px rgba(245,233,126,0.85));animation:alarmRocket 1.6s ease-in-out infinite;}
 @keyframes alarmRocket{0%,100%{transform:translateY(0);filter:drop-shadow(0 0 5px rgba(245,233,126,0.6));}50%{transform:translateY(-2px);filter:drop-shadow(0 0 12px rgba(245,233,126,1));}}
@@ -981,7 +981,7 @@ function getJobPulseSummary(j){
   if(total===0)return null;
   const avg=sum/total;
   const tier=tierFromScore(avg);
-  return{dominant:tier,emoji:ALARM_EMOJI[tier],avg,total,display:`${ALARM_EMOJI[tier]} ${total}y`};
+  return{dominant:tier,emoji:ALARM_EMOJI[tier],avg,total,display:`<span style="font-size:1.15rem;vertical-align:middle">${ALARM_EMOJI[tier]}</span> ${total}y`};
 }
 const TIER_COLORS={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)',mixed:'var(--muted)'};
 
@@ -2928,7 +2928,7 @@ canvas.addEventListener('mousemove',e=>{
     const emoji=ALARM_EMOJI[a.level]||'';
     const tierC={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
     const c=tierC[a.level]||'var(--muted)';
-    return `<div style="margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-left:2px solid ${c};font-size:var(--fs-sm);color:${c}">${emoji} ${a.label} <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:0.3rem">${a.strong}/${a.total} strong</span></div>`;
+    return `<div style="margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-left:2px solid ${c};font-size:var(--fs-sm);color:${c}"><span style="font-size:1.15rem;vertical-align:middle">${emoji}</span> ${a.label} <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:0.3rem">${a.strong}/${a.total} strong</span></div>`;
   })();
   // Smoothing line: when 3-yr / 5-yr MA is active, show the moving-average value
   // for the hovered year. Spline passes through actual points so adds no number.
@@ -3053,7 +3053,7 @@ function buildTable(){
     const ypTitle=_yp.level==='unknown'?'':_yp.label;
     h+=`<tr>
       <td>${yr}</td>
-      <td style="text-align:center" title="${ypTitle}">${ypEmoji}</td>
+      <td style="text-align:center;font-size:1.15rem" title="${ypTitle}">${ypEmoji}</td>
       <td>${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:''}</td>
       <td>${fmt(salaries[yr])}</td>
       <td style="color:var(--real)">${fmt(real[yr])}</td>
@@ -3070,7 +3070,7 @@ function buildTable(){
     cards+=`<div class="yc" onclick="this.classList.toggle('exp')">
       <div class="yc-head">
         <span class="yc-yr">${yr}</span>
-        <span title="${ypTitle}">${ypEmoji}</span>
+        <span title="${ypTitle}" style="font-size:1.2rem;line-height:1">${ypEmoji}</span>
         <span class="yc-job">${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:'<span style="opacity:0.4">—</span>'}</span>
         <span class="yc-sal">${fmt(salaries[yr])}</span>
         <span class="yc-yoy ${cc}">${cs}</span>
