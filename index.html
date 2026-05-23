@@ -115,14 +115,22 @@ body.resizing-sidebar *{cursor:ew-resize!important;}
 /* ── CENTER AREA ── */
 #center{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
 
-/* Chart section — top ~55% */
+/* Chart section — top ~55% (resizable via #chart-resize) */
 #chart-section{
   display:flex;flex-direction:column;
   padding:1rem 1.25rem 0.75rem;
   border-bottom:1px solid var(--border);
   flex-shrink:0;
-  height:55%;
+  height:var(--chart-h,55%);
 }
+#chart-resize{
+  height:5px;flex-shrink:0;cursor:ns-resize;background:transparent;
+  transition:background .15s;position:relative;z-index:5;
+}
+#chart-resize::before{content:'';position:absolute;inset:-4px 0;}
+#chart-resize:hover,body.resizing-chart #chart-resize{background:var(--accent);opacity:0.55;}
+body.resizing-chart{cursor:ns-resize;user-select:none;}
+body.resizing-chart *{cursor:ns-resize!important;}
 #chartControls{display:flex;gap:0.4rem;margin-bottom:var(--sp-2);align-items:center;flex-wrap:wrap;row-gap:0.4rem;}
 .ctrl-group{display:inline-flex;align-items:center;gap:0.28rem;padding:0.22rem 0.5rem;background:rgba(255,255,255,0.025);border-radius:3px;}
 .ctrl-lbl{font-size:var(--fs-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);font-weight:500;margin-right:0.25rem;white-space:nowrap;}
@@ -181,6 +189,15 @@ tr:hover td{background:var(--s1);}
   overflow:hidden;background:var(--s1);
 }
 #drawer.open{display:flex;}
+#drawer-resize{
+  width:5px;flex-shrink:0;cursor:ew-resize;background:transparent;
+  transition:background .15s;position:relative;z-index:5;display:none;
+}
+#drawer-resize::before{content:'';position:absolute;inset:0 -4px;}
+#drawer-resize:hover,body.resizing-drawer #drawer-resize{background:var(--accent);opacity:0.55;}
+body.drawer-open #drawer-resize{display:block;}
+body.resizing-drawer{cursor:ew-resize;user-select:none;}
+body.resizing-drawer *{cursor:ew-resize!important;}
 .dtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .dtab{flex:1;min-width:0;background:none;border:none;border-right:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.06em;text-transform:uppercase;padding:0.6rem 0.2rem;cursor:pointer;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dtab:last-child{border-right:none;}
@@ -264,8 +281,11 @@ tr:hover td{background:var(--s1);}
 #tip{position:fixed;background:var(--s2);border:1px solid var(--border2);padding:0.7rem 0.9rem;font-size:var(--fs-sm);pointer-events:none;opacity:0;transition:opacity .12s;z-index:300;min-width:170px;line-height:1.6;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
 #tip strong{display:block;font-size:var(--fs-xl);color:var(--accent);margin-bottom:0.2rem;font-family:'Playfair Display',serif;}
 
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-thumb{background:var(--border2);}
+::-webkit-scrollbar{width:11px;height:11px;}
+::-webkit-scrollbar-track{background:rgba(255,255,255,0.02);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px;border:2px solid var(--bg);}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+*{scrollbar-color:var(--border2) transparent;}
 
 /* ── ALARM CHIP — topbar career-health summary ── */
 .tb-stat.tb-alarm{padding:0 1.1rem;}
@@ -327,7 +347,7 @@ body.empty #emptyState{display:flex;}
   #hamburger{display:inline-block;}
   body.sidebar-open #scrim,body.drawer-open #scrim{display:block;}
   #sidebar{position:fixed;top:var(--topbar-h);bottom:0;left:0;width:min(85vw,320px);z-index:60;transform:translateX(-100%);transition:transform .2s ease;}
-  #sidebar-resize{display:none;}
+  #sidebar-resize,#drawer-resize,#chart-resize{display:none!important;}
   body.sidebar-open #sidebar{transform:translateX(0);}
   #drawer{position:fixed;top:var(--topbar-h);bottom:0;right:0;width:min(90vw,360px);z-index:60;transform:translateX(100%);transition:transform .2s ease;display:flex;}
   #drawer.open{transform:translateX(0);}
@@ -470,6 +490,7 @@ body.empty #emptyState{display:flex;}
         </div>
       </div>
     </div>
+    <div id="chart-resize" title="Drag to resize chart vs table (double-click to reset)"></div>
     <!-- DATA TABLE -->
     <div id="bottom-section">
       <div id="dataTableScroll"><table id="dataTable"></table></div>
@@ -477,6 +498,8 @@ body.empty #emptyState{display:flex;}
     </div>
   </div>
 
+  <!-- DRAWER RESIZE HANDLE -->
+  <div id="drawer-resize" title="Drag to resize the Vault (double-click to reset)"></div>
   <!-- RIGHT DRAWER -->
   <div id="drawer">
     <div class="dtabs">
@@ -2134,6 +2157,81 @@ try{const _savedSidebarW=localStorage.getItem('insight_sidebarW');if(_savedSideb
   handle.addEventListener('dblclick',()=>{
     document.documentElement.style.setProperty('--sidebar-w','300px');
     try{localStorage.removeItem('insight_sidebarW');}catch(e){}
+    resizeCanvas();
+  });
+})();
+
+// ── CHART / TABLE SPLITTER ────────────────────────────────────────────────────
+try{const _ch=localStorage.getItem('insight_chartH');if(_ch)document.documentElement.style.setProperty('--chart-h',_ch);}catch(e){}
+(()=>{
+  const handle=document.getElementById('chart-resize');if(!handle)return;
+  const center=document.getElementById('center'),cs=document.getElementById('chart-section');
+  let startY=0,startH=0,_raf=null;
+  function move(e){
+    const y=e.touches?e.touches[0].clientY:e.clientY;
+    const ch=center.getBoundingClientRect().height;
+    const pct=Math.max(25,Math.min(82,((startH+(y-startY))/ch)*100));
+    document.documentElement.style.setProperty('--chart-h',pct+'%');
+    if(!_raf)_raf=requestAnimationFrame(()=>{_raf=null;resizeCanvas();});
+  }
+  function up(){
+    document.body.classList.remove('resizing-chart');
+    document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+    document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up);
+    try{localStorage.setItem('insight_chartH',getComputedStyle(document.documentElement).getPropertyValue('--chart-h').trim()||'55%');}catch(e){}
+    resizeCanvas();
+  }
+  function down(e){
+    startY=e.touches?e.touches[0].clientY:e.clientY;
+    startH=cs.getBoundingClientRect().height;
+    document.body.classList.add('resizing-chart');
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
+    e.preventDefault();
+  }
+  handle.addEventListener('mousedown',down);
+  handle.addEventListener('touchstart',down,{passive:false});
+  handle.addEventListener('dblclick',()=>{
+    document.documentElement.style.setProperty('--chart-h','55%');
+    try{localStorage.removeItem('insight_chartH');}catch(e){}
+    resizeCanvas();
+  });
+})();
+
+// ── DRAWER (VAULT) RESIZE HANDLE ──────────────────────────────────────────────
+try{const _dw=localStorage.getItem('insight_drawerW');if(_dw)document.documentElement.style.setProperty('--drawer-w',_dw);}catch(e){}
+(()=>{
+  const handle=document.getElementById('drawer-resize');if(!handle)return;
+  const MIN=300,MAX=()=>Math.min(window.innerWidth*0.6,720);
+  let startX=0,startW=0,_raf=null;
+  const getCurrentW=()=>{const v=getComputedStyle(document.documentElement).getPropertyValue('--drawer-w').trim();return parseInt(v)||400;};
+  function move(e){
+    const x=e.touches?e.touches[0].clientX:e.clientX;
+    // Handle sits on the drawer's LEFT edge — dragging left widens it
+    const w=Math.max(MIN,Math.min(MAX(),startW+(startX-x)));
+    document.documentElement.style.setProperty('--drawer-w',w+'px');
+    if(!_raf)_raf=requestAnimationFrame(()=>{_raf=null;resizeCanvas();});
+  }
+  function up(){
+    document.body.classList.remove('resizing-drawer');
+    document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+    document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up);
+    try{localStorage.setItem('insight_drawerW',getCurrentW()+'px');}catch(e){}
+    resizeCanvas();
+  }
+  function down(e){
+    startX=e.touches?e.touches[0].clientX:e.clientX;
+    startW=getCurrentW();
+    document.body.classList.add('resizing-drawer');
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
+    e.preventDefault();
+  }
+  handle.addEventListener('mousedown',down);
+  handle.addEventListener('touchstart',down,{passive:false});
+  handle.addEventListener('dblclick',()=>{
+    document.documentElement.style.setProperty('--drawer-w','400px');
+    try{localStorage.removeItem('insight_drawerW');}catch(e){}
     resizeCanvas();
   });
 })();
