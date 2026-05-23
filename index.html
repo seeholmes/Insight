@@ -292,8 +292,11 @@ body.resizing-drawer *{cursor:ew-resize!important;}
 #alarmChip{display:inline-flex;align-items:center;gap:0.45rem;padding:0.32rem 0.65rem;border:1px solid var(--border);cursor:help;white-space:nowrap;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;color:var(--muted);transition:all .15s;}
 #alarmChip:hover{filter:brightness(1.15);}
 .alarm-emoji{font-size:0.95rem;line-height:1;flex-shrink:0;display:inline-block;filter:drop-shadow(0 0 0 transparent);transition:filter .2s;}
+#alarmChip[data-level="rocket"]{color:#f5e97e;border-color:#f5e97e;background:rgba(245,233,126,0.10);}
+#alarmChip[data-level="rocket"] .alarm-emoji{filter:drop-shadow(0 0 6px rgba(245,233,126,0.85));animation:alarmRocket 1.6s ease-in-out infinite;}
+@keyframes alarmRocket{0%,100%{transform:translateY(0);filter:drop-shadow(0 0 5px rgba(245,233,126,0.6));}50%{transform:translateY(-2px);filter:drop-shadow(0 0 12px rgba(245,233,126,1));}}
 #alarmChip[data-level="hot"]{color:var(--accent);border-color:var(--accent);background:rgba(212,169,106,0.08);}
-#alarmChip[data-level="hot"] .alarm-emoji{filter:drop-shadow(0 0 6px rgba(255,140,40,0.7));animation:alarmHotGlow 2.4s ease-in-out infinite;}
+#alarmChip[data-level="hot"] .alarm-emoji{filter:drop-shadow(0 0 6px rgba(212,169,106,0.7));animation:alarmHotGlow 2.4s ease-in-out infinite;}
 #alarmChip[data-level="steady"]{color:var(--pos);border-color:var(--pos);}
 #alarmChip[data-level="steady"] .alarm-emoji{filter:drop-shadow(0 0 4px rgba(245,233,126,0.5));}
 #alarmChip[data-level="cool"]{color:#7eb8f5;border-color:#7eb8f5;}
@@ -692,7 +695,7 @@ body.empty #emptyState{display:flex;}
       </div>
       <div class="dsec" id="ds-lab">
         <p class="sec-head">The Lab — Model Next Year</p>
-        <div style="font-size:0.6rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.55">Drag the sliders. Pulse and the per-check breakdown update live. Use <span style="color:var(--accent)">Find HOT</span> or <span style="color:var(--pos)">Find STEADY</span> to snap the raise slider to the minimum value needed to hit that tier.</div>
+        <div style="font-size:0.6rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.55">Drag the sliders. Pulse and the per-check breakdown update live. The Find buttons snap the raise slider to the minimum value needed to hit <span style="color:var(--pos)">Locked In</span>, <span style="color:var(--accent)">Money Long</span>, or <span style="color:#f5e97e">Whip a 4 to a 9</span>.</div>
         <div id="labForm"></div>
         <div id="labOutput" style="margin-top:0.9rem;padding:0.85rem;background:var(--s2);border:1px solid var(--border)"></div>
       </div>
@@ -962,7 +965,7 @@ function jobTrendCAGR(j){
 function getJobPulseSummary(j){
   const sy=(j.years||[]).filter(y=>salaries[y]&&salaries[y]>0).sort((a,b)=>a-b);
   if(!sy.length)return null;
-  const counts={hot:0,steady:0,cool:0,cold:0};
+  const counts={rocket:0,hot:0,steady:0,cool:0,cold:0};
   let total=0;
   sy.forEach(y=>{
     const a=assessAlarmState(y);
@@ -976,7 +979,7 @@ function getJobPulseSummary(j){
   }
   return{dominant:'mixed',emoji:`${ALARM_EMOJI[top1[0]]}${ALARM_EMOJI[top2[0]]}`,count:0,total,display:`${ALARM_EMOJI[top1[0]]}${ALARM_EMOJI[top2[0]]} mixed`};
 }
-const TIER_COLORS={hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)',mixed:'var(--muted)'};
+const TIER_COLORS={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)',mixed:'var(--muted)'};
 
 // ── CAREER PULSE ──────────────────────────────────────────────────────────────
 // Runs five forensic checks. Each returns a level (green/amber/red) plus a
@@ -1070,19 +1073,39 @@ function assessAlarmState(asOfYear){
         where:'36 → Your COL vs Inflation'});
     }
   }
-  // Overall tier — 4 levels keyed by temperature
+  // Overall tier — 5 rungs
   let level='steady';
   if(checks.some(c=>c.level==='red'))level='cold';
   else if(checks.some(c=>c.level==='amber'))level='cool';
   else{
     const strong=checks.filter(c=>c.strong).length;
-    if(checks.length>0&&(strong>=3||strong===checks.length))level='hot';
+    if(checks.length>0&&(strong>=3||strong===checks.length)){
+      level='hot';
+      // Top rung: a 🔥 year that's ALSO an atypical jump vs your own history —
+      // nominal YoY ≥ 2× your median positive raise (with a 12% absolute floor).
+      if(yoy!=null&&isAtypicalJump(yoy)) level='rocket';
+    }
   }
-  const labels={hot:'HOT',steady:'STEADY',cool:'COOL',cold:'COLD'};
+  const labels=PULSE_LABELS;
   const strong=checks.filter(c=>c.strong).length;
   return{level,label:labels[level],checks,strong,total:checks.length};
 }
-const ALARM_EMOJI={hot:'🔥',steady:'☀️',cool:'❄️',cold:'🧊',unknown:'—'};
+// Is this year's raise an outlier vs the person's own raise history?
+function isAtypicalJump(yoy){
+  const yrs=sortedYrs();
+  const raises=[];
+  for(let i=1;i<yrs.length;i++){
+    const a=salaries[yrs[i-1]],b=salaries[yrs[i]];
+    if(a>0){const r=(b-a)/a;if(r>0)raises.push(r);}
+  }
+  if(raises.length<2)return yoy>=0.20; // not enough history → absolute fallback
+  raises.sort((a,b)=>a-b);
+  const mid=Math.floor(raises.length/2);
+  const median=raises.length%2?raises[mid]:(raises[mid-1]+raises[mid])/2;
+  return yoy>=Math.max(0.12,2*median);
+}
+const PULSE_LABELS={rocket:'WHIP A 4 TO A 9',hot:'MONEY LONG',steady:'LOCKED IN',cool:'GRIND',cold:'DOWN BAD'};
+const ALARM_EMOJI={rocket:'🚀',hot:'🤑',steady:'😎',cool:'😤',cold:'😭',unknown:'—'};
 function renderAlarmChip(){
   const chip=document.getElementById('alarmChip');if(!chip)return;
   const a=assessAlarmState();
@@ -1189,15 +1212,17 @@ function modelPulse(raisePct,cpiRate,colYoy){
   else if(checks.some(c=>c.level==='amber'))level='cool';
   else{
     const s=checks.filter(c=>c.strong).length;
-    if(checks.length>0&&(s>=3||s===checks.length))level='hot';
+    if(checks.length>0&&(s>=3||s===checks.length)){
+      level='hot';
+      if(isAtypicalJump(raisePct))level='rocket';
+    }
   }
-  const labels={hot:'HOT',steady:'STEADY',cool:'COOL',cold:'COLD'};
-  return{level,label:labels[level],checks,strong:checks.filter(c=>c.strong).length,total:checks.length,synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
+  return{level,label:PULSE_LABELS[level],checks,strong:checks.filter(c=>c.strong).length,total:checks.length,synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
 }
 // Reverse calculator — minimum raise to land in (or above) targetTier
 function findRaiseForTier(targetTier,cpi,col){
   // Search from -5% to +30% in 0.1% increments; return smallest raise that hits
-  const tierRank={cold:0,cool:1,steady:2,hot:3};
+  const tierRank={cold:0,cool:1,steady:2,hot:3,rocket:4};
   const want=tierRank[targetTier]||0;
   for(let r=-5;r<=30.001;r+=0.1){
     const raisePct=r/100;
@@ -1360,8 +1385,9 @@ function updateLabOutput(){
       <div class="lab-money-row"><span>Net after personal COL</span><span class="lab-money-val">${(()=>{const net=p.raiseAmount-(p.prevSal*co);return `${net>=0?'+':''}${fmt(net)}`})()}</span></div>
     </div>
     <div class="lab-find-row">
-      <button class="btn-sm" onclick="labFindAndSnap('steady')">☀️ Find STEADY</button>
-      <button class="btn-sm primary" onclick="labFindAndSnap('hot')">🔥 Find HOT</button>
+      <button class="btn-sm" onclick="labFindAndSnap('steady')">😎 Locked In</button>
+      <button class="btn-sm" onclick="labFindAndSnap('hot')">🤑 Money Long</button>
+      <button class="btn-sm primary" onclick="labFindAndSnap('rocket')">🚀 4 to a 9</button>
     </div>`;
 }
 function labFindAndSnap(tier){
@@ -1383,7 +1409,7 @@ function labFindAndSnap(tier){
     if(a.checks.length===0){
       panel.innerHTML=`<h4>Career Pulse</h4><div class="ar-sub">Add at least 2 years of salary data to activate the read.</div>`;
     }else{
-      const tierColor={hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
+      const tierColor={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
       const dotColor={green:'var(--pos)',amber:'#7eb8f5',red:'var(--neg)'};
       const overallColor=tierColor[a.level]||'var(--muted)';
       const tierEmoji=ALARM_EMOJI[a.level]||'—';
@@ -2896,7 +2922,7 @@ canvas.addEventListener('mousemove',e=>{
     const a=assessAlarmState(yr);
     if(a.level==='unknown')return'';
     const emoji=ALARM_EMOJI[a.level]||'';
-    const tierC={hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
+    const tierC={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
     const c=tierC[a.level]||'var(--muted)';
     return `<div style="margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-left:2px solid ${c};font-size:var(--fs-sm);color:${c}">${emoji} ${a.label} <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:0.3rem">${a.strong}/${a.total} strong</span></div>`;
   })();
