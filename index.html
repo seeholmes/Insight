@@ -1225,10 +1225,13 @@ function modelPulse(raisePct,cpiRate,colYoy){
 }
 // Reverse calculator — minimum raise to land in (or above) targetTier
 function findRaiseForTier(targetTier,cpi,col){
-  // Search from -5% to +30% in 0.1% increments; return smallest raise that hits
+  // Sweep the full raise-slider range (-10% to +40%) in 0.1% steps and return
+  // the smallest raise that reaches the target tier (or better). Range must
+  // match the slider's max so high-bar tiers like ROCKET (which need an
+  // atypical jump, often >30%) are reachable here, not just by manual drag.
   const tierRank={cold:0,cool:1,steady:2,hot:3,rocket:4};
   const want=tierRank[targetTier]||0;
-  for(let r=-5;r<=30.001;r+=0.1){
+  for(let r=-10;r<=40.001;r+=0.1){
     const raisePct=r/100;
     const p=modelPulse(raisePct,cpi,col);
     if(!p)continue;
