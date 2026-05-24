@@ -1085,28 +1085,36 @@ function assessAlarmState(asOfYear){
     const strong=checks.filter(c=>c.strong).length;
     if(checks.length>0&&(strong>=3||strong===checks.length)){
       level='hot';
-      // Top rung: a 🔥 year that's ALSO an atypical jump vs your own history —
-      // nominal YoY ≥ 2× your median positive raise (with a 12% absolute floor).
-      if(yoy!=null&&isAtypicalJump(yoy)) level='rocket';
+      // Top rung: a 🤑 year whose REAL leap is atypical vs your own history.
+      if(yoy!=null&&isAtypicalJump(yoy,cpi??0)) level='rocket';
     }
   }
   const labels=PULSE_LABELS;
   const strong=checks.filter(c=>c.strong).length;
   return{level,label:labels[level],checks,strong,total:checks.length};
 }
-// "Whip a 4 to a 9" — a raise that's literally 2.25× your average raise
-// (9 ÷ 4 = 2.25). Only evaluated on MONEY LONG years, so the MONEY LONG gate
-// already prevents tiny-average over-firing.
-function isAtypicalJump(yoy){
+// "Whip a 4 to a 9" — this year's REAL raise is ≥ 2.25× your average real raise
+// (9 ÷ 4 = 2.25). Deflating by CPI ties the bar to the inflation environment:
+// a low-CPI year clears it with a smaller nominal raise; a high-CPI year needs
+// a bigger one. Only evaluated on MONEY LONG years (the gate prevents tiny-
+// average over-firing).
+function isAtypicalJump(nomYoy,cpi){
+  cpi=cpi||0;
+  const realYoy=(1+nomYoy)/(1+cpi)-1;
   const yrs=sortedYrs();
-  const raises=[];
+  const realRaises=[];
   for(let i=1;i<yrs.length;i++){
     const a=salaries[yrs[i-1]],b=salaries[yrs[i]];
-    if(a>0){const r=(b-a)/a;if(r>0)raises.push(r);}
+    if(a>0){
+      const nom=(b-a)/a;
+      const yc=MACRO[yrs[i]]?.inf??0;
+      const rr=(1+nom)/(1+yc)-1;
+      if(rr>0)realRaises.push(rr);
+    }
   }
-  if(raises.length<2)return yoy>=0.25; // not enough history → absolute fallback
-  const avg=raises.reduce((s,r)=>s+r,0)/raises.length;
-  return yoy>=2.25*avg;
+  if(realRaises.length<2)return realYoy>=0.18; // sparse history → absolute real floor
+  const avg=realRaises.reduce((s,r)=>s+r,0)/realRaises.length;
+  return realYoy>=2.25*avg;
 }
 const PULSE_LABELS={rocket:'WHIP A 4 TO A 9',hot:'MONEY LONG',steady:'LOCKED IN',cool:'GRIND',cold:'DOWN BAD'};
 const ALARM_EMOJI={rocket:'🚀',hot:'🤑',steady:'😎',cool:'😤',cold:'😭',unknown:'—'};
@@ -1218,7 +1226,7 @@ function modelPulse(raisePct,cpiRate,colYoy){
     const s=checks.filter(c=>c.strong).length;
     if(checks.length>0&&(s>=3||s===checks.length)){
       level='hot';
-      if(isAtypicalJump(raisePct))level='rocket';
+      if(isAtypicalJump(raisePct,cpiRate))level='rocket';
     }
   }
   return{level,label:PULSE_LABELS[level],checks,strong:checks.filter(c=>c.strong).length,total:checks.length,synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
