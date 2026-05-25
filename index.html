@@ -1091,7 +1091,25 @@ function assessAlarmState(asOfYear){
   }
   const labels=PULSE_LABELS;
   const strong=checks.filter(c=>c.strong).length;
-  return{level,label:labels[level],checks,strong,total:checks.length};
+  return{level,label:labels[level],checks,strong,total:checks.length,score:pulseScore(level,checks,strong,checks.length)};
+}
+// Analog Pulse — a 0–10 number anchored within the tier's 2-wide band so it
+// never contradicts the emoji. Position within the band comes from the
+// tier-appropriate signal, giving fine resolution between two same-emoji years.
+function pulseScore(level,checks,strong,total){
+  const bands={cold:[0,2],cool:[2,4],steady:[4,6],hot:[6,8],rocket:[8,10]};
+  const b=bands[level];
+  if(!b||!total)return null;
+  const greens=checks.filter(c=>c.level==='green').length;
+  const reds=checks.filter(c=>c.level==='red').length;
+  let pos=0.5;
+  if(level==='cold')pos=1-reds/total;            // fewer/milder reds → closer to escaping
+  else if(level==='cool')pos=greens/total;        // more greens → closer to all-clear
+  else if(level==='steady')pos=Math.min(1,strong/3);
+  else if(level==='hot')pos=Math.min(1,strong/total);
+  else if(level==='rocket')pos=0.75;
+  pos=Math.max(0.02,Math.min(0.98,pos));
+  return Math.round((b[0]+pos*(b[1]-b[0]))*10)/10;
 }
 // "Whip a 4 to a 9" — this year's REAL raise is ≥ 2.25× your average real raise
 // (9 ÷ 4 = 2.25). Deflating by CPI ties the bar to the inflation environment:
@@ -1123,7 +1141,7 @@ function renderAlarmChip(){
   const a=assessAlarmState();
   chip.dataset.level=a.level;
   document.getElementById('alarmEmoji').textContent=ALARM_EMOJI[a.level]||'—';
-  document.getElementById('alarmLabel').textContent=a.label;
+  document.getElementById('alarmLabel').textContent=a.label+(a.score!=null?' '+a.score.toFixed(1):'');
 }
 
 // ── THE LAB — model hypothetical next year ───────────────────────────────────
@@ -1229,7 +1247,8 @@ function modelPulse(raisePct,cpiRate,colYoy){
       if(isAtypicalJump(raisePct,cpiRate))level='rocket';
     }
   }
-  return{level,label:PULSE_LABELS[level],checks,strong:checks.filter(c=>c.strong).length,total:checks.length,synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
+  const _strongM=checks.filter(c=>c.strong).length;
+  return{level,label:PULSE_LABELS[level],checks,strong:_strongM,total:checks.length,score:pulseScore(level,checks,_strongM,checks.length),synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
 }
 // Reverse calculator — minimum raise to land in (or above) targetTier
 function findRaiseForTier(targetTier,cpi,col){
@@ -1383,7 +1402,7 @@ function updateLabOutput(){
   out.innerHTML=`
     <div class="lab-tier" style="border-color:${tierColor}">
       <span class="lab-emoji">${ALARM_EMOJI[p.level]}</span>
-      <span class="lab-tier-label" style="color:${tierColor}">${p.label}</span>
+      <span class="lab-tier-label" style="color:${tierColor}">${p.label}${p.score!=null?' '+p.score.toFixed(1):''}</span>
       <div class="lab-tier-sub">${p.strong}/${p.total} strong · ${p.checks.filter(x=>x.level==='green').length}/${p.total} passing</div>
     </div>
     <div style="margin-bottom:0.55rem">
@@ -1429,7 +1448,7 @@ function labFindAndSnap(tier){
       const overallColor=tierColor[a.level]||'var(--muted)';
       const tierEmoji=ALARM_EMOJI[a.level]||'—';
       const passing=a.checks.filter(c=>c.level==='green').length;
-      panel.innerHTML=`<h4 style="color:${overallColor}">${tierEmoji} ${a.label} <span style="color:var(--muted);font-style:normal;font-size:var(--fs-xs)">· ${a.strong}/${a.total} strong · ${passing}/${a.total} passing</span></h4>
+      panel.innerHTML=`<h4 style="color:${overallColor}">${tierEmoji} ${a.label}${a.score!=null?' '+a.score.toFixed(1):''} <span style="color:var(--muted);font-style:normal;font-size:var(--fs-xs)">· ${a.strong}/${a.total} strong · ${passing}/${a.total} passing</span></h4>
         <div class="ar-sub">five forensic checks · strong checks 🔥 push toward HOT</div>
         ${a.checks.map(c=>`<div class="alarm-row${c.strong?' strong':''}">
           <span class="ar-dot" style="background:${dotColor[c.level]}"></span>
@@ -2939,7 +2958,7 @@ canvas.addEventListener('mousemove',e=>{
     const emoji=ALARM_EMOJI[a.level]||'';
     const tierC={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)'};
     const c=tierC[a.level]||'var(--muted)';
-    return `<div style="margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-left:2px solid ${c};font-size:var(--fs-sm);color:${c}"><span style="font-size:1.15rem;vertical-align:middle">${emoji}</span> ${a.label} <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:0.3rem">${a.strong}/${a.total} strong</span></div>`;
+    return `<div style="margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-left:2px solid ${c};font-size:var(--fs-sm);color:${c}"><span style="font-size:1.15rem;vertical-align:middle">${emoji}</span> ${a.label}${a.score!=null?` <strong style="font-variant-numeric:tabular-nums">${a.score.toFixed(1)}</strong>`:''} <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:0.3rem">${a.strong}/${a.total} strong</span></div>`;
   })();
   // Smoothing line: when 3-yr / 5-yr MA is active, show the moving-average value
   // for the hovered year. Spline passes through actual points so adds no number.
@@ -3061,10 +3080,11 @@ function buildTable(){
     const evTxt=evs.map(e=>e.label).join(' · ');
     const _yp=assessAlarmState(yr);
     const ypEmoji=_yp.level==='unknown'?'':ALARM_EMOJI[_yp.level];
-    const ypTitle=_yp.level==='unknown'?'':_yp.label;
+    const ypTitle=_yp.level==='unknown'?'':(_yp.label+(_yp.score!=null?' '+_yp.score.toFixed(1):''));
+    const ypScore=_yp.score!=null?_yp.score.toFixed(1):'';
     h+=`<tr>
       <td>${yr}</td>
-      <td style="text-align:center;font-size:1.15rem" title="${ypTitle}">${ypEmoji}</td>
+      <td style="text-align:center;white-space:nowrap" title="${ypTitle}"><span style="font-size:1.15rem;vertical-align:middle">${ypEmoji}</span>${ypScore?` <span style="font-size:var(--fs-sm);color:var(--muted);font-variant-numeric:tabular-nums">${ypScore}</span>`:''}</td>
       <td>${j?`<span class="tdsw" style="background:${j.color}"></span>${j.name}`:''}</td>
       <td>${fmt(salaries[yr])}</td>
       <td style="color:var(--real)">${fmt(real[yr])}</td>
