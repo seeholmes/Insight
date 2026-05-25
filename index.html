@@ -960,28 +960,29 @@ function jobTrendCAGR(j){
   return Math.exp(slope)-1;
 }
 // Per-job Pulse summary — runs assessAlarmState for every year of the job and
-// resolves every job to a single tier by averaging non-linear per-year scores.
-// Non-linear: the cool→steady gap is 2 (the all-clear line) so a job must earn
-// its way out of the warning band. Nearest-tier mapping; ties break DOWN.
-const TIER_SCORE={cold:0,cool:1,steady:3,hot:4,rocket:6};
-const TIER_SCORE_ASC=[['cold',0],['cool',1],['steady',3],['hot',4],['rocket',6]];
-function tierFromScore(avg){
-  let best=TIER_SCORE_ASC[0];
-  for(const t of TIER_SCORE_ASC){if(Math.abs(t[1]-avg)<Math.abs(best[1]-avg))best=t;}
-  return best[0];
+// Map a 0–10 analog score to its tier via the (non-linear) PULSE_BANDS.
+function tierFromAnalogScore(score){
+  for(const [tier,b] of Object.entries(PULSE_BANDS)){
+    if(score>=b[0]&&score<b[1])return tier;
+  }
+  return score>=PULSE_BANDS.rocket[0]?'rocket':'cold';
 }
+// Resolve a job to a single tier + number by averaging its years' analog
+// (0–10) Pulse scores — the same scale the per-year display uses, so per-job
+// and per-year finally agree. The per-year bands are already non-linear
+// (money-long widest), so averaging the positions carries that weighting.
 function getJobPulseSummary(j){
   const sy=(j.years||[]).filter(y=>salaries[y]&&salaries[y]>0).sort((a,b)=>a-b);
   if(!sy.length)return null;
   let sum=0,total=0;
   sy.forEach(y=>{
     const a=assessAlarmState(y);
-    if(a.level&&TIER_SCORE[a.level]!==undefined){sum+=TIER_SCORE[a.level];total++;}
+    if(a.score!=null){sum+=a.score;total++;}
   });
   if(total===0)return null;
   const avg=sum/total;
-  const tier=tierFromScore(avg);
-  return{dominant:tier,emoji:ALARM_EMOJI[tier],avg,total,display:`<span style="font-size:1.15rem;vertical-align:middle">${ALARM_EMOJI[tier]}</span> ${total}y`};
+  const tier=tierFromAnalogScore(avg);
+  return{dominant:tier,emoji:ALARM_EMOJI[tier],avg,total,display:`<span style="font-size:1.15rem;vertical-align:middle">${ALARM_EMOJI[tier]}</span> ${avg.toFixed(1)}`};
 }
 const TIER_COLORS={rocket:'#f5e97e',hot:'var(--accent)',steady:'var(--pos)',cool:'#7eb8f5',cold:'var(--neg)',mixed:'var(--muted)'};
 
