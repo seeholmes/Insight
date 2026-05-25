@@ -698,6 +698,37 @@ body.empty #emptyState{display:flex;}
         <div style="font-size:0.6rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.55">Drag the sliders. Pulse and the per-check breakdown update live. The Find buttons snap the raise slider to the minimum value needed to hit <span style="color:var(--pos)">Locked In</span>, <span style="color:var(--accent)">Money Long</span>, or <span style="color:#f5e97e">Whip a 4 to a 9</span>.</div>
         <div id="labForm"></div>
         <div id="labOutput" style="margin-top:0.9rem;padding:0.85rem;background:var(--s2);border:1px solid var(--border)"></div>
+        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:0.7rem">
+          <p class="sec-head">Pulse Scale</p>
+          <div style="display:flex;flex-direction:column;gap:0.45rem">
+            <div style="display:grid;grid-template-columns:1.7rem 1fr auto;gap:0.5rem;align-items:center">
+              <span style="font-size:1.25rem">🚀</span>
+              <span style="font-size:var(--fs-sm)"><span style="color:#f5e97e">WHIP A 4 TO A 9</span><br><span style="font-size:var(--fs-xs);color:var(--muted)">money long + real raise ≥ 2.25× your average</span></span>
+              <span style="color:#f5e97e;font-variant-numeric:tabular-nums;font-size:var(--fs-sm)">8.5–10</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.7rem 1fr auto;gap:0.5rem;align-items:center">
+              <span style="font-size:1.25rem">🤑</span>
+              <span style="font-size:var(--fs-sm)"><span style="color:var(--accent)">MONEY LONG</span><br><span style="font-size:var(--fs-xs);color:var(--muted)">all checks pass + 3 of 5 strong</span></span>
+              <span style="color:var(--accent);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)">5.5–8.5</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.7rem 1fr auto;gap:0.5rem;align-items:center">
+              <span style="font-size:1.25rem">😎</span>
+              <span style="font-size:var(--fs-sm)"><span style="color:var(--pos)">LOCKED IN</span><br><span style="font-size:var(--fs-xs);color:var(--muted)">all checks pass (the all-clear line)</span></span>
+              <span style="color:var(--pos);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)">3–5.5</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.7rem 1fr auto;gap:0.5rem;align-items:center">
+              <span style="font-size:1.25rem">😤</span>
+              <span style="font-size:var(--fs-sm)"><span style="color:#7eb8f5">GRIND</span><br><span style="font-size:var(--fs-xs);color:var(--muted)">at least one warning (amber) check</span></span>
+              <span style="color:#7eb8f5;font-variant-numeric:tabular-nums;font-size:var(--fs-sm)">1.5–3</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.7rem 1fr auto;gap:0.5rem;align-items:center">
+              <span style="font-size:1.25rem">😭</span>
+              <span style="font-size:var(--fs-sm)"><span style="color:var(--neg)">DOWN BAD</span><br><span style="font-size:var(--fs-xs);color:var(--muted)">at least one failing (red) check</span></span>
+              <span style="color:var(--neg);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)">0–1.5</span>
+            </div>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:0.6rem;line-height:1.5;font-style:italic">The emoji is the worst of five checks; the decimal resolves where in that tier you sit. Money long is the widest band — the most room — because the climb to a rocket is the longest.</div>
+        </div>
       </div>
     </div>
   </div>
