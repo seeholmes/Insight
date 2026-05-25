@@ -1091,14 +1091,32 @@ function assessAlarmState(asOfYear){
   }
   const labels=PULSE_LABELS;
   const strong=checks.filter(c=>c.strong).length;
-  return{level,label:labels[level],checks,strong,total:checks.length,score:pulseScore(level,checks,strong,checks.length)};
+  const _rm=(yoy!=null)?realRaiseMultiple(yoy,cpi??0):null;
+  return{level,label:labels[level],checks,strong,total:checks.length,score:pulseScore(level,checks,strong,checks.length,_rm)};
 }
-// Analog Pulse — a 0–10 number anchored within the tier's 2-wide band so it
-// never contradicts the emoji. Position within the band comes from the
-// tier-appropriate signal, giving fine resolution between two same-emoji years.
-function pulseScore(level,checks,strong,total){
-  const bands={cold:[0,2],cool:[2,4],steady:[4,6],hot:[6,8],rocket:[8,10]};
-  const b=bands[level];
+// This year's REAL raise as a multiple of your average REAL raise. Deflates
+// both the current raise and every historical raise by their year's CPI, so
+// it's environment-aware. Returns null when history is too sparse.
+function realRaiseMultiple(nomYoy,cpi){
+  cpi=cpi||0;
+  const realYoy=(1+nomYoy)/(1+cpi)-1;
+  const yrs=sortedYrs();const rr=[];
+  for(let i=1;i<yrs.length;i++){
+    const a=salaries[yrs[i-1]],b=salaries[yrs[i]];
+    if(a>0){const nom=(b-a)/a;const yc=MACRO[yrs[i]]?.inf??0;const r=(1+nom)/(1+yc)-1;if(r>0)rr.push(r);}
+  }
+  if(rr.length<2)return null;
+  const avg=rr.reduce((s,x)=>s+x,0)/rr.length;
+  return avg>0?realYoy/avg:null;
+}
+// Analog Pulse — a 0–10 number anchored within the tier's band so it never
+// contradicts the emoji. Bands are non-linear: money-long is widest (5.5–8.5)
+// because the real-world climb to a rocket (2.25× real) is large and deserves
+// the most resolution. Position within money-long/rocket tracks the real-raise
+// multiple — honest proximity to (or distance beyond) the rocket threshold.
+const PULSE_BANDS={cold:[0,1.5],cool:[1.5,3],steady:[3,5.5],hot:[5.5,8.5],rocket:[8.5,10]};
+function pulseScore(level,checks,strong,total,realMult){
+  const b=PULSE_BANDS[level];
   if(!b||!total)return null;
   const greens=checks.filter(c=>c.level==='green').length;
   const reds=checks.filter(c=>c.level==='red').length;
@@ -1106,33 +1124,19 @@ function pulseScore(level,checks,strong,total){
   if(level==='cold')pos=1-reds/total;            // fewer/milder reds → closer to escaping
   else if(level==='cool')pos=greens/total;        // more greens → closer to all-clear
   else if(level==='steady')pos=Math.min(1,strong/3);
-  else if(level==='hot')pos=Math.min(1,strong/total);
-  else if(level==='rocket')pos=0.75;
+  else if(level==='hot')pos=(realMult!=null)?(realMult/2.25):Math.min(1,strong/total); // proximity to rocket bar
+  else if(level==='rocket')pos=(realMult!=null)?((realMult-2.25)/(4-2.25)):0.5; // how far beyond the bar (cap ~4×)
   pos=Math.max(0.02,Math.min(0.98,pos));
   return Math.round((b[0]+pos*(b[1]-b[0]))*10)/10;
 }
 // "Whip a 4 to a 9" — this year's REAL raise is ≥ 2.25× your average real raise
-// (9 ÷ 4 = 2.25). Deflating by CPI ties the bar to the inflation environment:
-// a low-CPI year clears it with a smaller nominal raise; a high-CPI year needs
-// a bigger one. Only evaluated on MONEY LONG years (the gate prevents tiny-
-// average over-firing).
+// (9 ÷ 4 = 2.25). Only evaluated on MONEY LONG years (the gate prevents tiny-
+// average over-firing). Sparse history → absolute real-raise floor.
 function isAtypicalJump(nomYoy,cpi){
-  cpi=cpi||0;
-  const realYoy=(1+nomYoy)/(1+cpi)-1;
-  const yrs=sortedYrs();
-  const realRaises=[];
-  for(let i=1;i<yrs.length;i++){
-    const a=salaries[yrs[i-1]],b=salaries[yrs[i]];
-    if(a>0){
-      const nom=(b-a)/a;
-      const yc=MACRO[yrs[i]]?.inf??0;
-      const rr=(1+nom)/(1+yc)-1;
-      if(rr>0)realRaises.push(rr);
-    }
-  }
-  if(realRaises.length<2)return realYoy>=0.18; // sparse history → absolute real floor
-  const avg=realRaises.reduce((s,r)=>s+r,0)/realRaises.length;
-  return realYoy>=2.25*avg;
+  const m=realRaiseMultiple(nomYoy,cpi);
+  if(m!=null)return m>=2.25;
+  const realYoy=(1+nomYoy)/(1+(cpi||0))-1;
+  return realYoy>=0.18;
 }
 const PULSE_LABELS={rocket:'WHIP A 4 TO A 9',hot:'MONEY LONG',steady:'LOCKED IN',cool:'GRIND',cold:'DOWN BAD'};
 const ALARM_EMOJI={rocket:'🚀',hot:'🤑',steady:'😎',cool:'😤',cold:'😭',unknown:'—'};
@@ -1248,7 +1252,8 @@ function modelPulse(raisePct,cpiRate,colYoy){
     }
   }
   const _strongM=checks.filter(c=>c.strong).length;
-  return{level,label:PULSE_LABELS[level],checks,strong:_strongM,total:checks.length,score:pulseScore(level,checks,_strongM,checks.length),synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
+  const _rmM=realRaiseMultiple(raisePct,cpiRate);
+  return{level,label:PULSE_LABELS[level],checks,strong:_strongM,total:checks.length,score:pulseScore(level,checks,_strongM,checks.length,_rmM),synthSal,synthYr,prevSal,raiseAmount:synthSal-prevSal};
 }
 // Reverse calculator — minimum raise to land in (or above) targetTier
 function findRaiseForTier(targetTier,cpi,col){
