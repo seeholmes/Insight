@@ -16,7 +16,7 @@
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#ff9b4d;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;
+  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#e87a5d;--u6-color:#a85040;
   /* Layout */
   --sidebar-w:300px;--drawer-w:400px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -150,6 +150,12 @@ body.resizing-chart *{cursor:ns-resize!important;}
 .cbtn.on-recession{border-color:var(--neg)!important;color:var(--neg)!important;}
 .cbtn.on-medianWage{border-color:var(--mwg-color)!important;color:var(--mwg-color)!important;}
 .cbtn.on-cumMedianWage{border-color:var(--cmwg-color)!important;color:var(--cmwg-color)!important;}
+.cbtn.on-u3{border-color:var(--u3-color)!important;color:var(--u3-color)!important;}
+.cbtn.on-u6{border-color:var(--u6-color)!important;color:var(--u6-color)!important;}
+/* Inline info pips — small ℹ️ next to column headers / values to flag a caveat
+   in the underlying metric. Hover shows the lesson. */
+.pip{display:inline-block;margin-left:3px;font-size:0.62rem;color:var(--muted);cursor:help;opacity:0.7;vertical-align:middle;}
+.pip:hover{opacity:1;color:var(--accent);}
 .cbtn.on-col{border-color:var(--col-color)!important;color:var(--col-color)!important;}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
@@ -475,6 +481,8 @@ body.empty #emptyState{display:flex;}
           <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')"    title="Real GDP growth rate">GDP</button>
           <button class="cbtn" id="ov-medianWage" onclick="toggleOv('medianWage')" title="BLS real median weekly earnings YoY % (full-time wage & salary workers, CPS data) — qualitative comparator only">Med Wage</button>
           <button class="cbtn" id="ov-cumMedianWage" onclick="toggleOv('cumMedianWage')" title="Cumulative US median wage growth since first year — compounded BLS YoY">Cum. Med Wage</button>
+          <button class="cbtn" id="ov-u3" onclick="toggleOv('u3')" title="U-3 unemployment rate (BLS headline) — the metric quoted in press releases. Low = tight labor market = leverage to demand raises.">Unemp (U-3)</button>
+          <button class="cbtn" id="ov-u6" onclick="toggleOv('u6')" title="U-6 unemployment rate — includes discouraged workers and involuntary part-time. The honest version of U-3. Typically 1.5-2× U-3; the wider the gap, the more slack the headline is hiding.">Unemp (U-6)</button>
           <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')"    title="Macro events as colored bands across their date ranges">Events</button>
           <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')" title="US income class bands shaded behind the chart">Class Bands</button>
           <button class="cbtn" id="ov-recession" onclick="toggleOv('recession')" title="Shade NBER-called US recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)">Recessions</button>
@@ -821,6 +829,26 @@ const MEDIAN_WAGE_GROWTH={
   2023:0.015, 2024:0.010, 2025:0.005, 2026:0.003,
 };
 
+// BLS annual average unemployment rates (%). U-3 is the headline rate that gets
+// quoted in press releases. U-6 is the broader measure that includes discouraged
+// workers, marginally attached, and involuntary part-time. U-6 typically runs
+// ~1.5-2× U-3. When the gap widens, the headline rate is lying about labor
+// market slack. U-6 series starts 1994 (BLS introduced it that year).
+const UNEMP_U3={
+  1993:6.9, 1994:6.1, 1995:5.6, 1996:5.4, 1997:4.9, 1998:4.5, 1999:4.2,
+  2000:4.0, 2001:4.7, 2002:5.8, 2003:6.0, 2004:5.5, 2005:5.1, 2006:4.6, 2007:4.6,
+  2008:5.8, 2009:9.3, 2010:9.6, 2011:8.9, 2012:8.1, 2013:7.4, 2014:6.2, 2015:5.3,
+  2016:4.9, 2017:4.4, 2018:3.9, 2019:3.7, 2020:8.1, 2021:5.4, 2022:3.6, 2023:3.6,
+  2024:4.0, 2025:4.2, 2026:4.3,
+};
+const UNEMP_U6={
+  1994:10.9, 1995:10.1, 1996:9.7, 1997:8.9, 1998:8.0, 1999:7.4,
+  2000:7.0, 2001:8.1, 2002:9.6, 2003:10.1, 2004:9.6, 2005:8.9, 2006:8.2, 2007:8.3,
+  2008:10.5, 2009:16.2, 2010:16.7, 2011:15.9, 2012:14.7, 2013:13.8, 2014:12.0, 2015:10.4,
+  2016:9.6, 2017:8.5, 2018:7.7, 2019:7.2, 2020:13.6, 2021:9.4, 2022:6.7, 2023:6.9,
+  2024:7.7, 2025:7.9, 2026:8.0,
+};
+
 const PCTILE_THRESHOLDS={
   1993:[10000,21000,38000,62000,82000,150000],1995:[11000,23000,41000,66000,88000,160000],
   1997:[12500,25000,44000,72000,96000,178000],1999:[14000,28000,49000,80000,107000,200000],
@@ -941,7 +969,7 @@ if(_s.recessions==null){
   RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
   recessionNextId=RECESSIONS.length+1;
 }
-let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,evt:false,classBands:false,recession:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,evt:false,classBands:false,recession:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -2771,6 +2799,39 @@ function drawChart(){
     ctx.fillStyle='rgba(176,72,120,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText((finalPct>=0?'+':'')+finalPct+'% total',lx+5,ly+3);
   }
+  // Unemployment overlays — both share the same lower-strip scale (0% to 18%)
+  // so U-3 and U-6 can be eyeballed together. Higher = worse labor market = less
+  // leverage for raises. Helper extracted so both blocks render identically.
+  const _uY=u=>pad.top+cH-(u/18)*cH*0.4-cH*0.04;
+  if(ov.u3||ov.u6){
+    // shared baseline + scale ticks (only drawn once when either is on)
+    [0,5,10,15].forEach(v=>{
+      const y=_uY(v);
+      ctx.strokeStyle='rgba(232,122,93,0.12)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='rgba(232,122,93,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+      ctx.fillText(v+'%',pad.left+cW+4,y+3);
+    });
+  }
+  if(ov.u6){
+    // Draw U-6 first so U-3 sits on top when both are on
+    const pts=[];
+    yrs.forEach(yr=>{const u=UNEMP_U6[yr];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
+    if(pts.length){
+      ctx.strokeStyle='rgba(168,80,64,0.85)';ctx.lineWidth=1.8;ctx.setLineDash([4,3]);
+      ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fillStyle='rgba(168,80,64,0.9)';ctx.fill();});
+    }
+  }
+  if(ov.u3){
+    const pts=[];
+    yrs.forEach(yr=>{const u=UNEMP_U3[yr];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
+    if(pts.length){
+      ctx.strokeStyle='rgba(232,122,93,0.95)';ctx.lineWidth=2.2;ctx.beginPath();
+      pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(232,122,93,0.95)';ctx.fill();});
+    }
+  }
 
   // Bars — fade to ghost-context when a smoothing mode is on so the line dominates
   const bw=Math.max(2,cW/(n*1.5));
@@ -3190,7 +3251,7 @@ function buildTable(){
   const yrs=sortedYrs(),real=realSalaries();
   const today=(yrs.length>1)?todaysSalaries():{};
   const cum=cumEarnings();
-  let h=`<thead><tr><th>Year</th><th>Pulse</th><th>Job</th><th>Salary</th><th>Old Money</th><th>New Money</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Med Wage</th><th>Event</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Year</th><th>Pulse</th><th>Job</th><th>Salary<span class="pip" title="Gross pre-tax pay. Marginal federal+state+FICA can take 35–45% of additional dollars at higher brackets — so a $20K raise often nets ~$12K. Net Raise in the hover tooltip is also pre-tax.">ℹ️</span></th><th>Old Money</th><th>New Money</th><th>YoY<span class="pip" title="Percentages aren't symmetric. A 50% loss needs a 100% gain to recover. A 20% raise after a 20% pay cut leaves you 4% behind. Always check the $ trajectory alongside the %.">ℹ️</span></th><th>Percentile<span class="pip" title="Compared against US individual W-2 earners only — excludes ~40% of working-age adults with no W-2 income (students, retirees, stay-home parents, off-the-books). Among all working-age adults your percentile is meaningfully lower; among households, different again.">ℹ️</span></th><th>Social Class</th><th>Cum. Earned</th><th>Inflation<span class="pip" title="CPI uses hedonic adjustments — a TV that's 10% better at the same sticker is counted as a 10% price drop. Same logic for healthcare, tech, housing quality. Effect: official CPI under-measures real cash outflow by ~1–2 pts/yr, which compounds to a 40%+ gap over a career.">ℹ️</span></th><th>GDP</th><th>Med Wage<span class="pip" title="BLS median weekly earnings is contaminated 2020–22 by composition effects: COVID layoffs hit low-wage jobs first, mechanically pushing the median up (+3.5% in 2020) without anyone getting raises. The 2021–22 negatives are partly that artifact reversing, partly real inflation pain. Treat this stretch as unreliable.">ℹ️</span></th><th>Event</th></tr></thead><tbody>`;
   let cards='';
   yrs.forEach(yr=>{
     const j=getJob(yr),chg=yoy(yr);
@@ -3270,6 +3331,8 @@ const OV_META={
   gdp:{label:'GDP',color:_cssVar('--gdp-color')||'#6fcf97'},
   medianWage:{label:'Med Wage',color:_cssVar('--mwg-color')||'#d678a1'},
   cumMedianWage:{label:'Cum. Med Wage',color:_cssVar('--cmwg-color')||'#b04878'},
+  u3:{label:'Unemp (U-3)',color:_cssVar('--u3-color')||'#e87a5d'},
+  u6:{label:'Unemp (U-6)',color:_cssVar('--u6-color')||'#a85040'},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
   recession:{label:'Recessions',color:_cssVar('--neg')||'#eb5757'},
