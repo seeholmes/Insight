@@ -16,7 +16,7 @@
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#ff9b4d;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;
+  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;
   /* Layout */
   --sidebar-w:300px;--drawer-w:400px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -148,6 +148,7 @@ body.resizing-chart *{cursor:ns-resize!important;}
 .cbtn.on-today{border-color:var(--today-color)!important;color:var(--today-color)!important;}
 .cbtn.on-classBands{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--s2);}
 .cbtn.on-recession{border-color:var(--neg)!important;color:var(--neg)!important;}
+.cbtn.on-medianWage{border-color:var(--mwg-color)!important;color:var(--mwg-color)!important;}
 .cbtn.on-col{border-color:var(--col-color)!important;color:var(--col-color)!important;}
 #chartWrap{flex:1;position:relative;min-height:0;}
 #chartWrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
@@ -471,6 +472,7 @@ body.empty #emptyState{display:flex;}
           <button class="cbtn" id="ov-inf"    onclick="toggleOv('inf')"    title="Annual inflation rate (CPI-U)">Inflation</button>
           <button class="cbtn" id="ov-cuminf" onclick="toggleOv('cuminf')" title="Cumulative inflation index since first year">Cum. Inflation</button>
           <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')"    title="Real GDP growth rate">GDP</button>
+          <button class="cbtn" id="ov-medianWage" onclick="toggleOv('medianWage')" title="BLS real median weekly earnings YoY % (full-time wage & salary workers, CPS data) — qualitative comparator only">Med Wage</button>
           <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')"    title="Macro events as colored bands across their date ranges">Events</button>
           <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')" title="US income class bands shaded behind the chart">Class Bands</button>
           <button class="cbtn" id="ov-recession" onclick="toggleOv('recession')" title="Shade NBER-called US recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)">Recessions</button>
@@ -804,6 +806,19 @@ const NBER_RECESSIONS=[
   {startYear:2020,endYear:2020,label:"COVID"},
 ];
 
+// BLS real median usual weekly earnings, full-time wage & salary workers (CPS,
+// LEU0252881600 family). Annual YoY % change, deflated by CPI-U. Approximate
+// values for qualitative comparison only — not a forensic check input.
+const MEDIAN_WAGE_GROWTH={
+  1993:0.005, 1994:0.012, 1995:-0.003, 1996:0.008, 1997:0.015,
+  1998:0.032, 1999:0.014, 2000:0.008, 2001:0.016, 2002:0.018,
+  2003:0.005, 2004:-0.004, 2005:-0.006, 2006:0.007, 2007:0.010,
+  2008:-0.005, 2009:0.028, 2010:-0.002, 2011:-0.020, 2012:0.001,
+  2013:0.012, 2014:0.003, 2015:0.026, 2016:0.020, 2017:0.005,
+  2018:0.004, 2019:0.015, 2020:0.035, 2021:-0.027, 2022:-0.032,
+  2023:0.015, 2024:0.010, 2025:0.005, 2026:0.003,
+};
+
 const PCTILE_THRESHOLDS={
   1993:[10000,21000,38000,62000,82000,150000],1995:[11000,23000,41000,66000,88000,160000],
   1997:[12500,25000,44000,72000,96000,178000],1999:[14000,28000,49000,80000,107000,200000],
@@ -924,7 +939,7 @@ if(_s.recessions==null){
   RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
   recessionNextId=RECESSIONS.length+1;
 }
-let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,evt:false,classBands:false,recession:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,evt:false,classBands:false,recession:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -2699,6 +2714,29 @@ function drawChart(){
       });
     }
   }
+  if(ov.medianWage){
+    // BLS real median weekly earnings YoY % — rose-colored dotted line in the
+    // same lower strip as GDP, scaled -4% to +6% so the typical 0-2% range
+    // reads with resolution and the 2021-22 inflation crunch (-2 to -3) shows.
+    const mwY=m=>pad.top+cH-((m+0.04)/0.10)*cH*0.4-cH*0.08;
+    const zeroY=mwY(0);
+    ctx.strokeStyle='rgba(214,120,161,0.20)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(214,120,161,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText('Med 0%',pad.left+cW+4,zeroY+3);
+    const pts=[];
+    yrs.forEach(yr=>{const m=MEDIAN_WAGE_GROWTH[yr];if(m==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),mwY(m),m]);});
+    if(pts.length){
+      // Stroke line — dotted so it's visually distinct from GDP's dashed line
+      ctx.strokeStyle='rgba(214,120,161,0.9)';ctx.lineWidth=2;ctx.setLineDash([2,3]);
+      ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      // Small dot at each year
+      pts.forEach(([x,y,m])=>{
+        ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);
+        ctx.fillStyle=m<0?'rgba(235,87,87,0.95)':'rgba(214,120,161,0.95)';ctx.fill();
+      });
+    }
+  }
 
   // Bars — fade to ghost-context when a smoothing mode is on so the line dominates
   const bw=Math.max(2,cW/(n*1.5));
@@ -3181,6 +3219,7 @@ const OV_META={
   inf:{label:'Inflation',color:_cssVar('--inf-color')||'#d4a96a'},
   cuminf:{label:'Cum. Inflation',color:_cssVar('--cuminf-color')||'#ff7f7f'},
   gdp:{label:'GDP',color:_cssVar('--gdp-color')||'#6fcf97'},
+  medianWage:{label:'Med Wage',color:_cssVar('--mwg-color')||'#d678a1'},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
   recession:{label:'Recessions',color:_cssVar('--neg')||'#eb5757'},
