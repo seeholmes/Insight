@@ -3143,7 +3143,7 @@ function buildTable(){
   const yrs=sortedYrs(),real=realSalaries();
   const today=(yrs.length>1)?todaysSalaries():{};
   const cum=cumEarnings();
-  let h=`<thead><tr><th>Year</th><th>Pulse</th><th>Job</th><th>Salary</th><th>Old Money</th><th>New Money</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Event</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Year</th><th>Pulse</th><th>Job</th><th>Salary</th><th>Old Money</th><th>New Money</th><th>YoY</th><th>Percentile</th><th>Social Class</th><th>Cum. Earned</th><th>Inflation</th><th>GDP</th><th>Med Wage</th><th>Event</th></tr></thead><tbody>`;
   let cards='';
   yrs.forEach(yr=>{
     const j=getJob(yr),chg=yoy(yr);
@@ -3170,6 +3170,7 @@ function buildTable(){
       <td style="color:var(--cum)">${fmtK(cum[yr])}</td>
       <td class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':''}</td>
       <td class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':''}</td>
+      <td style="color:var(--mwg-color)">${MEDIAN_WAGE_GROWTH[yr]!=null?((MEDIAN_WAGE_GROWTH[yr]>=0?'+':'')+(MEDIAN_WAGE_GROWTH[yr]*100).toFixed(1)+'%'):''}</td>
       <td class="tddim">${evTxt}</td>
     </tr>`;
     // Year card (mobile)
@@ -3190,6 +3191,7 @@ function buildTable(){
         <div class="yc-row"><span class="l">Class</span><span style="color:${sc.color}">${sc.label}</span></div>
         <div class="yc-row"><span class="l">Inflation</span><span class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':'—'}</span></div>
         <div class="yc-row"><span class="l">GDP</span><span class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':'—'}</span></div>
+        <div class="yc-row"><span class="l">Med Wage</span><span style="color:var(--mwg-color)">${MEDIAN_WAGE_GROWTH[yr]!=null?((MEDIAN_WAGE_GROWTH[yr]>=0?'+':'')+(MEDIAN_WAGE_GROWTH[yr]*100).toFixed(1)+'%'):'—'}</span></div>
         ${evs.length?`<div class="yc-row"><span class="l">Events</span><span style="color:var(--evt-color);text-align:right;flex:1;margin-left:0.6rem">${evTxt}</span></div>`:''}
       </div>
     </div>`;
