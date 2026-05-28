@@ -3110,9 +3110,22 @@ canvas.addEventListener('mousemove',e=>{
     if(netVsCpi!=null)parts.push(`vs CPI ${fmtNet(netVsCpi,prevSal)}`);
     return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">Net raise</span>${parts.join(' <span style="color:var(--muted)">·</span> ')}</div>`;
   })();
+  const mwgLine=(()=>{
+    const m=MEDIAN_WAGE_GROWTH[yr];if(m==null)return'';
+    const mTxt=`${m>=0?'+':''}${(m*100).toFixed(1)}%`;
+    const yrChg=yoy(yr);
+    let gap='';
+    if(yrChg!=null){
+      const d=yrChg-m;
+      const dColor=Math.abs(d)<0.003?'var(--muted)':(d>0?'var(--pos)':'var(--neg)');
+      const dTxt=Math.abs(d)<0.003?'≈ median':`${d>0?'+':''}${(d*100).toFixed(1)} pts vs median`;
+      gap=` <span style="color:${dColor}">· ${dTxt}</span>`;
+    }
+    return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">US Med Wage</span><span style="color:var(--mwg-color)">${mTxt}</span>${gap}</div>`;
+  })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${pulseLine}${smoothLine}${secondaryLine}${colLine}${netLine}${jobLine}${evLine}`;
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${pulseLine}${smoothLine}${secondaryLine}${colLine}${netLine}${mwgLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
