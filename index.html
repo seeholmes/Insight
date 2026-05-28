@@ -2697,24 +2697,71 @@ function drawChart(){
       ctx.fillText((lastInf*100).toFixed(1)+'%',lx+5,ly+3);
     }
   }
-  if(ov.cuminf){
-    // Build cumulative index: 1.0 at first year, compounding each year's inflation
+  // ── Shared cumulative axis ─────────────────────────────────────────────────
+  // When multiple cumulative overlays are on (cuminf / cumMedianWage / cashPerHead),
+  // they share a single y-scale so the relative gaps between them are honest.
+  // When only one is on, that overlay autoscales for max resolution.
+  const _cumActive=[ov.cuminf,ov.cumMedianWage,ov.cashPerHead].filter(Boolean).length;
+  const _shareCumAxis=_cumActive>1;
+  let _cumInfIdx=null,_cumMwIdx=null,_cphIdx=null,_cumYFn=null,_cumMin=1,_cumMax=1;
+  if(_cumActive>0){
     const firstYr=yrs[0];
-    let ix=1.0;const cumIdx={};cumIdx[firstYr]=1.0;
-    for(let i=1;i<yrs.length;i++){ix*=(1+(MACRO[yrs[i]]?.inf??0));cumIdx[yrs[i]]=ix;}
+    if(ov.cuminf){
+      let ix=1.0;_cumInfIdx={[firstYr]:1.0};
+      for(let i=1;i<yrs.length;i++){ix*=(1+(MACRO[yrs[i]]?.inf??0));_cumInfIdx[yrs[i]]=ix;}
+    }
+    if(ov.cumMedianWage){
+      let ix=1.0;_cumMwIdx={[firstYr]:1.0};
+      for(let i=1;i<yrs.length;i++){ix*=(1+(MEDIAN_WAGE_GROWTH[yrs[i]]??0));_cumMwIdx[yrs[i]]=ix;}
+    }
+    if(ov.cashPerHead&&EPOP[firstYr]!=null){
+      const baseEpop=EPOP[firstYr];let wageIx=1.0;_cphIdx={[firstYr]:1.0};
+      for(let i=1;i<yrs.length;i++){
+        wageIx*=(1+(MEDIAN_WAGE_GROWTH[yrs[i]]??0));
+        const ep=EPOP[yrs[i]];
+        _cphIdx[yrs[i]]=(ep!=null)?wageIx*(ep/baseEpop):_cphIdx[yrs[i-1]];
+      }
+    }
+    if(_shareCumAxis){
+      // Pool all active series values to find shared min/max
+      const allVals=[];
+      if(_cumInfIdx)allVals.push(...Object.values(_cumInfIdx));
+      if(_cumMwIdx)allVals.push(...Object.values(_cumMwIdx));
+      if(_cphIdx)allVals.push(...Object.values(_cphIdx));
+      _cumMin=Math.min(...allVals,1.0);
+      _cumMax=Math.max(...allVals,1.0);
+      const range=Math.max(_cumMax-_cumMin,0.01);
+      _cumYFn=v=>pad.top+cH*(1-(v-_cumMin)/range);
+      // Draw shared right-axis ticks ONCE in a neutral muted color
+      const tickCandidates=[0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2,1.25,1.5,1.75,2.0,2.25,2.5];
+      const ticks=tickCandidates.filter(v=>v>=_cumMin-0.02&&v<=_cumMax+0.02);
+      ticks.forEach(v=>{
+        const y=_cumYFn(v);
+        ctx.strokeStyle='rgba(160,160,160,0.14)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='rgba(180,180,180,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+        const pct=Math.round((v-1)*100);
+        ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
+      });
+    }
+  }
+  if(ov.cuminf){
+    const cumIdx=_cumInfIdx;
     const maxIdx=Math.max(...Object.values(cumIdx));
-    // own y-scale: 1.0 at bottom, maxIdx at top — uses full chart height
-    const yCI=v=>pad.top+cH*(1-(v-1)/(maxIdx-1||1));
+    // Shared scale when multiple cumulative overlays are on; otherwise autoscale solo
+    const yCI=_shareCumAxis?_cumYFn:(v=>pad.top+cH*(1-(v-1)/(maxIdx-1||1)));
     const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),yCI(cumIdx[yr])]);
-    // right-axis guide lines + labels
-    const ticks=[1.0,1.25,1.5,1.75,2.0,2.25,2.5].filter(v=>v<=maxIdx+0.05);
-    ticks.forEach(v=>{
-      const y=yCI(v);
-      ctx.strokeStyle='rgba(255,127,127,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
-      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='rgba(255,127,127,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-      ctx.fillText('+'+Math.round((v-1)*100)+'%',pad.left+cW+4,y+3);
-    });
+    if(!_shareCumAxis){
+      // right-axis guide lines + labels (skip when shared axis already drew them)
+      const ticks=[1.0,1.25,1.5,1.75,2.0,2.25,2.5].filter(v=>v<=maxIdx+0.05);
+      ticks.forEach(v=>{
+        const y=yCI(v);
+        ctx.strokeStyle='rgba(255,127,127,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='rgba(255,127,127,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+        ctx.fillText('+'+Math.round((v-1)*100)+'%',pad.left+cW+4,y+3);
+      });
+    }
     // Filled area (0.10 → 0.15)
     ctx.fillStyle='rgba(255,127,127,0.15)';ctx.beginPath();
     cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
@@ -2784,27 +2831,24 @@ function drawChart(){
   }
   if(ov.cumMedianWage){
     // Cumulative US median wage growth — compounds MEDIAN_WAGE_GROWTH from first
-    // year. Mirrors Cum. Inflation visually so the two can be eyeballed side by
-    // side: did real median wages keep pace with CPI over your career? (Spoiler:
-    // mostly no.) Own y-scale: 1.0 at bottom, max cum index at top.
-    const firstYr=yrs[0];
-    let ix=1.0;const cumIdx={};cumIdx[firstYr]=1.0;
-    for(let i=1;i<yrs.length;i++){ix*=(1+(MEDIAN_WAGE_GROWTH[yrs[i]]??0));cumIdx[yrs[i]]=ix;}
+    // year. Shares axis with other cumulative overlays when multiple are on.
+    const cumIdx=_cumMwIdx;
     const vals=Object.values(cumIdx);
     const minIdx=Math.min(...vals,1.0),maxIdx=Math.max(...vals,1.0);
     const range=Math.max(maxIdx-minIdx,0.01);
-    const yCMW=v=>pad.top+cH*(1-(v-minIdx)/range);
+    const yCMW=_shareCumAxis?_cumYFn:(v=>pad.top+cH*(1-(v-minIdx)/range));
     const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),yCMW(cumIdx[yr])]);
-    // Right-axis ticks at sensible cumulative %s
-    const ticks=[0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2,1.25].filter(v=>v>=minIdx-0.02&&v<=maxIdx+0.02);
-    ticks.forEach(v=>{
-      const y=yCMW(v);
-      ctx.strokeStyle='rgba(176,72,120,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
-      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='rgba(176,72,120,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-      const pct=Math.round((v-1)*100);
-      ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
-    });
+    if(!_shareCumAxis){
+      const ticks=[0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2,1.25].filter(v=>v>=minIdx-0.02&&v<=maxIdx+0.02);
+      ticks.forEach(v=>{
+        const y=yCMW(v);
+        ctx.strokeStyle='rgba(176,72,120,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='rgba(176,72,120,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+        const pct=Math.round((v-1)*100);
+        ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
+      });
+    }
     // Stroke line — dotted to match the Med Wage YoY style family
     ctx.strokeStyle='rgba(176,72,120,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([2,3]);
     ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
@@ -2814,27 +2858,16 @@ function drawChart(){
     ctx.fillStyle='rgba(176,72,120,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText((finalPct>=0?'+':'')+finalPct+'% total',lx+5,ly+3);
   }
-  if(ov.cashPerHead){
-    // CASH PER HEAD — CREAM custom metric. Cum Med Wage × EPOP, indexed to base.
-    // Logic: each year's "honest peer benchmark" is the median wage scaled by
-    // the share of adults actually earning it. When EPOP drops (2009-10, 2020),
-    // this line drops even if Cum Med Wage stays flat or rises — exposing the
-    // composition lie. Mirrors Cum Med Wage's render style with a teal palette.
-    const firstYr=yrs[0];
-    const baseEpop=EPOP[firstYr];
-    if(baseEpop!=null){
-      let wageIx=1.0;const cphIdx={};
-      cphIdx[firstYr]=1.0;
-      for(let i=1;i<yrs.length;i++){
-        wageIx*=(1+(MEDIAN_WAGE_GROWTH[yrs[i]]??0));
-        const ep=EPOP[yrs[i]];
-        cphIdx[yrs[i]]=(ep!=null)?wageIx*(ep/baseEpop):cphIdx[yrs[i-1]];
-      }
-      const vals=Object.values(cphIdx);
-      const minIdx=Math.min(...vals,1.0),maxIdx=Math.max(...vals,1.0);
-      const range=Math.max(maxIdx-minIdx,0.01);
-      const yCPH=v=>pad.top+cH*(1-(v-minIdx)/range);
-      const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),yCPH(cphIdx[yr])]);
+  if(ov.cashPerHead&&_cphIdx){
+    // CASH PER HEAD — Cum Med Wage × EPOP. Shares axis when multiple cumulative
+    // overlays are on so the gap vs Cum Med Wage / Cum Inflation reads honestly.
+    const cphIdx=_cphIdx;
+    const vals=Object.values(cphIdx);
+    const minIdx=Math.min(...vals,1.0),maxIdx=Math.max(...vals,1.0);
+    const range=Math.max(maxIdx-minIdx,0.01);
+    const yCPH=_shareCumAxis?_cumYFn:(v=>pad.top+cH*(1-(v-minIdx)/range));
+    const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),yCPH(cphIdx[yr])]);
+    if(!_shareCumAxis){
       const ticks=[0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2].filter(v=>v>=minIdx-0.02&&v<=maxIdx+0.02);
       ticks.forEach(v=>{
         const y=yCPH(v);
@@ -2844,15 +2877,14 @@ function drawChart(){
         const pct=Math.round((v-1)*100);
         ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
       });
-      // Solid stroke — distinguishes it from the rose dotted Med Wage family
-      ctx.strokeStyle='rgba(95,184,160,0.95)';ctx.lineWidth=2.4;
-      ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
-      cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(95,184,160,0.95)';ctx.fill();});
-      const[lx,ly]=cumPts[cumPts.length-1];
-      const finalPct=Math.round((cphIdx[yrs[yrs.length-1]]-1)*100);
-      ctx.fillStyle='rgba(95,184,160,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-      ctx.fillText((finalPct>=0?'+':'')+finalPct+'% CPH',lx+5,ly+3);
     }
+    ctx.strokeStyle='rgba(95,184,160,0.95)';ctx.lineWidth=2.4;
+    ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+    cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(95,184,160,0.95)';ctx.fill();});
+    const[lx,ly]=cumPts[cumPts.length-1];
+    const finalPct=Math.round((cphIdx[yrs[yrs.length-1]]-1)*100);
+    ctx.fillStyle='rgba(95,184,160,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+    ctx.fillText((finalPct>=0?'+':'')+finalPct+'% CPH',lx+5,ly+3);
   }
   // Unemployment overlays — both share the same lower-strip scale (0% to 18%)
   // so U-3 and U-6 can be eyeballed together. Higher = worse labor market = less
