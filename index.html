@@ -16,7 +16,7 @@
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#ff9b4d;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#e87a5d;--u6-color:#a85040;
+  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#e87a5d;--u6-color:#a85040;--cph-color:#5fb8a0;
   /* Layout */
   --sidebar-w:300px;--drawer-w:400px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -152,6 +152,7 @@ body.resizing-chart *{cursor:ns-resize!important;}
 .cbtn.on-cumMedianWage{border-color:var(--cmwg-color)!important;color:var(--cmwg-color)!important;}
 .cbtn.on-u3{border-color:var(--u3-color)!important;color:var(--u3-color)!important;}
 .cbtn.on-u6{border-color:var(--u6-color)!important;color:var(--u6-color)!important;}
+.cbtn.on-cashPerHead{border-color:var(--cph-color)!important;color:var(--cph-color)!important;}
 /* Inline info pips — small i next to column headers / values to flag a caveat
    in the underlying metric. Hover shows the lesson. */
 .pip{display:inline-block;margin-left:4px;width:11px;height:11px;line-height:10px;text-align:center;font-size:8px;font-weight:700;font-style:italic;font-family:Georgia,serif;color:var(--muted);background:transparent;border:1px solid var(--muted);border-radius:50%;cursor:help;opacity:0.7;vertical-align:middle;}
@@ -483,6 +484,7 @@ body.empty #emptyState{display:flex;}
           <button class="cbtn" id="ov-cumMedianWage" onclick="toggleOv('cumMedianWage')" title="Cumulative US median wage growth since first year — compounded BLS YoY">Cum. Med Wage</button>
           <button class="cbtn" id="ov-u3" onclick="toggleOv('u3')" title="U-3 unemployment rate (BLS headline) — the metric quoted in press releases. Low = tight labor market = leverage to demand raises.">Unemp (U-3)</button>
           <button class="cbtn" id="ov-u6" onclick="toggleOv('u6')" title="U-6 unemployment rate — includes discouraged workers and involuntary part-time. The honest version of U-3. Typically 1.5-2× U-3; the wider the gap, the more slack the headline is hiding.">Unemp (U-6)</button>
+          <button class="cbtn" id="ov-cashPerHead" onclick="toggleOv('cashPerHead')" title="Cash Per Head — CREAM custom metric. Cumulative US median wage × employment-to-population ratio, indexed to your first year. Treats the non-employed as $0 earners, so it captures BOTH wage growth AND who's actually getting it. Diverges dramatically from Cum. Med Wage during labor-force shocks (2008–10, 2020).">Cash Per Head</button>
           <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')"    title="Macro events as colored bands across their date ranges">Events</button>
           <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')" title="US income class bands shaded behind the chart">Class Bands</button>
           <button class="cbtn" id="ov-recession" onclick="toggleOv('recession')" title="Shade NBER-called US recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)">Recessions</button>
@@ -841,6 +843,19 @@ const UNEMP_U3={
   2016:4.9, 2017:4.4, 2018:3.9, 2019:3.7, 2020:8.1, 2021:5.4, 2022:3.6, 2023:3.6,
   2024:4.0, 2025:4.2, 2026:4.3,
 };
+// Employment-to-Population ratio (EPOP, civilian, 16+). The % of working-age
+// adults who actually have a job. Captures both unemployment AND labor force
+// participation in one number — the honest denominator when normalizing wage
+// stats to "per adult". COVID 2020: EPOP collapsed from 60.8 to 56.8 (4 pts in
+// one year), which is what makes the BLS median wage spike a statistical lie.
+const EPOP={
+  1993:61.7, 1994:62.5, 1995:62.9, 1996:63.2, 1997:63.8, 1998:64.1, 1999:64.3,
+  2000:64.4, 2001:63.7, 2002:62.7, 2003:62.3, 2004:62.3, 2005:62.7, 2006:63.1, 2007:63.0,
+  2008:62.2, 2009:59.3, 2010:58.5, 2011:58.4, 2012:58.6, 2013:58.6, 2014:59.0, 2015:59.3,
+  2016:59.7, 2017:60.1, 2018:60.4, 2019:60.8, 2020:56.8, 2021:58.4, 2022:60.0, 2023:60.3,
+  2024:60.1, 2025:59.8, 2026:59.6,
+};
+
 const UNEMP_U6={
   1994:10.9, 1995:10.1, 1996:9.7, 1997:8.9, 1998:8.0, 1999:7.4,
   2000:7.0, 2001:8.1, 2002:9.6, 2003:10.1, 2004:9.6, 2005:8.9, 2006:8.2, 2007:8.3,
@@ -969,7 +984,7 @@ if(_s.recessions==null){
   RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
   recessionNextId=RECESSIONS.length+1;
 }
-let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,evt:false,classBands:false,recession:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,evt:false,classBands:false,recession:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -2799,6 +2814,46 @@ function drawChart(){
     ctx.fillStyle='rgba(176,72,120,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText((finalPct>=0?'+':'')+finalPct+'% total',lx+5,ly+3);
   }
+  if(ov.cashPerHead){
+    // CASH PER HEAD — CREAM custom metric. Cum Med Wage × EPOP, indexed to base.
+    // Logic: each year's "honest peer benchmark" is the median wage scaled by
+    // the share of adults actually earning it. When EPOP drops (2009-10, 2020),
+    // this line drops even if Cum Med Wage stays flat or rises — exposing the
+    // composition lie. Mirrors Cum Med Wage's render style with a teal palette.
+    const firstYr=yrs[0];
+    const baseEpop=EPOP[firstYr];
+    if(baseEpop!=null){
+      let wageIx=1.0;const cphIdx={};
+      cphIdx[firstYr]=1.0;
+      for(let i=1;i<yrs.length;i++){
+        wageIx*=(1+(MEDIAN_WAGE_GROWTH[yrs[i]]??0));
+        const ep=EPOP[yrs[i]];
+        cphIdx[yrs[i]]=(ep!=null)?wageIx*(ep/baseEpop):cphIdx[yrs[i-1]];
+      }
+      const vals=Object.values(cphIdx);
+      const minIdx=Math.min(...vals,1.0),maxIdx=Math.max(...vals,1.0);
+      const range=Math.max(maxIdx-minIdx,0.01);
+      const yCPH=v=>pad.top+cH*(1-(v-minIdx)/range);
+      const cumPts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),yCPH(cphIdx[yr])]);
+      const ticks=[0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2].filter(v=>v>=minIdx-0.02&&v<=maxIdx+0.02);
+      ticks.forEach(v=>{
+        const y=yCPH(v);
+        ctx.strokeStyle='rgba(95,184,160,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='rgba(95,184,160,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+        const pct=Math.round((v-1)*100);
+        ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
+      });
+      // Solid stroke — distinguishes it from the rose dotted Med Wage family
+      ctx.strokeStyle='rgba(95,184,160,0.95)';ctx.lineWidth=2.4;
+      ctx.beginPath();cumPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+      cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(95,184,160,0.95)';ctx.fill();});
+      const[lx,ly]=cumPts[cumPts.length-1];
+      const finalPct=Math.round((cphIdx[yrs[yrs.length-1]]-1)*100);
+      ctx.fillStyle='rgba(95,184,160,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
+      ctx.fillText((finalPct>=0?'+':'')+finalPct+'% CPH',lx+5,ly+3);
+    }
+  }
   // Unemployment overlays — both share the same lower-strip scale (0% to 18%)
   // so U-3 and U-6 can be eyeballed together. Higher = worse labor market = less
   // leverage for raises. Helper extracted so both blocks render identically.
@@ -3333,6 +3388,7 @@ const OV_META={
   cumMedianWage:{label:'Cum. Med Wage',color:_cssVar('--cmwg-color')||'#b04878'},
   u3:{label:'Unemp (U-3)',color:_cssVar('--u3-color')||'#e87a5d'},
   u6:{label:'Unemp (U-6)',color:_cssVar('--u6-color')||'#a85040'},
+  cashPerHead:{label:'Cash Per Head',color:_cssVar('--cph-color')||'#5fb8a0'},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
   recession:{label:'Recessions',color:_cssVar('--neg')||'#eb5757'},
