@@ -413,6 +413,7 @@ body.empty #emptyState{display:flex;}
     <div class="tb-stat"><label>Avg / yr</label><value id="sAvg">—</value></div>
     <div class="tb-stat"><label>Real Growth</label><value id="sReal">—</value></div>
     <div class="tb-stat" title="Career Trend — log-linear regression through every year. Less noise than endpoint CAGR; reflects underlying growth rate."><label>Trend</label><value id="sTrend">—</value></div>
+    <div class="tb-stat" title="Endpoint CAGR — first salary to current salary, compounded annually. Vulnerable to anomalous first or last year. Compare to Trend: when they diverge (Δ shown), one endpoint is noisy."><label>CAGR</label><value id="sCagr">—</value></div>
     <div class="tb-stat tb-alarm">
       <label>Pulse</label>
       <span id="alarmChip" data-level="unknown"><span class="alarm-emoji" id="alarmEmoji">—</span><span id="alarmLabel">—</span></span>
@@ -1574,7 +1575,7 @@ function labFindAndSnap(tier){
 function updateStats(){
   const yrs=sortedYrs(),vals=yrs.map(y=>salaries[y]);
   if(!yrs.length){
-    ['sTotal','sPeak','sAvg','sReal','sTrend'].forEach(id=>document.getElementById(id).textContent='—');
+    ['sTotal','sPeak','sAvg','sReal','sTrend','sCagr'].forEach(id=>document.getElementById(id).textContent='—');
     document.getElementById('sYJ').textContent='0 · '+jobs.length;
     renderAlarmChip();
     return;
@@ -1590,6 +1591,14 @@ function updateStats(){
   document.getElementById('sAvg').textContent=fmtK(total/vals.length);
   document.getElementById('sReal').textContent=(rg>0?'+':'')+rg+'%';
   document.getElementById('sTrend').textContent=careerTrend!=null?((careerTrend>=0?'+':'')+(careerTrend*100).toFixed(1)+'%'):'—';
+  // Endpoint CAGR — first salary to most-recent salary, compounded across span
+  const firstSal=vals[0],lastSal=vals[vals.length-1],span=yrs.length-1;
+  const cagr=(firstSal>0&&span>0)?Math.pow(lastSal/firstSal,1/span)-1:null;
+  const cagrTxt=cagr!=null?((cagr>=0?'+':'')+(cagr*100).toFixed(1)+'%'):'—';
+  // Δ flag when endpoint and trend diverge ≥2pts — signals an anomalous endpoint year
+  const gap=(cagr!=null&&careerTrend!=null)?Math.abs(cagr-careerTrend)*100:0;
+  const gapTxt=gap>=2?` <span style="color:var(--neg);font-size:0.6em;font-weight:600">Δ${gap.toFixed(1)}</span>`:'';
+  document.getElementById('sCagr').innerHTML=cagrTxt+gapTxt;
   document.getElementById('sYJ').textContent=yrs.length+' · '+jobs.length;
   renderAlarmChip();
 }
@@ -1791,12 +1800,7 @@ function renderInsights(){
     {n:'04',l:'Current',v:fmtK(_curSal)},
     {n:'05',l:'Years Tracked',v:_idxYrs.length},
     {n:'06',l:'Jobs Held',v:jobs.length},
-    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr),sub:(()=>{
-      if(_careerTrend==null)return 'endpoint';
-      const gap=Math.abs((_careerCagr||0)-_careerTrend)*100;
-      const gapTxt=gap>=2?` · Δ${gap.toFixed(1)}pts`:'';
-      return `endpt · trend ${fmtPct(_careerTrend)}${gapTxt}`;
-    })()},
+    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr),sub:_careerTrend!=null?'trend '+fmtPct(_careerTrend):''},
     {n:'08',l:'Best Raise',v:fmtPct(_bestRaisePct)},
     {n:'09',l:'Real Growth',v:fmtPct(_realGrowth/100)},
     {n:'10',l:'Inflation Drag',v:fmtK(_drag)},
