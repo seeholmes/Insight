@@ -1791,7 +1791,12 @@ function renderInsights(){
     {n:'04',l:'Current',v:fmtK(_curSal)},
     {n:'05',l:'Years Tracked',v:_idxYrs.length},
     {n:'06',l:'Jobs Held',v:jobs.length},
-    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr),sub:_careerTrend!=null?'trend '+fmtPct(_careerTrend):''},
+    {n:'07',l:'Career CAGR',v:fmtPct(_careerCagr),sub:(()=>{
+      if(_careerTrend==null)return 'endpoint';
+      const gap=Math.abs((_careerCagr||0)-_careerTrend)*100;
+      const gapTxt=gap>=2?` · Δ${gap.toFixed(1)}pts`:'';
+      return `endpt · trend ${fmtPct(_careerTrend)}${gapTxt}`;
+    })()},
     {n:'08',l:'Best Raise',v:fmtPct(_bestRaisePct)},
     {n:'09',l:'Real Growth',v:fmtPct(_realGrowth/100)},
     {n:'10',l:'Inflation Drag',v:fmtK(_drag)},
