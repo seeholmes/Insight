@@ -466,6 +466,8 @@ body.empty #emptyState{display:flex;}
           <button class="cbtn" id="sm-ma3" onclick="setSmoothing('ma3')" title="3-year moving average">3-yr</button>
           <button class="cbtn" id="sm-ma5" onclick="setSmoothing('ma5')" title="5-year moving average">5-yr</button>
           <button class="cbtn" id="sm-spline" onclick="setSmoothing('spline')" title="Catmull-Rom spline interpolation">Spline</button>
+          <span class="ctrl-sep" style="opacity:0.3;margin:0 0.15rem">·</span>
+          <button class="cbtn" id="sm-macro" onclick="toggleSmoothMacro()" title="When smoothing is on, also smooth macro overlays (Inflation, GDP, Med Wage, U-3, U-6). Old Money / New Money / COL always smooth with salary.">Macro</button>
         </div>
         <div class="ctrl-group">
           <span class="ctrl-lbl">Lines</span>
@@ -1013,6 +1015,11 @@ let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
 let curDTab='jobs';
 let smoothing='none';
+// When true, smoothing (3-yr/5-yr/spline) cascades to noisy macro overlays
+// (Inflation, GDP, Med Wage, U-3, U-6). Salary-derivative overlays (Old Money,
+// New Money, COL) always cascade regardless — they share the salary's axis and
+// would visually lie otherwise.
+let smoothMacro=localStorage.getItem('cream_smoothMacro')==='1';
 let _crosshair=null;   // {x, y} or null
 let _eventHitboxes=[]; // [{x,y,r,yr}] — populated during drawChart
 const _isTouch=matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -2444,6 +2451,29 @@ function setSmoothing(s){
   ['none','ma3','ma5','spline'].forEach(k=>document.getElementById('sm-'+k).classList.toggle('active',k===s));
   drawChart();
 }
+function toggleSmoothMacro(){
+  smoothMacro=!smoothMacro;
+  localStorage.setItem('cream_smoothMacro',smoothMacro?'1':'0');
+  document.getElementById('sm-macro').classList.toggle('active',smoothMacro);
+  drawChart();
+}
+// Null-safe smoothing: averages only non-null neighbors so sparse macro series
+// (e.g., U-6 has no 1993 value) don't NaN-out. Spline mode is a no-op here —
+// it smooths visually via drawSeries() instead.
+function smoothVals(arr){
+  if(smoothing!=='ma3'&&smoothing!=='ma5')return arr;
+  const w=smoothing==='ma3'?3:5,h=Math.floor(w/2);
+  return arr.map((v,i)=>{
+    if(v==null)return v;
+    const win=arr.slice(Math.max(0,i-h),Math.min(arr.length,i+h+1)).filter(x=>x!=null);
+    return win.length?win.reduce((a,b)=>a+b,0)/win.length:v;
+  });
+}
+// Stroke a point list, respecting spline mode for visual smoothing
+function drawSeries(pts,c){
+  if(smoothing==='spline')drawSpline(pts,c);
+  else{c.beginPath();pts.forEach((p,i)=>i===0?c.moveTo(p[0],p[1]):c.lineTo(p[0],p[1]));}
+}
 
 // ── CREAM COL COMPANION BRIDGE ───────────────────────────────────────────────
 const _COL_ZONES={0:{housing:1.65,food:1.35,transport:1.15},1:{housing:1.55,food:1.30,transport:1.12},2:{housing:1.20,food:1.15,transport:1.08},3:{housing:1.10,food:1.08,transport:1.05},4:{housing:0.88,food:0.95,transport:0.97},5:{housing:0.85,food:0.92,transport:0.96},6:{housing:1.02,food:1.00,transport:1.00},7:{housing:0.95,food:0.98,transport:1.00},8:{housing:1.15,food:1.05,transport:1.06},9:{housing:1.80,food:1.42,transport:1.22}};
@@ -2705,14 +2735,17 @@ function drawChart(){
 
   // Overlays
   if(ov.inf){
-    const infPts=yrs.map(yr=>{const v=(MACRO[yr]?.inf??0)/0.08*cH*0.42;return[xp(allYrs.indexOf(yr)),pad.top+cH-v];});
+    // Optional cascade: smooth inflation YoY when Macro toggle is on
+    const infRaw=yrs.map(yr=>MACRO[yr]?.inf??0);
+    const infSm=smoothMacro?smoothVals(infRaw):infRaw;
+    const infPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH-(infSm[i]/0.08*cH*0.42)]);
     // filled area
     ctx.fillStyle='rgba(240,192,96,0.28)';ctx.beginPath();
     infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
     ctx.lineTo(infPts[infPts.length-1][0],pad.top+cH);ctx.lineTo(infPts[0][0],pad.top+cH);ctx.closePath();ctx.fill();
     // stroke line — brighter color, thicker width
     ctx.strokeStyle='rgba(240,192,96,1)';ctx.lineWidth=3;ctx.setLineDash([4,2]);
-    ctx.beginPath();infPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    drawSeries(infPts,ctx);ctx.stroke();ctx.setLineDash([]);
     // Per-year dots — red for high-inflation years (≥4%)
     infPts.forEach(([x,y],i)=>{
       const r=MACRO[yrs[i]]?.inf??0;
@@ -2816,9 +2849,11 @@ function drawChart(){
     ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle='rgba(111,207,151,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText('GDP 0%',pad.left+cW+4,zeroY+3);
-    // Build point list once so we can fill + stroke
+    // Build point list with optional macro smoothing cascade
+    const gdpRawArr=yrs.map(yr=>MACRO[yr]?.gdp);
+    const gdpSmArr=smoothMacro?smoothVals(gdpRawArr):gdpRawArr;
     const pts=[];
-    yrs.forEach(yr=>{const g=MACRO[yr]?.gdp;if(g==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),gdpY(g),g]);});
+    yrs.forEach((yr,i)=>{const g=gdpSmArr[i];if(g==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),gdpY(g),g]);});
     if(pts.length){
       // Filled area between line and zero — green when positive, faded red when negative is conveyed by line color
       ctx.fillStyle='rgba(111,207,151,0.12)';
@@ -2829,7 +2864,7 @@ function drawChart(){
       ctx.closePath();ctx.fill();
       // Stroke line — bumped opacity 0.28 → 0.9 and width 1.5 → 2.2
       ctx.strokeStyle='rgba(111,207,151,0.9)';ctx.lineWidth=2.2;ctx.setLineDash([5,3]);
-      ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      drawSeries(pts,ctx);ctx.stroke();ctx.setLineDash([]);
       // Dot markers at each year so it reads as discrete data
       pts.forEach(([x,y,g])=>{
         ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);
@@ -2847,12 +2882,14 @@ function drawChart(){
     ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle='rgba(214,120,161,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText('Med 0%',pad.left+cW+4,zeroY+3);
+    const mwRawArr=yrs.map(yr=>MEDIAN_WAGE_GROWTH[yr]);
+    const mwSmArr=smoothMacro?smoothVals(mwRawArr):mwRawArr;
     const pts=[];
-    yrs.forEach(yr=>{const m=MEDIAN_WAGE_GROWTH[yr];if(m==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),mwY(m),m]);});
+    yrs.forEach((yr,i)=>{const m=mwSmArr[i];if(m==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),mwY(m),m]);});
     if(pts.length){
       // Stroke line — dotted so it's visually distinct from GDP's dashed line
       ctx.strokeStyle='rgba(214,120,161,0.9)';ctx.lineWidth=2;ctx.setLineDash([2,3]);
-      ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      drawSeries(pts,ctx);ctx.stroke();ctx.setLineDash([]);
       // Small dot at each year
       pts.forEach(([x,y,m])=>{
         ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);
@@ -2933,20 +2970,24 @@ function drawChart(){
   }
   if(ov.u6){
     // Draw U-6 first so U-3 sits on top when both are on
+    const u6Raw=yrs.map(yr=>UNEMP_U6[yr]);
+    const u6Sm=smoothMacro?smoothVals(u6Raw):u6Raw;
     const pts=[];
-    yrs.forEach(yr=>{const u=UNEMP_U6[yr];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
+    yrs.forEach((yr,i)=>{const u=u6Sm[i];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
     if(pts.length){
       ctx.strokeStyle='rgba(168,80,64,0.85)';ctx.lineWidth=1.8;ctx.setLineDash([4,3]);
-      ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      drawSeries(pts,ctx);ctx.stroke();ctx.setLineDash([]);
       pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fillStyle='rgba(168,80,64,0.9)';ctx.fill();});
     }
   }
   if(ov.u3){
+    const u3Raw=yrs.map(yr=>UNEMP_U3[yr]);
+    const u3Sm=smoothMacro?smoothVals(u3Raw):u3Raw;
     const pts=[];
-    yrs.forEach(yr=>{const u=UNEMP_U3[yr];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
+    yrs.forEach((yr,i)=>{const u=u3Sm[i];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
     if(pts.length){
-      ctx.strokeStyle='rgba(232,122,93,0.95)';ctx.lineWidth=2.2;ctx.beginPath();
-      pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+      ctx.strokeStyle='rgba(232,122,93,0.95)';ctx.lineWidth=2.2;
+      drawSeries(pts,ctx);ctx.stroke();
       pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(232,122,93,0.95)';ctx.fill();});
     }
   }
@@ -3010,19 +3051,23 @@ function drawChart(){
   ctx.stroke();
 
   if(ov.real){
-    const realPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-realVals[i]/maxNom)]);
+    // Old Money cascades with salary smoothing — same axis, same logic
+    const realSm=smoothVals(realVals);
+    const realPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-realSm[i]/maxNom)]);
     ctx.strokeStyle='rgba(126,184,245,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([6,3]);
-    ctx.beginPath();realPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    drawSeries(realPts,ctx);ctx.stroke();ctx.setLineDash([]);
     realPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(126,184,245,0.95)';ctx.fill();});
     // End label — current real $
     const [lx,ly]=realPts[realPts.length-1];
     ctx.fillStyle='rgba(126,184,245,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText(fmtK(realVals[realVals.length-1]),lx+5,ly+3);
+    ctx.fillText(fmtK(realSm[realSm.length-1]),lx+5,ly+3);
   }
   if(ov.today){
-    const todayPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-todayVals[i]/maxNom)]);
+    // New Money cascades with salary smoothing
+    const todaySm=smoothVals(todayVals);
+    const todayPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-todaySm[i]/maxNom)]);
     ctx.strokeStyle='rgba(78,205,196,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([2,5]);
-    ctx.beginPath();todayPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+    drawSeries(todayPts,ctx);ctx.stroke();ctx.setLineDash([]);
     todayPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(78,205,196,0.95)';ctx.fill();});
     // End label — first year's value in today's $ (most dramatic comparison)
     const [fx,fy]=todayPts[0];
@@ -3086,7 +3131,8 @@ function drawChart(){
     const colCfg=userCfg||DEFAULT_COL_CFG;
     const colYrs=allYrs.filter(y=>y>=1993&&y<=2026);
     if(colYrs.length){
-      const colVals=colYrs.map(y=>calcColForYear(colCfg,y));
+      // COL cascades with salary smoothing — same dollar axis, so must match
+      const colVals=smoothVals(colYrs.map(y=>calcColForYear(colCfg,y)));
       const isPct=colCfg.displayMode==='pctSalary';
       const yPct=p=>pad.top+cH*(1-Math.max(0,Math.min(1.5,p))/1.5);
       // Collect points first so we can fill + stroke + dot
@@ -3121,9 +3167,9 @@ function drawChart(){
         colPts.forEach(([x,y])=>ctx.lineTo(x,y));
         ctx.lineTo(colPts[colPts.length-1][0],pad.top+cH);ctx.closePath();ctx.fill();
       }
-      // Stroke
+      // Stroke (spline cascade respected via drawSeries)
       ctx.strokeStyle='rgba(240,168,0,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([5,3]);
-      ctx.beginPath();colPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();ctx.setLineDash([]);
+      drawSeries(colPts,ctx);ctx.stroke();ctx.setLineDash([]);
       // Per-year dots
       colPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(240,168,0,0.95)';ctx.fill();});
       // End-of-line label
@@ -3854,6 +3900,7 @@ const _initialTab=(!_hasUiTabPref&&sortedYrs().length>0)?'insights':curSTab;
 setSTab(_initialTab);
 document.body.classList.toggle('empty',sortedYrs().length===0);
 updateStats();renderLegend();buildTable();renderOvLegend();tmInit();
+if(smoothMacro)document.getElementById('sm-macro').classList.add('active');
 
 // Rotating tagline — picks a random Wu-Tang-flavored line on each load
 const TAGLINES=[
