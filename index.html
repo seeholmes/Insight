@@ -3308,8 +3308,10 @@ canvas.addEventListener('mousemove',e=>{
   const smoothLine=(()=>{
     if(isProj||smoothing==='none'||smoothing==='spline'||!yrs.includes(yr))return'';
     const w=smoothing==='ma3'?3:smoothing==='ma5'?5:0;if(w===0)return'';
+    // Symmetric-shrink window — matches the chart line and overlays
     const i=yrs.indexOf(yr),h=Math.floor(w/2);
-    const slice=yrs.slice(Math.max(0,i-h),Math.min(yrs.length,i+h+1));
+    const k=Math.min(h,i,yrs.length-1-i);
+    const slice=yrs.slice(i-k,i+k+1);
     const ma=slice.reduce((s,y)=>s+(salaries[y]||0),0)/slice.length;
     const delta=ma-sal,pct2=sal>0?(delta/sal)*100:0;
     const dColor=delta>=0?'var(--pos)':'var(--neg)';
