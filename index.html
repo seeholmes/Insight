@@ -2431,9 +2431,15 @@ try{const _dw=localStorage.getItem('insight_drawerW');if(_dw)document.documentEl
   });
 })();
 
+// Symmetric-shrink centered moving average: window contracts symmetrically at
+// the edges so the first/last value averages only itself, i=1 uses 3 points,
+// i=2 onward uses the full window. Avoids forward-bias at start of series
+// (a growing salary's "5-yr avg at 1993" no longer gets pulled up by 1994-95).
 function movingAvg(vals,w){
+  const h=Math.floor(w/2),n=vals.length;
   return vals.map((v,i)=>{
-    const h=Math.floor(w/2),sl=vals.slice(Math.max(0,i-h),Math.min(vals.length,i+h+1));
+    const k=Math.min(h,i,n-1-i);
+    const sl=vals.slice(i-k,i+k+1);
     return sl.reduce((a,b)=>a+b,0)/sl.length;
   });
 }
@@ -2462,10 +2468,13 @@ function toggleSmoothMacro(){
 // it smooths visually via drawSeries() instead.
 function smoothVals(arr){
   if(smoothing!=='ma3'&&smoothing!=='ma5')return arr;
-  const w=smoothing==='ma3'?3:5,h=Math.floor(w/2);
+  const w=smoothing==='ma3'?3:5,h=Math.floor(w/2),n=arr.length;
   return arr.map((v,i)=>{
     if(v==null)return v;
-    const win=arr.slice(Math.max(0,i-h),Math.min(arr.length,i+h+1)).filter(x=>x!=null);
+    // Symmetric-shrink: window contracts equally on both sides at edges so the
+    // average at year 0 is just year 0, not a forward-biased blend.
+    const k=Math.min(h,i,n-1-i);
+    const win=arr.slice(i-k,i+k+1).filter(x=>x!=null);
     return win.length?win.reduce((a,b)=>a+b,0)/win.length:v;
   });
 }
