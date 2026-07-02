@@ -342,10 +342,21 @@ body.empty #chart-section canvas,body.empty #chart-section #chartControls,body.e
 body.empty #emptyState{display:flex;}
 
 /* ── OVERLAY LEGEND ── */
-#ovLegend{position:absolute;top:8px;right:56px;display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:flex-end;max-width:60%;z-index:4;pointer-events:auto;}
+/* Legend: slim in-flow strip between toolbar and canvas — never covers the plot */
+#ovLegend{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:var(--sp-2);}
+#ovLegend:empty{display:none;}
 .ovl-item{display:inline-flex;align-items:center;gap:0.35rem;padding:0.18rem 0.45rem;background:rgba(19,20,26,0.85);border:1px solid var(--border);font-size:var(--fs-xs);color:var(--muted);cursor:pointer;transition:all .15s;}
 .ovl-item:hover{border-color:var(--border2);color:var(--text);}
 .ovl-sw{width:9px;height:9px;border-radius:1px;flex-shrink:0;}
+/* Custom overlay picker — fixed-position popover anchored to the Custom chip */
+#ovPicker{position:fixed;z-index:80;display:none;background:var(--s2,#13141a);border:1px solid var(--border2,#3a3948);border-radius:4px;padding:0.55rem 0.65rem;box-shadow:0 10px 28px rgba(0,0,0,0.55);max-height:min(440px,70vh);overflow-y:auto;width:min(300px,calc(100vw - 16px));}
+#ovPicker.open{display:block;}
+.ovp-grp{font-size:var(--fs-xs);color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin:0.55rem 0 0.2rem;}
+.ovp-grp:first-child{margin-top:0;}
+.ovp-row{display:flex;align-items:center;gap:0.45rem;padding:0.3rem 0.25rem;cursor:pointer;font-size:var(--fs-sm);color:var(--text);border-radius:2px;}
+.ovp-row:hover{background:rgba(255,255,255,0.045);}
+.ovp-row input{accent-color:var(--accent);margin:0;flex-shrink:0;}
+.ovp-sw{width:9px;height:9px;border-radius:1px;flex-shrink:0;}
 
 /* ── HAMBURGER + SCRIM (mobile) ── */
 #hamburger{display:none;background:none;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;padding:0.3rem 0.55rem;cursor:pointer;margin-right:0.4rem;}
@@ -395,7 +406,6 @@ body.empty #emptyState{display:flex;}
   #chartControls{gap:0.3rem;}
   .ctrl-group{padding:0.18rem 0.4rem;gap:0.25rem;}
   #bottom-section{padding:0.5rem 0.6rem;}
-  #ovLegend{top:4px;right:4px;max-width:90%;}
 }
 @media (hover: none) and (pointer: coarse){
   .tbtn,.cbtn,.stab,.dtab,.btn-sm,#addJobBtn,.ovl-item{min-height:var(--tap);}
@@ -492,22 +502,18 @@ body.empty #emptyState{display:flex;}
         </div>
         <div class="ctrl-group">
           <span class="ctrl-lbl">Context</span>
-          <button class="cbtn" id="ov-inf"    onclick="toggleOv('inf')"    title="Annual inflation rate (CPI-U)">Inflation</button>
-          <button class="cbtn" id="ov-cuminf" onclick="toggleOv('cuminf')" title="Cumulative inflation index since first year">Cum. Inflation</button>
-          <button class="cbtn" id="ov-gdp"    onclick="toggleOv('gdp')"    title="Real GDP growth rate">GDP</button>
-          <button class="cbtn" id="ov-medianWage" onclick="toggleOv('medianWage')" title="BLS real median weekly earnings YoY % (full-time wage & salary workers, CPS data) — qualitative comparator only">Med Wage</button>
-          <button class="cbtn" id="ov-cumMedianWage" onclick="toggleOv('cumMedianWage')" title="Cumulative US median wage growth since first year — compounded BLS YoY">Cum. Med Wage</button>
-          <button class="cbtn" id="ov-u3" onclick="toggleOv('u3')" title="U-3 unemployment rate (BLS headline) — the metric quoted in press releases. Low = tight labor market = leverage to demand raises.">Unemp (U-3)</button>
-          <button class="cbtn" id="ov-u6" onclick="toggleOv('u6')" title="U-6 unemployment rate — includes discouraged workers and involuntary part-time. The honest version of U-3. Typically 1.5-2× U-3; the wider the gap, the more slack the headline is hiding.">Unemp (U-6)</button>
-          <button class="cbtn" id="ov-cashPerHead" onclick="toggleOv('cashPerHead')" title="Cash Per Head — CREAM custom metric. Cumulative US median wage × employment-to-population ratio, indexed to your first year. Treats the non-employed as $0 earners, so it captures BOTH wage growth AND who's actually getting it. Diverges dramatically from Cum. Med Wage during labor-force shocks (2008–10, 2020).">Cash Per Head</button>
-          <button class="cbtn" id="ov-evt"    onclick="toggleOv('evt')"    title="Macro events as colored bands across their date ranges">Events</button>
-          <button class="cbtn" id="ov-classBands" onclick="toggleOv('classBands')" title="US income class bands shaded behind the chart">Class Bands</button>
-          <button class="cbtn" id="ov-recession" onclick="toggleOv('recession')" title="Shade NBER-called US recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)">Recessions</button>
+          <button class="cbtn" id="ps-clean"  onclick="applyPreset('clean')"  title="All context overlays off — just your money">Clean</button>
+          <button class="cbtn" id="ps-prices" onclick="applyPreset('prices')" title="Did I outrun CPI? — Inflation, Cum. Inflation, Recessions">vs Prices</button>
+          <button class="cbtn" id="ps-wages"  onclick="applyPreset('wages')"  title="Did I outrun the median American? — Med Wage, Cum. Med Wage, Cash Per Head">vs Wages</button>
+          <button class="cbtn" id="ps-labor"  onclick="applyPreset('labor')"  title="Was I bold or riding a tight market? — Unemp U-3, U-6, Recessions">vs Labor</button>
+          <button class="cbtn" id="ps-works"  onclick="applyPreset('works')"  title="One overlay per family, stays legible — Inflation, GDP, Med Wage, U-3, Events, Recessions">The Works</button>
+          <button class="cbtn" id="ps-custom" onclick="toggleOvPicker(event)" title="Pick individual overlays, grouped by family">Custom ⚙</button>
         </div>
       </div>
+      <div id="ovLegend"></div>
+      <div id="ovPicker"></div>
       <div id="chartWrap">
         <canvas id="c"></canvas>
-        <div id="ovLegend"></div>
         <div id="emptyState">
           <div class="es-inner">
             <img src="cream-logo-512.png" alt="CREAM" width="360" height="360" style="display:block;margin:0 auto 1.5rem;max-width:80vw;height:auto">
@@ -2327,6 +2333,9 @@ function resizeCanvas(){
 }
 let _resizeT=null;
 window.addEventListener('resize',()=>{clearTimeout(_resizeT);_resizeT=setTimeout(resizeCanvas,150);});
+// The legend strip above the canvas grows/shrinks the wrap without a window
+// resize — observe the wrap itself so the canvas always matches.
+if(window.ResizeObserver)new ResizeObserver(()=>{clearTimeout(_resizeT);_resizeT=setTimeout(resizeCanvas,60);}).observe(wrap);
 
 // ── SIDEBAR RESIZE HANDLE ─────────────────────────────────────────────────────
 // Restore saved sidebar width (before initCanvas runs so the chart sizes right
@@ -2467,6 +2476,7 @@ function drawSpline(pts,c){
 function setSmoothing(s){
   smoothing=s;
   ['none','ma3','ma5','spline'].forEach(k=>document.getElementById('sm-'+k).classList.toggle('active',k===s));
+  if(typeof saveOvState==='function')saveOvState();
   drawChart();
 }
 function toggleSmoothMacro(){
@@ -2658,6 +2668,10 @@ function drawChart(){
   ctx.clearRect(0,0,W,H);
   const pad={top:28,right:50,bottom:46,left:76};
   const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  // Label queues — right-margin tick texts and line-end callouts are collected
+  // during overlay drawing and flushed at the end with collision handling, so
+  // multiple overlays can't garble each other's labels.
+  const _rmQ=[],_endQ=[];
 
   const yrs=sortedYrs();
   const projData=ov.proj?projectSalaries():{};
@@ -2788,8 +2802,7 @@ function drawChart(){
     const lastInf=MACRO[yrs[yrs.length-1]]?.inf;
     if(lastInf!=null){
       const [lx,ly]=infPts[infPts.length-1];
-      ctx.fillStyle='rgba(240,192,96,1)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-      ctx.fillText((lastInf*100).toFixed(1)+'%',lx+5,ly+3);
+      _endQ.push({x:lx+5,y:ly+3,text:(lastInf*100).toFixed(1)+'%',color:'rgba(240,192,96,1)'});
     }
   }
   // ── Shared cumulative axis ─────────────────────────────────────────────────
@@ -2834,9 +2847,8 @@ function drawChart(){
         const y=_cumYFn(v);
         ctx.strokeStyle='rgba(160,160,160,0.14)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
         ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-        ctx.fillStyle='rgba(180,180,180,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
         const pct=Math.round((v-1)*100);
-        ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
+        _rmQ.push({y:y+3,text:(pct>=0?'+':'')+pct+'%',color:'rgba(180,180,180,0.6)'});
       });
     }
   }
@@ -2853,8 +2865,7 @@ function drawChart(){
         const y=yCI(v);
         ctx.strokeStyle='rgba(255,127,127,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
         ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-        ctx.fillStyle='rgba(255,127,127,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-        ctx.fillText('+'+Math.round((v-1)*100)+'%',pad.left+cW+4,y+3);
+        _rmQ.push({y:y+3,text:'+'+Math.round((v-1)*100)+'%',color:'rgba(255,127,127,0.6)'});
       });
     }
     // Filled area (0.10 → 0.15)
@@ -2868,8 +2879,7 @@ function drawChart(){
     cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(255,127,127,0.95)';ctx.fill();});
     // End label
     const[lx,ly]=cumPts[cumPts.length-1];
-    ctx.fillStyle='rgba(255,127,127,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText('+'+Math.round((maxIdx-1)*100)+'% total',lx+5,ly+3);
+    _endQ.push({x:lx+5,y:ly+3,text:'+'+Math.round((maxIdx-1)*100)+'% CPI',color:'rgba(255,127,127,0.95)'});
   }
   if(ov.gdp){
     // GDP plotted in the lower 40% strip of the chart, scaled -4% to +8%
@@ -2878,8 +2888,7 @@ function drawChart(){
     // Zero baseline guide so the line has context
     ctx.strokeStyle='rgba(111,207,151,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
     ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(111,207,151,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText('GDP 0%',pad.left+cW+4,zeroY+3);
+    _rmQ.push({y:zeroY+3,text:'GDP 0%',color:'rgba(111,207,151,0.55)'});
     // Build point list with optional macro smoothing cascade
     const gdpRawArr=yrs.map(yr=>MACRO[yr]?.gdp);
     const gdpSmArr=smoothMacro?smoothVals(gdpRawArr):gdpRawArr;
@@ -2911,8 +2920,7 @@ function drawChart(){
     const zeroY=mwY(0);
     ctx.strokeStyle='rgba(214,120,161,0.20)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
     ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(214,120,161,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText('Med 0%',pad.left+cW+4,zeroY+3);
+    _rmQ.push({y:zeroY+3,text:'Med 0%',color:'rgba(214,120,161,0.6)'});
     const mwRawArr=yrs.map(yr=>MEDIAN_WAGE_GROWTH[yr]);
     const mwSmArr=smoothMacro?smoothVals(mwRawArr):mwRawArr;
     const pts=[];
@@ -2943,9 +2951,8 @@ function drawChart(){
         const y=yCMW(v);
         ctx.strokeStyle='rgba(176,72,120,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
         ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-        ctx.fillStyle='rgba(176,72,120,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
         const pct=Math.round((v-1)*100);
-        ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
+        _rmQ.push({y:y+3,text:(pct>=0?'+':'')+pct+'%',color:'rgba(176,72,120,0.6)'});
       });
     }
     // Stroke line — dotted to match the Med Wage YoY style family
@@ -2954,8 +2961,7 @@ function drawChart(){
     cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(176,72,120,0.95)';ctx.fill();});
     const[lx,ly]=cumPts[cumPts.length-1];
     const finalPct=Math.round((cumIdx[yrs[yrs.length-1]]-1)*100);
-    ctx.fillStyle='rgba(176,72,120,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText((finalPct>=0?'+':'')+finalPct+'% total',lx+5,ly+3);
+    _endQ.push({x:lx+5,y:ly+3,text:(finalPct>=0?'+':'')+finalPct+'% Med',color:'rgba(176,72,120,0.95)'});
   }
   if(ov.cashPerHead&&_cphIdx){
     // CASH PER HEAD — Cum Med Wage × EPOP. Shares axis when multiple cumulative
@@ -2972,9 +2978,8 @@ function drawChart(){
         const y=yCPH(v);
         ctx.strokeStyle='rgba(95,184,160,0.18)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
         ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-        ctx.fillStyle='rgba(95,184,160,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
         const pct=Math.round((v-1)*100);
-        ctx.fillText((pct>=0?'+':'')+pct+'%',pad.left+cW+4,y+3);
+        _rmQ.push({y:y+3,text:(pct>=0?'+':'')+pct+'%',color:'rgba(95,184,160,0.6)'});
       });
     }
     ctx.strokeStyle='rgba(95,184,160,0.95)';ctx.lineWidth=2.4;
@@ -2982,8 +2987,7 @@ function drawChart(){
     cumPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(95,184,160,0.95)';ctx.fill();});
     const[lx,ly]=cumPts[cumPts.length-1];
     const finalPct=Math.round((cphIdx[yrs[yrs.length-1]]-1)*100);
-    ctx.fillStyle='rgba(95,184,160,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText((finalPct>=0?'+':'')+finalPct+'% CPH',lx+5,ly+3);
+    _endQ.push({x:lx+5,y:ly+3,text:(finalPct>=0?'+':'')+finalPct+'% CPH',color:'rgba(95,184,160,0.95)'});
   }
   // Unemployment overlays — both share the same lower-strip scale (0% to 18%)
   // so U-3 and U-6 can be eyeballed together. Higher = worse labor market = less
@@ -2995,8 +2999,7 @@ function drawChart(){
       const y=_uY(v);
       ctx.strokeStyle='rgba(232,122,93,0.12)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
       ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='rgba(232,122,93,0.55)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-      ctx.fillText(v+'%',pad.left+cW+4,y+3);
+      _rmQ.push({y:y+3,text:v+'%',color:'rgba(232,122,93,0.55)'});
     });
   }
   if(ov.u6){
@@ -3090,8 +3093,7 @@ function drawChart(){
     realPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(126,184,245,0.95)';ctx.fill();});
     // End label — current real $
     const [lx,ly]=realPts[realPts.length-1];
-    ctx.fillStyle='rgba(126,184,245,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText(fmtK(realSm[realSm.length-1]),lx+5,ly+3);
+    _endQ.push({x:lx+5,y:ly+3,text:fmtK(realSm[realSm.length-1]),color:'rgba(126,184,245,0.95)'});
   }
   if(ov.today){
     // New Money cascades with salary smoothing
@@ -3120,11 +3122,9 @@ function drawChart(){
     // End label — total earned to date
     const lastCum=cum[yrs[yrs.length-1]];
     const [lx,ly]=cumPts[cumPts.length-1];
-    ctx.fillStyle='rgba(255,155,77,1)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText(fmtK(lastCum),lx+5,ly+3);
+    _endQ.push({x:lx+5,y:ly+3,text:fmtK(lastCum),color:'rgba(255,155,77,1)'});
     // Right axis ceiling label
-    ctx.fillStyle='rgba(255,155,77,0.6)';ctx.font='9px IBM Plex Mono,monospace';
-    ctx.fillText(fmtK(maxCum),pad.left+cW+4,pad.top+10);
+    _rmQ.push({y:pad.top+10,text:fmtK(maxCum),color:'rgba(255,155,77,0.6)'});
   }
   if(ov.pct){
     const pctPts=yrs.map((yr,i)=>[xp(allYrs.indexOf(yr)),pad.top+cH*(1-pcts[i]/100)]);
@@ -3133,8 +3133,7 @@ function drawChart(){
       const y=pad.top+cH*(1-p/100);
       ctx.strokeStyle='rgba(196,126,245,0.10)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
       ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='rgba(196,126,245,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-      ctx.fillText(p+'th',pad.left+cW+4,y+3);
+      _rmQ.push({y:y+3,text:p+'th',color:'rgba(196,126,245,0.6)'});
     });
     // Stroke
     ctx.strokeStyle='rgba(196,126,245,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([5,4]);
@@ -3148,8 +3147,7 @@ function drawChart(){
     // End label — current percentile
     const [lx,ly]=pctPts[pctPts.length-1];
     const lastPct=pcts[pcts.length-1];
-    ctx.fillStyle='rgba(196,126,245,0.95)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
-    ctx.fillText(lastPct.toFixed(0)+'th',lx+5,ly+3);
+    _endQ.push({x:lx+5,y:ly+3,text:lastPct.toFixed(0)+'th',color:'rgba(196,126,245,0.95)'});
   }
   if(ov.proj){
     const pjYrs=[yrs[yrs.length-1],...Object.keys(projData).map(Number)];
@@ -3187,8 +3185,7 @@ function drawChart(){
           const y=yPct(t);
           ctx.strokeStyle='rgba(240,168,0,0.14)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
           ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-          ctx.fillStyle='rgba(240,168,0,0.6)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-          ctx.fillText(Math.round(t*100)+'%',pad.left+cW+4,y+3);
+          _rmQ.push({y:y+3,text:Math.round(t*100)+'%',color:'rgba(240,168,0,0.6)'});
         });
       }
       // Filled area in dollar mode (line is monotonic-ish, fill reads as cost mass)
@@ -3206,10 +3203,8 @@ function drawChart(){
       // End-of-line label
       if(colPts.length){
         const [lx,ly]=colPts[colPts.length-1];
-        ctx.fillStyle='rgba(240,168,0,0.95)';
-        ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';
         const txt=isPct?(Math.round(lastDrawnVal*100)+'% of pay'):(fmtK(lastDrawnVal)+'/yr');
-        ctx.fillText(txt,lx+5,ly+3);
+        _endQ.push({x:lx+5,y:ly+3,text:txt,color:'rgba(240,168,0,0.95)'});
       }
       // Hint when using default cfg
       if(!userCfg){
@@ -3279,6 +3274,29 @@ function drawChart(){
       ctx.fillText(truncated,x0-bandPad+3,y+rowH-4);
       _eventHitboxes.push({x0:x0-bandPad,x1:x0-bandPad+bandW,y0:y,y1:y+rowH-2,id:ev.id,fullBandY1:pad.top+cH});
     });
+  }
+
+  // ── LABEL FLUSH ─────────────────────────────────────────────────────────────
+  // Right-margin tick texts: keep top-to-bottom, drop any within 10px of the
+  // previous kept label (they're grid-aligned; nudging would detach them).
+  _rmQ.sort((a,b)=>a.y-b.y);
+  {
+    let py=-1e9;ctx.textAlign='left';ctx.font='9px IBM Plex Mono,monospace';
+    _rmQ.forEach(L=>{
+      if(L.y-py<10)return;
+      ctx.fillStyle=L.color;ctx.fillText(L.text,pad.left+cW+4,L.y);
+      py=L.y;
+    });
+  }
+  // Line-end callouts: nudge apart 12px (value labels, safe to shift), then
+  // pull the whole cluster up if it ran past the chart bottom.
+  _endQ.sort((a,b)=>a.y-b.y);
+  {
+    let py=-1e9;
+    _endQ.forEach(L=>{L.fy=Math.max(L.y,py+12);py=L.fy;});
+    const over=_endQ.length?Math.max(0,_endQ[_endQ.length-1].fy-(pad.top+cH)):0;
+    ctx.textAlign='left';ctx.font='10px IBM Plex Mono,monospace';
+    _endQ.forEach(L=>{ctx.fillStyle=L.color;ctx.fillText(L.text,L.x,L.fy-over);});
   }
 
   // Crosshair (desktop only)
@@ -3511,7 +3529,95 @@ function toggleOv(k){
   ov[k]=!ov[k];
   const btn=document.getElementById('ov-'+k);
   if(btn){if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);}
+  saveOvState();syncCtxUI();
   drawChart();renderOvLegend();
+}
+
+// ── CONTEXT PRESETS + CUSTOM PICKER ──────────────────────────────────────────
+// The 11 context overlays are driven by story-presets (each answers a career
+// question) plus a grouped Custom popover. Lines-group overlays are untouched
+// by presets — they're views of YOUR money, not context.
+const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','evt','classBands','recession'];
+const OV_PRESETS={
+  clean:[],                                              // just show me my money
+  prices:['inf','cuminf','recession'],                   // did I outrun CPI?
+  wages:['medianWage','cumMedianWage','cashPerHead'],    // did I outrun the median American?
+  labor:['u3','u6','recession'],                         // bold move or tight market?
+  works:['inf','gdp','medianWage','u3','evt','recession'],// one per family, stays legible
+};
+const OV_PICKER_GROUPS=[
+  {name:'Prices',keys:['inf','cuminf']},
+  {name:'Wages',keys:['medianWage','cumMedianWage','cashPerHead']},
+  {name:'Labor',keys:['u3','u6']},
+  {name:'Economy',keys:['gdp','recession']},
+  {name:'Story',keys:['evt','classBands']},
+];
+// Long-form descriptions (former button titles) surfaced in the picker rows
+const OV_INFO={
+  inf:'Annual inflation rate (CPI-U)',
+  cuminf:'Cumulative inflation index since first year',
+  gdp:'Real GDP growth rate',
+  medianWage:'BLS real median weekly earnings YoY % (full-time CPS) — qualitative comparator only',
+  cumMedianWage:'Cumulative US median wage growth since first year — compounded BLS YoY',
+  u3:'U-3 unemployment (BLS headline). Low = tight labor market = leverage to demand raises.',
+  u6:'U-6 — adds discouraged workers and involuntary part-time. The honest U-3; a widening gap is hidden slack.',
+  cashPerHead:'CREAM custom metric: cum. median wage × employment-to-population ratio. Catches who is actually getting paid.',
+  evt:'Macro events as colored bands across their date ranges',
+  classBands:'US income class bands shaded behind the chart',
+  recession:'NBER recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)',
+};
+function applyPreset(name){
+  const set=new Set(OV_PRESETS[name]||[]);
+  CTX_KEYS.forEach(k=>{ov[k]=set.has(k);});
+  saveOvState();syncCtxUI();drawChart();renderOvLegend();
+}
+// Which preset (if any) exactly matches the current context set?
+function detectPreset(){
+  for(const [name,keys] of Object.entries(OV_PRESETS)){
+    const set=new Set(keys);
+    if(CTX_KEYS.every(k=>!!ov[k]===set.has(k)))return name;
+  }
+  return null;
+}
+function syncCtxUI(){
+  const p=detectPreset();
+  Object.keys(OV_PRESETS).forEach(name=>{
+    const b=document.getElementById('ps-'+name);
+    if(b)b.classList.toggle('active',p===name);
+  });
+  const cb=document.getElementById('ps-custom');
+  if(cb)cb.classList.toggle('active',p===null);
+  document.querySelectorAll('#ovPicker input[data-ovkey]').forEach(inp=>{inp.checked=!!ov[inp.dataset.ovkey];});
+}
+function renderOvPicker(){
+  const el=document.getElementById('ovPicker');if(!el)return;
+  el.innerHTML=OV_PICKER_GROUPS.map(g=>
+    `<div class="ovp-grp">${g.name}</div>`+
+    g.keys.map(k=>`<label class="ovp-row" title="${OV_INFO[k]||''}"><input type="checkbox" data-ovkey="${k}" onchange="toggleOv('${k}')"><span class="ovp-sw" style="background:${OV_META[k].color}"></span>${OV_META[k].label}</label>`).join('')
+  ).join('');
+}
+function toggleOvPicker(e){
+  e.stopPropagation();
+  const el=document.getElementById('ovPicker');
+  if(el.classList.contains('open')){closeOvPicker();return;}
+  el.classList.add('open');
+  syncCtxUI();
+  const r=document.getElementById('ps-custom').getBoundingClientRect();
+  el.style.top=Math.max(8,Math.min(r.bottom+6,window.innerHeight-el.offsetHeight-8))+'px';
+  el.style.left=Math.max(8,Math.min(r.left,window.innerWidth-el.offsetWidth-8))+'px';
+}
+function closeOvPicker(){const el=document.getElementById('ovPicker');if(el)el.classList.remove('open');}
+document.addEventListener('click',e=>{
+  const el=document.getElementById('ovPicker');
+  if(el&&el.classList.contains('open')&&!el.contains(e.target))closeOvPicker();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOvPicker();});
+// ── OVERLAY / SMOOTHING PERSISTENCE ──────────────────────────────────────────
+function saveOvState(){
+  try{
+    localStorage.setItem('cream_ov',JSON.stringify(ov));
+    localStorage.setItem('cream_smoothing',smoothing);
+  }catch(e){}
 }
 
 // ── OVERLAY LEGEND (HTML overlay over canvas) ────────────────────────────────
@@ -3930,8 +4036,19 @@ function tmCalc(side){
 // Returning visitors restore their last-used tab via insight_uiTab.
 const _hasUiTabPref=!!localStorage.getItem('insight_uiTab');
 const _initialTab=(!_hasUiTabPref&&sortedYrs().length>0)?'insights':curSTab;
+// Restore persisted overlay + smoothing state before first paint
+try{
+  const _savedOv=JSON.parse(localStorage.getItem('cream_ov')||'null');
+  if(_savedOv)Object.keys(ov).forEach(k=>{if(typeof _savedOv[k]==='boolean')ov[k]=_savedOv[k];});
+  const _savedSm=localStorage.getItem('cream_smoothing');
+  if(['none','ma3','ma5','spline'].includes(_savedSm))smoothing=_savedSm;
+}catch(e){}
 setSTab(_initialTab);
 document.body.classList.toggle('empty',sortedYrs().length===0);
+renderOvPicker();
+Object.keys(ov).forEach(k=>{const b=document.getElementById('ov-'+k);if(b)b.classList.toggle('on-'+k,ov[k]);});
+['none','ma3','ma5','spline'].forEach(k=>document.getElementById('sm-'+k).classList.toggle('active',k===smoothing));
+syncCtxUI();
 updateStats();renderLegend();buildTable();renderOvLegend();tmInit();
 if(smoothMacro)document.getElementById('sm-macro').classList.add('active');
 
