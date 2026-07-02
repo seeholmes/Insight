@@ -50,7 +50,9 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 .tb-stat label{display:block;font-size:var(--fs-xs);letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
 .tb-stat value{display:block;font-size:var(--fs-lg);font-weight:500;}
 .tb-right{display:flex;gap:var(--sp-2);margin-left:auto;align-items:center;}
-.tbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;padding:0.32rem 0.75rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+/* inline-flex centering so button and label variants (Drop It wraps a file
+   input in a <label>) share identical glyph alignment */
+.tbtn{display:inline-flex;align-items:center;justify-content:center;line-height:1;background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;padding:0.32rem 0.75rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .tbtn:hover{color:var(--accent);border-color:var(--accent);}
 .tbtn.open{background:var(--s2);border-color:var(--border2);color:var(--text);}
 
@@ -2796,21 +2798,33 @@ function drawChart(){
     ctx.fillText('Bands: US income percentile classes',pad.left+6,pad.top+12);
   }
 
-  // Job boundary lines
-  jobs.forEach(j=>{
-    const sy=j.years.filter(y=>yrs.includes(y)).sort((a,b)=>a-b);
-    if(!sy.length)return;
-    const firstIdx=allYrs.indexOf(sy[0]);
-    if(firstIdx>0){
+  // Job boundary lines + names. Boundaries collect first (jobs array isn't
+  // chronological), sort by x, then a min-gap walk draws only the names that
+  // fit — dense boundaries (8 jobs on a phone) skip names instead of stacking.
+  // Skipped jobs keep their boundary line; names live in bars/cards/tooltip.
+  {
+    const jb=[];
+    jobs.forEach(j=>{
+      const sy=j.years.filter(y=>yrs.includes(y)).sort((a,b)=>a-b);
+      if(!sy.length)return;
+      const firstIdx=allYrs.indexOf(sy[0]);
+      if(firstIdx>0)jb.push({x:xp(firstIdx),name:j.name,color:j.color});
+    });
+    jb.sort((a,b)=>a.x-b.x);
+    ctx.font='9px IBM Plex Mono,monospace';
+    let jbRight=-1e9;
+    jb.forEach(b=>{
       ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
-      ctx.beginPath();ctx.moveTo(xp(firstIdx),pad.top);ctx.lineTo(xp(firstIdx),pad.top+cH);ctx.stroke();
-      ctx.setLineDash([]);
-      // job name label
-      ctx.fillStyle=j.color;ctx.globalAlpha=0.7;ctx.textAlign='center';ctx.font='9px IBM Plex Mono,monospace';
-      ctx.fillText(j.name,xp(firstIdx),pad.top-6);
-      ctx.globalAlpha=1;
-    }
-  });
+      ctx.beginPath();ctx.moveTo(b.x,pad.top);ctx.lineTo(b.x,pad.top+cH);ctx.stroke();ctx.setLineDash([]);
+      const w=ctx.measureText(b.name).width;
+      if(b.x-w/2>jbRight+8){
+        ctx.fillStyle=b.color;ctx.globalAlpha=0.7;ctx.textAlign='center';
+        ctx.fillText(b.name,b.x,pad.top-6);
+        ctx.globalAlpha=1;
+        jbRight=b.x+w/2;
+      }
+    });
+  }
 
   // Overlays
   if(ov.inf){
