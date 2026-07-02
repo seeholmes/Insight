@@ -372,10 +372,22 @@ body.empty #emptyState{display:flex;}
   /* Replace the 11-column table with a card list — table is unreadable below this width */
   #dataTable{display:none;}
   #yearCardList{display:flex;}
+  /* Toolbar: stack the three groups as full-width rows, each scrolling
+     horizontally so every toggle stays reachable (Context alone has 11).
+     Right-edge mask fades the last button as a "more this way" hint. */
+  #chartControls{flex-direction:column;align-items:stretch;}
+  .ctrl-group{display:flex;flex-wrap:nowrap;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);}
+  .ctrl-group::-webkit-scrollbar{display:none;}
+  .ctrl-group .cbtn{flex-shrink:0;white-space:nowrap;}
 }
 @media (max-width: 600px){
+  /* Compact topbar: logo carries the brand alone; action buttons go icon-only */
+  :root{--topbar-h:60px;}
   #topbar{padding:0 0.6rem;gap:0.5rem;}
-  #topbar h1{font-size:1rem;}
+  .cream-mark{width:42px;height:42px;}
+  .cream-words{display:none;}
+  .tbtn-txt{display:none;}
+  .tb-right{gap:0.3rem;}
   .tbsep{display:none;}
   #sidebar{width:85vw;}
   #drawer{width:100vw;max-width:100vw;}
@@ -426,9 +438,9 @@ body.empty #emptyState{display:flex;}
       <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">36</button>
       <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Status</button>
     </div>
-    <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇ Cop It</button>
-    <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆ Drop It<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
-    <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙ The Vault</button>
+    <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇<span class="tbtn-txt"> Cop It</span></button>
+    <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆<span class="tbtn-txt"> Drop It</span><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
+    <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙<span class="tbtn-txt"> The Vault</span></button>
   </div>
 </div>
 
@@ -2679,15 +2691,25 @@ function drawChart(){
     ctx.fillText('$'+t/1000+'k',pad.left-10,y+4);
   });
 
-  // X labels — show every 2 years for desktop
+  // X labels — candidates are first/last/even years, then a min-pixel-gap walk
+  // drops any that would crowd a neighbor (fixes "20132014" collisions at
+  // narrow widths). The endpoint label always wins over its predecessors.
   ctx.textAlign='center';ctx.font='11px IBM Plex Mono,monospace';
-  allYrs.forEach((yr,i)=>{
-    const isProj=!yrs.includes(yr);
-    if(yr%2===0||i===0||i===n-1){
-      ctx.fillStyle=isProj?'rgba(245,233,126,0.5)':'rgba(221,219,228,0.75)';
-      ctx.fillText(yr,xp(i),H-pad.bottom+17);
-    }
-  });
+  {
+    const minGap=34; // px between label centers ("2013" ≈ 26px + breathing room)
+    const lastX=xp(n-1);
+    let prevX=-Infinity;
+    allYrs.forEach((yr,i)=>{
+      const isLast=i===n-1;
+      if(!isLast&&i!==0&&yr%2!==0)return;          // odd mid-years never label
+      const x=xp(i);
+      if(!isLast&&x-prevX<minGap)return;           // too close to previous label
+      if(!isLast&&lastX-x<minGap)return;           // would crowd the endpoint
+      ctx.fillStyle=(!yrs.includes(yr))?'rgba(245,233,126,0.5)':'rgba(221,219,228,0.75)';
+      ctx.fillText(yr,x,H-pad.bottom+17);
+      prevX=x;
+    });
+  }
 
   // Social class band shading (under everything else)
   if(ov.classBands){
