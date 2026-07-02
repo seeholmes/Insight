@@ -342,6 +342,9 @@ body.empty #chart-section canvas,body.empty #chart-section #chartControls,body.e
 body.empty #emptyState{display:flex;}
 
 /* ── OVERLAY LEGEND ── */
+/* Mobile stat strip + Tune fold — desktop never sees either */
+#mobileStats{display:none;}
+#tuneToggle{display:none;}
 /* Legend: slim in-flow strip between toolbar and canvas — never covers the plot */
 #ovLegend{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:var(--sp-2);}
 #ovLegend:empty{display:none;}
@@ -378,6 +381,9 @@ body.empty #emptyState{display:flex;}
   #center{width:100%;}
   .tb-stats{display:none;}
   .tb-right .tbtn{padding:0.28rem 0.5rem;font-size:0.58rem;}
+  /* Topbar stats are hidden here — surface Pulse + key numbers in a slim strip */
+  #mobileStats{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--sp-2);}
+  #mobileStats:empty{display:none;}
 }
 @media (max-width: 700px){
   /* Replace the 11-column table with a card list — table is unreadable below this width */
@@ -390,6 +396,10 @@ body.empty #emptyState{display:flex;}
   .ctrl-group{display:flex;flex-wrap:nowrap;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);}
   .ctrl-group::-webkit-scrollbar{display:none;}
   .ctrl-group .cbtn{flex-shrink:0;white-space:nowrap;}
+  /* Glance mode: Context row leads; Smooth + Lines fold behind the Tune chip */
+  .ctrl-context{order:-1;}
+  #tuneToggle{display:inline-flex;}
+  body:not(.tune-open) .ctrl-smooth,body:not(.tune-open) .ctrl-lines{display:none;}
 }
 @media (max-width: 600px){
   /* Compact topbar: logo carries the brand alone; action buttons go icon-only */
@@ -481,8 +491,9 @@ body.empty #emptyState{display:flex;}
   <div id="center">
     <!-- CHART -->
     <div id="chart-section">
+      <div id="mobileStats"></div>
       <div id="chartControls">
-        <div class="ctrl-group">
+        <div class="ctrl-group ctrl-smooth">
           <span class="ctrl-lbl">Smooth</span>
           <button class="cbtn active" id="sm-none" onclick="setSmoothing('none')" title="No smoothing — raw year-over-year line">None</button>
           <button class="cbtn" id="sm-ma3" onclick="setSmoothing('ma3')" title="3-year moving average">3-yr</button>
@@ -491,7 +502,7 @@ body.empty #emptyState{display:flex;}
           <span class="ctrl-sep" style="opacity:0.3;margin:0 0.15rem">·</span>
           <button class="cbtn" id="sm-macro" onclick="toggleSmoothMacro()" title="When smoothing is on, also smooth macro overlays (Inflation, GDP, Med Wage, U-3, U-6). Old Money / New Money / COL always smooth with salary.">Macro</button>
         </div>
-        <div class="ctrl-group">
+        <div class="ctrl-group ctrl-lines">
           <span class="ctrl-lbl">Lines</span>
           <button class="cbtn" id="ov-col"  onclick="toggleOv('col')"  title="Personal cost of living from CREAM COL companion — configure in companion app">COL</button>
           <button class="cbtn" id="ov-real" onclick="toggleOv('real')" title="Every year's salary expressed in your first-year (base) dollars — what your paychecks bought back then">Old Money</button>
@@ -500,8 +511,9 @@ body.empty #emptyState{display:flex;}
           <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')"  title="Cumulative lifetime earnings">Cumulative</button>
           <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')" title="5-year linear projection from recent trend">Projection</button>
         </div>
-        <div class="ctrl-group">
+        <div class="ctrl-group ctrl-context">
           <span class="ctrl-lbl">Context</span>
+          <button class="cbtn" id="tuneToggle" onclick="toggleTune()" title="Show smoothing and line toggles">⋯ Tune</button>
           <button class="cbtn" id="ps-clean"  onclick="applyPreset('clean')"  title="All context overlays off — just your money">Clean</button>
           <button class="cbtn" id="ps-prices" onclick="applyPreset('prices')" title="Did I outrun CPI? — Inflation, Cum. Inflation, Recessions">vs Prices</button>
           <button class="cbtn" id="ps-wages"  onclick="applyPreset('wages')"  title="Did I outrun the median American? — Med Wage, Cum. Med Wage, Cash Per Head">vs Wages</button>
@@ -522,6 +534,7 @@ body.empty #emptyState{display:flex;}
             <p>Add your first year of income and CREAM surfaces your earning story — percentile rank, social class, inflation drag, and forensic trend detection across the chambers of your career.</p>
             <div class="es-btns">
               <button onclick="openAddYear()">+ Add to the Cipher</button>
+              <button class="secondary" onclick="document.getElementById('importFile').click()">⬆ Drop It — Import Backup</button>
               <button class="secondary" onclick="loadSampleData()">🎲 Drop the Sample</button>
             </div>
           </div>
@@ -1623,6 +1636,7 @@ function updateStats(){
   const yrs=sortedYrs(),vals=yrs.map(y=>salaries[y]);
   if(!yrs.length){
     ['sTotal','sPeak','sAvg','sReal','sTrend','sCagr'].forEach(id=>document.getElementById(id).textContent='—');
+    const _ms=document.getElementById('mobileStats');if(_ms)_ms.innerHTML='';
     document.getElementById('sYJ').textContent='0 · '+jobs.length;
     renderAlarmChip();
     return;
@@ -1648,6 +1662,20 @@ function updateStats(){
   document.getElementById('sCagr').innerHTML=cagrTxt+gapTxt;
   document.getElementById('sYJ').textContent=yrs.length+' · '+jobs.length;
   renderAlarmChip();
+  // Mobile stat strip — Pulse + Trend + Peak, the glanceables the hidden
+  // topbar stats would otherwise take with them (<900px)
+  const ms=document.getElementById('mobileStats');
+  if(ms){
+    const a=assessAlarmState(yrs[yrs.length-1]);
+    const em=a.level&&a.level!=='unknown'?ALARM_EMOJI[a.level]:'—';
+    const sc=a.score!=null?a.score.toFixed(1):'';
+    const trendTxt=careerTrend!=null?((careerTrend>=0?'+':'')+(careerTrend*100).toFixed(1)+'%'):'—';
+    const trendColor=(careerTrend||0)>=0?'var(--pos)':'var(--neg)';
+    ms.innerHTML=`<span style="font-size:1.1rem;line-height:1">${em}</span>`
+      +(sc?`<span style="color:var(--text);font-variant-numeric:tabular-nums">${sc}</span>`:'')
+      +`<span style="opacity:0.4">·</span><span>Trend <span style="color:${trendColor}">${trendTxt}</span></span>`
+      +`<span style="opacity:0.4">·</span><span>Peak <span style="color:var(--text)">${fmtK(Math.max(...vals))}</span></span>`;
+  }
 }
 
 // ── SIDEBAR: JOBS LEGEND ──────────────────────────────────────────────────────
@@ -2479,6 +2507,12 @@ function setSmoothing(s){
   if(typeof saveOvState==='function')saveOvState();
   drawChart();
 }
+// Mobile "glance mode" fold: Smooth + Lines rows hide behind the Tune chip
+function toggleTune(){
+  const open=document.body.classList.toggle('tune-open');
+  const b=document.getElementById('tuneToggle');
+  if(b)b.classList.toggle('active',open);
+}
 function toggleSmoothMacro(){
   smoothMacro=!smoothMacro;
   localStorage.setItem('cream_smoothMacro',smoothMacro?'1':'0');
@@ -3262,16 +3296,18 @@ function drawChart(){
       const bandPad=Math.max(2,bw*0.4);
       const bandW=Math.max(3,(x1-x0)+bandPad*2);
       ctx.fillRect(x0-bandPad,pad.top,bandW,cH);
-      // Top label strip — purple bar with year label
-      ctx.fillStyle='rgba(155,141,245,0.78)';
-      ctx.fillRect(x0-bandPad,y,bandW,rowH-2);
-      // Label text (truncated to band width)
-      ctx.fillStyle='#fff';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
-      const yrTxt=ev.startYear===ev.endYear?String(ev.startYear):`${ev.startYear}–${ev.endYear}`;
-      const fullTxt=`${yrTxt} · ${ev.label}`;
-      const maxChars=Math.max(3,Math.floor(bandW/5.4));
-      const truncated=fullTxt.length>maxChars?fullTxt.slice(0,maxChars-1)+'…':fullTxt;
-      ctx.fillText(truncated,x0-bandPad+3,y+rowH-4);
+      // Top label pill — suppressed under 520px where the pills stack into a
+      // wall; bands + tap-through stay, names live in the tooltip / Events tab
+      if(W>=520){
+        ctx.fillStyle='rgba(155,141,245,0.78)';
+        ctx.fillRect(x0-bandPad,y,bandW,rowH-2);
+        ctx.fillStyle='#fff';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+        const yrTxt=ev.startYear===ev.endYear?String(ev.startYear):`${ev.startYear}–${ev.endYear}`;
+        const fullTxt=`${yrTxt} · ${ev.label}`;
+        const maxChars=Math.max(3,Math.floor(bandW/5.4));
+        const truncated=fullTxt.length>maxChars?fullTxt.slice(0,maxChars-1)+'…':fullTxt;
+        ctx.fillText(truncated,x0-bandPad+3,y+rowH-4);
+      }
       _eventHitboxes.push({x0:x0-bandPad,x1:x0-bandPad+bandW,y0:y,y1:y+rowH-2,id:ev.id,fullBandY1:pad.top+cH});
     });
   }
