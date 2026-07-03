@@ -362,6 +362,9 @@ body.empty #emptyState{display:flex;}
 .ovp-row:hover{background:rgba(255,255,255,0.045);}
 .ovp-row input{accent-color:var(--accent);margin:0;flex-shrink:0;}
 .ovp-sw{width:9px;height:9px;border-radius:1px;flex-shrink:0;}
+/* Instant hint tooltips — replaces native title= (slow, unstyled, dead on touch) */
+#hintTip{position:fixed;z-index:95;display:none;max-width:270px;background:var(--s2,#13141a);border:1px solid var(--border2,#3a3948);border-radius:3px;padding:0.45rem 0.6rem;font-size:var(--fs-xs);line-height:1.55;color:var(--text);box-shadow:0 8px 22px rgba(0,0,0,0.5);pointer-events:none;}
+#hintTip.show{display:block;}
 
 /* ── HAMBURGER + SCRIM (mobile) ── */
 #hamburger{display:none;background:none;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;padding:0.3rem 0.55rem;cursor:pointer;margin-right:0.4rem;}
@@ -808,6 +811,7 @@ body.empty #emptyState{display:flex;}
 
 <div id="tip"></div>
 <div id="alarmTip"></div>
+<div id="hintTip"></div>
 <div id="scrim" onclick="closeAll()"></div>
 
 <script>
@@ -3669,6 +3673,65 @@ function saveOvState(){
     localStorage.setItem('cream_smoothing',smoothing);
   }catch(e){}
 }
+
+// ── HINT ENGINE ──────────────────────────────────────────────────────────────
+// Replaces native title= tooltips app-wide: instant on hover, styled, keyboard-
+// focus aware, long-press on touch. title converts to data-hint lazily on
+// first pointerover, so dynamically rebuilt DOM (table, picker, lab) keeps
+// working and the native browser tooltip never gets the ~1s it needs to show.
+const hintTip=document.getElementById('hintTip');
+let _hintEl=null,_lpTimer=null,_lpFired=false;
+function _hintText(el){
+  if(el.hasAttribute('title')){el.dataset.hint=el.getAttribute('title');el.removeAttribute('title');}
+  return el.dataset.hint||'';
+}
+function showHint(el){
+  const txt=_hintText(el);
+  if(!txt){hideHint();return;}
+  _hintEl=el;
+  hintTip.textContent=txt;
+  hintTip.classList.add('show');
+  const r=el.getBoundingClientRect(),tw=hintTip.offsetWidth,th=hintTip.offsetHeight;
+  const left=Math.max(8,Math.min(r.left+r.width/2-tw/2,window.innerWidth-tw-8));
+  let top=r.bottom+8;
+  if(top+th>window.innerHeight-8)top=Math.max(8,r.top-th-8);
+  hintTip.style.left=left+'px';hintTip.style.top=top+'px';
+}
+function hideHint(){_hintEl=null;hintTip.classList.remove('show');}
+document.addEventListener('mouseover',e=>{
+  const el=e.target.closest('[title],[data-hint]');
+  if(!el){if(_hintEl)hideHint();return;}
+  if(el===_hintEl)return;
+  showHint(el);
+});
+document.addEventListener('mouseout',e=>{
+  if(_hintEl&&!_hintEl.contains(e.relatedTarget))hideHint();
+});
+document.addEventListener('focusin',e=>{
+  const el=e.target.closest('[title],[data-hint]');
+  if(el)showHint(el);
+});
+document.addEventListener('focusout',()=>hideHint());
+window.addEventListener('scroll',()=>hideHint(),true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideHint();});
+// Touch: long-press any hinted element shows its hint and swallows the tap;
+// pips (no click action of their own) show on plain tap.
+document.addEventListener('touchstart',e=>{
+  _lpFired=false;
+  const el=e.target.closest('[title],[data-hint]');
+  if(!el)return;
+  _lpTimer=setTimeout(()=>{showHint(el);_lpFired=true;},480);
+},{passive:true});
+document.addEventListener('touchmove',()=>clearTimeout(_lpTimer),{passive:true});
+document.addEventListener('touchend',e=>{
+  clearTimeout(_lpTimer);
+  if(_lpFired)e.preventDefault(); // keep the hint; suppress the click
+},{passive:false});
+document.addEventListener('click',e=>{
+  const pip=e.target.closest('.pip');
+  if(pip){showHint(pip);e.stopPropagation();return;}
+  if(_hintEl&&!_hintEl.contains(e.target))hideHint();
+});
 
 // ── OVERLAY LEGEND (HTML overlay over canvas) ────────────────────────────────
 const _cssVar=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
