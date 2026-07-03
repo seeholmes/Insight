@@ -527,6 +527,7 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
           <button class="cbtn" id="ps-wages"  onclick="applyPreset('wages')"  title="Did I outrun the median American? — Med Wage, Cum. Med Wage, Cash Per Head">vs Wages</button>
           <button class="cbtn" id="ps-labor"  onclick="applyPreset('labor')"  title="Was I bold or riding a tight market? — Unemp U-3, U-6, Recessions">vs Labor</button>
           <button class="cbtn" id="ps-works"  onclick="applyPreset('works')"  title="One overlay per family, stays legible — Inflation, GDP, Med Wage, U-3, Events, Recessions">The Works</button>
+          <button class="cbtn" id="ps-ladder" onclick="applyPreset('ladder')" title="Your arc vs the US earner ladder — p50, p75, and p90 rails in actual dollars. Same CPS individual-earner basis as the Percentile line.">vs Ladder</button>
           <button class="cbtn" id="ps-custom" onclick="toggleOvPicker(event)" title="Pick individual overlays, grouped by family">Custom ⚙</button>
         </div>
       </div>
@@ -976,6 +977,29 @@ function getSalaryForPercentile(pct,year){
   if(pct>=25)return p25+(pct-25)/25*(p50-p25);
   return pct/25*p25;
 }
+// THE LADDER — US earner percentile rails drawn in actual dollars on the
+// salary axis. idx maps into PCTILE_THRESHOLDS columns [p25,p50,p75,p90,p95,p99].
+// Silver ramp brightens with rank; p99 gets the Top-1% gold from getSocialClass.
+const LADDER_RUNGS={
+  lad25:{idx:0,label:'p25',color:'#8a8a96'},
+  lad50:{idx:1,label:'p50',color:'#a8a8b8'},
+  lad75:{idx:2,label:'p75',color:'#c9c9da'},
+  lad90:{idx:3,label:'p90',color:'#e6e6f2'},
+  lad99:{idx:5,label:'p99',color:'#f5e97e'},
+};
+// Threshold for a rung in any year — linear interpolation between the table's
+// ~2-year anchors so rails draw smooth instead of stair-stepped.
+function ladderValueFor(idx,yr){
+  const ys=Object.keys(PCTILE_THRESHOLDS).map(Number).sort((a,b)=>a-b);
+  if(yr<=ys[0])return PCTILE_THRESHOLDS[ys[0]][idx];
+  if(yr>=ys[ys.length-1])return PCTILE_THRESHOLDS[ys[ys.length-1]][idx];
+  let lo=ys[0];
+  for(const y of ys){if(y<=yr)lo=y;else break;}
+  const hi=ys.find(y=>y>=yr)??lo;
+  if(hi===lo)return PCTILE_THRESHOLDS[lo][idx];
+  const t=(yr-lo)/(hi-lo);
+  return PCTILE_THRESHOLDS[lo][idx]*(1-t)+PCTILE_THRESHOLDS[hi][idx]*t;
+}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 const DEFAULT_SALARIES={};
@@ -1049,7 +1073,7 @@ if(_s.recessions==null){
   RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
   recessionNextId=RECESSIONS.length+1;
 }
-let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,evt:false,classBands:false,recession:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,lad25:false,lad50:false,lad75:false,lad90:false,lad99:false,evt:false,classBands:false,recession:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -2734,6 +2758,11 @@ function drawChart(){
   // If Today $ is on, raise the y-ceiling so the inflated line fits (today values can exceed nominal)
   let maxNom=Math.max(...vals)*1.1;
   if(ov.today)maxNom=Math.max(maxNom,Math.max(...todayVals)*1.05);
+  // Ladder rails can exceed your peak (p99 runs ~$430k) — extend the axis to fit
+  Object.entries(LADDER_RUNGS).forEach(([k,r])=>{
+    if(!ov[k])return;
+    maxNom=Math.max(maxNom,Math.max(...yrs.map(y=>ladderValueFor(r.idx,y)))*1.05);
+  });
   const maxCum=Math.max(...Object.values(cum))*1.08;
 
   const xp=i=>pad.left+(i/(n-1||1))*cW;
@@ -2818,6 +2847,19 @@ function drawChart(){
     ctx.fillStyle='rgba(221,219,228,0.5)';ctx.font='italic 9px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText('Bands: US income percentile classes',pad.left+6,pad.top+12);
   }
+
+  // THE LADDER — percentile rails in actual dollars, drawn under the bars so
+  // they read as reference lines, not data series. Long-dash is the "rail"
+  // language; end labels ride the collision-safe queue.
+  Object.entries(LADDER_RUNGS).forEach(([k,r])=>{
+    if(!ov[k])return;
+    const pts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),ys(ladderValueFor(r.idx,yr))]);
+    ctx.strokeStyle=r.color;ctx.globalAlpha=k==='lad99'?0.8:0.55;ctx.lineWidth=1.4;ctx.setLineDash([7,4]);
+    ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+    ctx.setLineDash([]);ctx.globalAlpha=1;
+    const[lx,ly]=pts[pts.length-1];
+    _endQ.push({x:lx+5,y:ly+3,text:r.label+' '+fmtK(ladderValueFor(r.idx,yrs[yrs.length-1])),color:r.color});
+  });
 
   // Job boundary lines + names. Boundaries collect first (jobs array isn't
   // chronological), sort by x, then a min-gap walk draws only the names that
@@ -3611,18 +3653,20 @@ function toggleOv(k){
 // The 11 context overlays are driven by story-presets (each answers a career
 // question) plus a grouped Custom popover. Lines-group overlays are untouched
 // by presets — they're views of YOUR money, not context.
-const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','evt','classBands','recession'];
+const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','lad25','lad50','lad75','lad90','lad99','evt','classBands','recession'];
 const OV_PRESETS={
   clean:[],                                              // just show me my money
   prices:['inf','cuminf','recession'],                   // did I outrun CPI?
   wages:['medianWage','cumMedianWage','cashPerHead'],    // did I outrun the median American?
   labor:['u3','u6','recession'],                         // bold move or tight market?
   works:['inf','gdp','medianWage','u3','evt','recession'],// one per family, stays legible
+  ladder:['lad50','lad75','lad90'],                      // my arc vs the earner rails
 };
 const OV_PICKER_GROUPS=[
   {name:'Prices',keys:['inf','cuminf']},
   {name:'Wages',keys:['medianWage','cumMedianWage','cashPerHead']},
   {name:'Labor',keys:['u3','u6']},
+  {name:'The Ladder',keys:['lad25','lad50','lad75','lad90','lad99']},
   {name:'Economy',keys:['gdp','recession']},
   {name:'Story',keys:['evt','classBands']},
 ];
@@ -3636,6 +3680,11 @@ const OV_INFO={
   u3:'U-3 unemployment (BLS headline). Low = tight labor market = leverage to demand raises.',
   u6:'U-6 — adds discouraged workers and involuntary part-time. The honest U-3; a widening gap is hidden slack.',
   cashPerHead:'CREAM custom metric: cum. median wage × employment-to-population ratio. Catches who is actually getting paid.',
+  lad25:'p25 US earner wage in actual dollars — the working-class rail; context for early-career years',
+  lad50:'Median US individual earner (p50) in actual dollars — THE benchmark rail',
+  lad75:'p75 US earner wage in actual dollars — the upper-middle rail',
+  lad90:'p90 US earner wage in actual dollars — the top-10% door',
+  lad99:'p99 US earner wage — the 1% line. Heads up: turning this on roughly doubles the y-axis.',
   evt:'Macro events as colored bands across their date ranges',
   classBands:'US income class bands shaded behind the chart',
   recession:'NBER recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)',
@@ -3770,6 +3819,11 @@ const OV_META={
   u3:{label:'Unemp (U-3)',color:_cssVar('--u3-color')||'#e87a5d'},
   u6:{label:'Unemp (U-6)',color:_cssVar('--u6-color')||'#a85040'},
   cashPerHead:{label:'Cash Per Head',color:_cssVar('--cph-color')||'#5fb8a0'},
+  lad25:{label:'p25 Rail',color:LADDER_RUNGS.lad25.color},
+  lad50:{label:'Median Rail (p50)',color:LADDER_RUNGS.lad50.color},
+  lad75:{label:'p75 Rail',color:LADDER_RUNGS.lad75.color},
+  lad90:{label:'p90 Rail',color:LADDER_RUNGS.lad90.color},
+  lad99:{label:'The 1% Line',color:LADDER_RUNGS.lad99.color},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
   recession:{label:'Recessions',color:_cssVar('--neg')||'#eb5757'},
