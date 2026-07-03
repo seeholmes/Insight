@@ -16,7 +16,7 @@
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#ff9b4d;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#e87a5d;--u6-color:#a85040;--cph-color:#5fb8a0;
+  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#8ea7c9;--u6-color:#62799b;--cph-color:#5fb8a0;
   /* Layout */
   --sidebar-w:300px;--drawer-w:400px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -365,6 +365,9 @@ body.empty #emptyState{display:flex;}
 /* Instant hint tooltips — replaces native title= (slow, unstyled, dead on touch) */
 #hintTip{position:fixed;z-index:95;display:none;max-width:270px;background:var(--s2,#13141a);border:1px solid var(--border2,#3a3948);border-radius:3px;padding:0.45rem 0.6rem;font-size:var(--fs-xs);line-height:1.55;color:var(--text);box-shadow:0 8px 22px rgba(0,0,0,0.5);pointer-events:none;}
 #hintTip.show{display:block;}
+/* Keyboard focus ring on interactive controls — inputs keep their own
+   border-color focus styles, so they're deliberately not included */
+button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:focus-visible,input[type=checkbox]:focus-visible,.pip:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px;}
 
 /* ── HAMBURGER + SCRIM (mobile) ── */
 #hamburger{display:none;background:none;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;padding:0.3rem 0.55rem;cursor:pointer;margin-right:0.4rem;}
@@ -2509,7 +2512,11 @@ function drawSpline(pts,c){
 }
 function setSmoothing(s){
   smoothing=s;
-  ['none','ma3','ma5','spline'].forEach(k=>document.getElementById('sm-'+k).classList.toggle('active',k===s));
+  ['none','ma3','ma5','spline'].forEach(k=>{
+    const b=document.getElementById('sm-'+k);
+    b.classList.toggle('active',k===s);
+    b.setAttribute('aria-pressed',String(k===s));
+  });
   if(typeof saveOvState==='function')saveOvState();
   drawChart();
 }
@@ -2517,12 +2524,14 @@ function setSmoothing(s){
 function toggleTune(){
   const open=document.body.classList.toggle('tune-open');
   const b=document.getElementById('tuneToggle');
-  if(b)b.classList.toggle('active',open);
+  if(b){b.classList.toggle('active',open);b.setAttribute('aria-expanded',String(open));}
 }
 function toggleSmoothMacro(){
   smoothMacro=!smoothMacro;
   localStorage.setItem('cream_smoothMacro',smoothMacro?'1':'0');
-  document.getElementById('sm-macro').classList.toggle('active',smoothMacro);
+  const b=document.getElementById('sm-macro');
+  b.classList.toggle('active',smoothMacro);
+  b.setAttribute('aria-pressed',String(smoothMacro));
   drawChart();
 }
 // Null-safe smoothing: averages only non-null neighbors so sparse macro series
@@ -2735,14 +2744,22 @@ function drawChart(){
   ctx.beginPath();ctx.moveTo(pad.left,pad.top);ctx.lineTo(pad.left,pad.top+cH);ctx.lineTo(pad.left+cW,pad.top+cH);ctx.stroke();
 
   // Y grid + labels
-  const ticks=[0,50000,100000,150000,200000,250000].filter(t=>t<=maxNom*1.05);
+  // Adaptive y ticks — nice step sized for ~5 gridlines at any salary scale
+  // (the old hardcoded list topped out at $250k)
+  const _rawStep=maxNom/5;
+  const _mag=Math.pow(10,Math.floor(Math.log10(_rawStep||1)));
+  const _nn=_rawStep/_mag;
+  const _step=(_nn<=1?1:_nn<=2?2:_nn<=2.5?2.5:_nn<=5?5:10)*_mag;
+  const ticks=[];
+  for(let t=0;t<=maxNom*1.001;t+=_step)ticks.push(Math.round(t));
   ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='right';
   ticks.forEach(t=>{
     const y=ys(t);
     ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();
     ctx.fillStyle='rgba(221,219,228,0.85)';
-    ctx.fillText('$'+t/1000+'k',pad.left-10,y+4);
+    const kv=t/1000;
+    ctx.fillText(t>=1e6?('$'+(t/1e6)+'M'):('$'+(kv%1?kv.toFixed(1):kv)+'k'),pad.left-10,y+4);
   });
 
   // X labels — candidates are first/last/even years, then a min-pixel-gap walk
@@ -3049,9 +3066,9 @@ function drawChart(){
     // shared baseline + scale ticks (only drawn once when either is on)
     [0,5,10,15].forEach(v=>{
       const y=_uY(v);
-      ctx.strokeStyle='rgba(232,122,93,0.12)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+      ctx.strokeStyle='rgba(142,167,201,0.12)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
       ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-      _rmQ.push({y:y+3,text:v+'%',color:'rgba(232,122,93,0.55)'});
+      _rmQ.push({y:y+3,text:v+'%',color:'rgba(142,167,201,0.55)'});
     });
   }
   if(ov.u6){
@@ -3061,9 +3078,9 @@ function drawChart(){
     const pts=[];
     yrs.forEach((yr,i)=>{const u=u6Sm[i];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
     if(pts.length){
-      ctx.strokeStyle='rgba(168,80,64,0.85)';ctx.lineWidth=1.8;ctx.setLineDash([4,3]);
+      ctx.strokeStyle='rgba(98,121,155,0.85)';ctx.lineWidth=1.8;ctx.setLineDash([4,3]);
       drawSeries(pts,ctx);ctx.stroke();ctx.setLineDash([]);
-      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fillStyle='rgba(168,80,64,0.9)';ctx.fill();});
+      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fillStyle='rgba(98,121,155,0.9)';ctx.fill();});
     }
   }
   if(ov.u3){
@@ -3072,9 +3089,9 @@ function drawChart(){
     const pts=[];
     yrs.forEach((yr,i)=>{const u=u3Sm[i];if(u==null)return;const xi=allYrs.indexOf(yr);pts.push([xp(xi),_uY(u)]);});
     if(pts.length){
-      ctx.strokeStyle='rgba(232,122,93,0.95)';ctx.lineWidth=2.2;
+      ctx.strokeStyle='rgba(142,167,201,0.95)';ctx.lineWidth=2.2;
       drawSeries(pts,ctx);ctx.stroke();
-      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(232,122,93,0.95)';ctx.fill();});
+      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(142,167,201,0.95)';ctx.fill();});
     }
   }
 
@@ -3582,7 +3599,10 @@ function buildTable(){
 function toggleOv(k){
   ov[k]=!ov[k];
   const btn=document.getElementById('ov-'+k);
-  if(btn){if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);}
+  if(btn){
+    if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);
+    btn.setAttribute('aria-pressed',String(ov[k]));
+  }
   saveOvState();syncCtxUI();
   drawChart();renderOvLegend();
 }
@@ -3637,10 +3657,10 @@ function syncCtxUI(){
   const p=detectPreset();
   Object.keys(OV_PRESETS).forEach(name=>{
     const b=document.getElementById('ps-'+name);
-    if(b)b.classList.toggle('active',p===name);
+    if(b){b.classList.toggle('active',p===name);b.setAttribute('aria-pressed',String(p===name));}
   });
   const cb=document.getElementById('ps-custom');
-  if(cb)cb.classList.toggle('active',p===null);
+  if(cb){cb.classList.toggle('active',p===null);cb.setAttribute('aria-pressed',String(p===null));}
   document.querySelectorAll('#ovPicker input[data-ovkey]').forEach(inp=>{inp.checked=!!ov[inp.dataset.ovkey];});
 }
 function renderOvPicker(){
@@ -4159,11 +4179,12 @@ try{
 setSTab(_initialTab);
 document.body.classList.toggle('empty',sortedYrs().length===0);
 renderOvPicker();
-Object.keys(ov).forEach(k=>{const b=document.getElementById('ov-'+k);if(b)b.classList.toggle('on-'+k,ov[k]);});
-['none','ma3','ma5','spline'].forEach(k=>document.getElementById('sm-'+k).classList.toggle('active',k===smoothing));
+Object.keys(ov).forEach(k=>{const b=document.getElementById('ov-'+k);if(b){b.classList.toggle('on-'+k,ov[k]);b.setAttribute('aria-pressed',String(ov[k]));}});
+['none','ma3','ma5','spline'].forEach(k=>{const b=document.getElementById('sm-'+k);b.classList.toggle('active',k===smoothing);b.setAttribute('aria-pressed',String(k===smoothing));});
 syncCtxUI();
 updateStats();renderLegend();buildTable();renderOvLegend();tmInit();
-if(smoothMacro)document.getElementById('sm-macro').classList.add('active');
+const _smb=document.getElementById('sm-macro');
+if(_smb){_smb.classList.toggle('active',smoothMacro);_smb.setAttribute('aria-pressed',String(smoothMacro));}
 
 // Rotating tagline — picks a random Wu-Tang-flavored line on each load
 const TAGLINES=[
