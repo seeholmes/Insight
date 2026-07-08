@@ -512,7 +512,7 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
         </div>
         <div class="ctrl-group ctrl-lines">
           <span class="ctrl-lbl">Lines</span>
-          <button class="cbtn" id="ov-col"  onclick="toggleOv('col')"  title="Personal cost of living from CREAM COL companion — configure in companion app">COL</button>
+          <button class="cbtn" id="ov-col"  onclick="toggleOv('col')"  title="Personal cost of living by life-era — each year uses the era config that was actually your life. Configure eras in The Vault → COL. Rings on the line mark era changes.">COL</button>
           <button class="cbtn" id="ov-real" onclick="toggleOv('real')" title="Every year's salary expressed in your first-year (base) dollars — what your paychecks bought back then">Old Money</button>
           <button class="cbtn" id="ov-today" onclick="toggleOv('today')" title="Every year's salary inflated forward to today's dollars — what your old paychecks would be worth now">New Money</button>
           <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')"  title="Your percentile rank vs all US individual earners">Percentile</button>
@@ -1201,8 +1201,7 @@ function assessAlarmState(asOfYear){
   }
   // 2. YoY vs personal COL — strong when the raise beats COL by ≥3 pts
   if(yoy!=null&&lastYr>=2000&&lastYr<=2026&&prevYr>=2000){
-    const cfg=getEffectiveColCfg();
-    const colA=calcColForYear(cfg,prevYr),colB=calcColForYear(cfg,lastYr);
+    const colA=colForYear(prevYr),colB=colForYear(lastYr);
     if(colA&&colB){
       const colYoy=(colB-colA)/colA;
       let lvl='green';
@@ -1245,11 +1244,10 @@ function assessAlarmState(asOfYear){
   }
   // 5. Career wage CAGR vs personal COL CAGR — strong when gap ≥+1.5 pts
   const wageTrend=jobTrendCAGR({years:yrs});
-  const colCfg=getEffectiveColCfg();
   const colYrsAlarm=yrs.filter(y=>y>=1993&&y<=2026);
   if(colYrsAlarm.length>=3&&wageTrend!=null){
     const firstY=colYrsAlarm[0],lastY=colYrsAlarm[colYrsAlarm.length-1];
-    const a=calcColForYear(colCfg,firstY),b=calcColForYear(colCfg,lastY);
+    const a=colForYear(firstY),b=colForYear(lastY);
     const span=lastY-firstY;
     if(a&&b&&span>0){
       const colCagr=Math.pow(b/a,1/span)-1;
@@ -1402,12 +1400,11 @@ function modelPulse(raisePct,cpiRate,colYoy){
     if(denom!==0){
       const synthWageTrend=Math.exp((n*sxl-sx*sl)/denom)-1;
       // COL CAGR — historical anchor through last actual year, projected forward via colYoy
-      const colCfg=getEffectiveColCfg();
       const colYrsM=yrs.filter(y=>y>=1993&&y<=2026);
       if(colYrsM.length>=3){
         const firstY=colYrsM[0],lastColY=colYrsM[colYrsM.length-1];
-        const colStart=calcColForYear(colCfg,firstY);
-        const colLast=calcColForYear(colCfg,lastColY);
+        const colStart=colForYear(firstY);
+        const colLast=colForYear(lastColY);
         if(colStart&&colLast){
           const gap=synthYr-lastColY;
           const colSynth=colLast*Math.pow(1+colYoy,gap);
@@ -1473,8 +1470,7 @@ function renderLab(){
   // Derive default COL YoY from last 2 years of COL data if available
   let dCol=dCpi;
   if(lastYr>=2001&&lastYr<=2026){
-    const cfg=getEffectiveColCfg();
-    const a=calcColForYear(cfg,lastYr-1),b=calcColForYear(cfg,lastYr);
+    const a=colForYear(lastYr-1),b=colForYear(lastYr);
     if(a&&b)dCol=(b-a)/a;
   }
   // Read existing slider values if present (preserve user's drag state)
@@ -1508,10 +1504,10 @@ function renderLab(){
     <div id="labColGap" style="font-size:var(--fs-xs);color:var(--muted);text-align:right;margin:-0.45rem 0 0.35rem 0;font-variant-numeric:tabular-nums">—</div>
     ${(()=>{
       // Recent personal COL trail — last 3 actual years
-      const trail=[];const cfg=getEffectiveColCfg();
+      const trail=[];
       for(let i=Math.max(0,yrs.length-3);i<yrs.length;i++){
         const y=yrs[i];if(y<2001||y>2026)continue;
-        const a=calcColForYear(cfg,y-1),b=calcColForYear(cfg,y);
+        const a=colForYear(y-1),b=colForYear(y);
         if(a&&b){const yy=(b-a)/a;trail.push(`${y} ${yy>=0?'+':''}${(yy*100).toFixed(1)}%`);}
       }
       return trail.length?`<div style="font-size:var(--fs-xs);color:var(--muted);margin:0 0 0.55rem 5.75rem;letter-spacing:0.04em">Recent: ${trail.join(' · ')}</div>`:'';
@@ -1552,8 +1548,7 @@ function labSetCol(mode){
     const yrs=sortedYrs();
     const lastYr=yrs[yrs.length-1];
     if(lastYr>=2001&&lastYr<=2026){
-      const cfg=getEffectiveColCfg();
-      const a=calcColForYear(cfg,lastYr-1),b=calcColForYear(cfg,lastYr);
+      const a=colForYear(lastYr-1),b=colForYear(lastYr);
       if(a&&b)target=((b-a)/a)*100;
     }
   }else if(mode==='surge'){
@@ -1863,15 +1858,14 @@ function renderInsights(){
   const _topCagrRate=_topCagrJob?(_topCagrJob.trend??_topCagrJob.cagr):null;
   const _longestJob=_jobRowsLocal.reduce((b,r)=>(b==null||r.sy.length>b.sy.length)?r:b,null);
   const _avgTenure=_jobRowsLocal.length?_jobRowsLocal.reduce((a,r)=>a+r.sy.length,0)/_jobRowsLocal.length:0;
-  // COL chambers (last year in 1993-2026)
-  const _colCfgIdx=getEffectiveColCfg();
+  // COL chambers (last year in 1993-2026) — era-aware per year
   const _colYrIns=Math.max(1993,Math.min(2026,_lastYr));
-  const _colNow=calcColForYear(_colCfgIdx,_colYrIns);
+  const _colNow=colForYear(_colYrIns);
   const _colPctPay=(_colNow&&_curSal>0)?(_colNow/_curSal*100):null;
   const _colYrsIns=_idxYrs.filter(y=>y>=1993&&y<=2026);
   let _colCagrIns=0,_colCpiGap=0,_wageColGap=0,_cumCol=0;
   if(_colYrsIns.length>=2){
-    const a=calcColForYear(_colCfgIdx,_colYrsIns[0]),b=calcColForYear(_colCfgIdx,_colYrsIns[_colYrsIns.length-1]);
+    const a=colForYear(_colYrsIns[0]),b=colForYear(_colYrsIns[_colYrsIns.length-1]);
     const span=_colYrsIns[_colYrsIns.length-1]-_colYrsIns[0];
     if(a&&b&&span>0){_colCagrIns=Math.pow(b/a,1/span)-1;}
     let cpi=1;for(let i=_idxYrs.indexOf(_colYrsIns[0])+1;i<=_idxYrs.indexOf(_colYrsIns[_colYrsIns.length-1]);i++)cpi*=1+(MACRO[_idxYrs[i]]?.inf??0);
@@ -1880,7 +1874,7 @@ function renderInsights(){
     const wageA=salaries[_colYrsIns[0]],wageB=salaries[_colYrsIns[_colYrsIns.length-1]];
     if(wageA>0&&wageB>0){_wageColGap=Math.pow(wageB/wageA,1/span)-1-_colCagrIns;}
   }
-  _colYrsIns.forEach(y=>{const v=calcColForYear(_colCfgIdx,y);if(v)_cumCol+=v;});
+  _colYrsIns.forEach(y=>{const v=colForYear(y);if(v)_cumCol+=v;});
   // Inflection / stagnation — re-derive (events array is defined later in renderInsights)
   let _inflectionN=0,_stagN=0;
   const _realYoYIdx=_idxYrs.map((y,i)=>i===0?null:(real[y]-real[_idxYrs[i-1]])/real[_idxYrs[i-1]]);
@@ -2204,12 +2198,11 @@ function renderInsights(){
 
   h+=_DIV();
   // ── Your COL vs CPI ─────────────────────────────────────────────────────────
-  const _colCfgIns=getEffectiveColCfg();
-  const _hasUserCfg=!!loadColData();
+  const _hasUserCfg=!!loadColEras();
   const _colYrs=yrs.filter(y=>y>=1993&&y<=2026);
   if(_colYrs.length>=2){
     const cFirst=_colYrs[0],cLast=_colYrs[_colYrs.length-1],cSpan=cLast-cFirst;
-    const colA=calcColForYear(_colCfgIns,cFirst),colB=calcColForYear(_colCfgIns,cLast);
+    const colA=colForYear(cFirst),colB=colForYear(cLast);
     const colCagr=(colA&&colB&&cSpan>0)?Math.pow(colB/colA,1/cSpan)-1:0;
     let cpiIdx=1;for(let y=cFirst+1;y<=cLast;y++){cpiIdx*=1+(MACRO[y]?.inf??0);}
     const cpiCagr=cSpan>0?Math.pow(cpiIdx,1/cSpan)-1:0;
@@ -2624,25 +2617,82 @@ const DEFAULT_COL_CFG={
 function loadColData(){
   try{const s=localStorage.getItem('cream_cfg');return s?JSON.parse(s):null;}catch{return null;}
 }
-function saveColCfg(cfg){
-  try{localStorage.setItem('cream_cfg',JSON.stringify(cfg));}catch(e){}
+// ── COL ERAS ──────────────────────────────────────────────────────────────────
+// A lifestyle changes over a career — cities, rent→own, commutes, EVs. Eras
+// hold a full COL config per life-chapter: [{startYear, cfg}, ...] sorted.
+// Era i covers startYear_i through the next era's start − 1; the last era is
+// open-ended; years before the first era backcast with the first era's profile.
+// displayMode ($ vs % of pay) is a render preference, not a life fact → global.
+// Cached because colForYear() runs inside per-year loops (chart, Pulse, table).
+let _colErasCache;   // undefined = not read yet · null = nothing stored
+let selColEra=0;     // which era the Vault form is editing
+function loadColEras(){
+  if(_colErasCache!==undefined)return _colErasCache;
+  try{
+    const s=localStorage.getItem('cream_col_eras');
+    if(s){
+      const e=JSON.parse(s);
+      if(Array.isArray(e)&&e.length){_colErasCache=e.sort((a,b)=>a.startYear-b.startYear);return _colErasCache;}
+    }
+  }catch{}
+  // Migration: wrap a legacy single profile as one era covering everything
+  const legacy=loadColData();
+  if(legacy){
+    const eras=[{startYear:1993,cfg:{...legacy}}];
+    saveColEras(eras);
+    return eras;
+  }
+  _colErasCache=null;
+  return null;
 }
-function getEffectiveColCfg(){return loadColData()||{...DEFAULT_COL_CFG};}
+function saveColEras(eras){
+  eras.sort((a,b)=>a.startYear-b.startYear);
+  _colErasCache=eras;
+  try{
+    localStorage.setItem('cream_col_eras',JSON.stringify(eras));
+    // Mirror the latest era to the legacy key so anything still reading
+    // cream_cfg (COL companion) sees a sane single profile
+    localStorage.setItem('cream_cfg',JSON.stringify({...eras[eras.length-1].cfg,displayMode:getColDisplayMode()}));
+  }catch(e){}
+}
+function getColDisplayMode(){
+  try{const m=localStorage.getItem('cream_col_displayMode');if(m)return m;}catch{}
+  const legacy=loadColData();
+  return(legacy&&legacy.displayMode)||'dollars';
+}
+function setColDisplayMode(m){try{localStorage.setItem('cream_col_displayMode',m);}catch(e){}}
+// Which era's config was your actual life in year y?
+function colCfgForYear(y){
+  const eras=loadColEras();
+  if(!eras)return DEFAULT_COL_CFG;
+  let cfg=eras[0].cfg;
+  for(const e of eras){if(e.startYear<=y)cfg=e.cfg;else break;}
+  return cfg;
+}
+// One-stop: year y's COL under the era config that actually applied
+function colForYear(y){return calcColForYear(colCfgForYear(y),y);}
+function getEffectiveColCfg(y){return colCfgForYear(y??(sortedYrs().slice(-1)[0]||2026));}
 function updateColField(field,raw){
-  const cfg=getEffectiveColCfg();
-  const wasSaved=!!loadColData();
+  // displayMode is global (render preference), everything else edits the selected era
+  if(field==='displayMode'){
+    setColDisplayMode(raw);
+    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.mode===raw));
+    const eras0=loadColEras();
+    updateColPreview(eras0?eras0[Math.min(selColEra,eras0.length-1)].cfg:DEFAULT_COL_CFG);
+    drawChart();return;
+  }
+  const eras=loadColEras()||[{startYear:1993,cfg:{...DEFAULT_COL_CFG}}];
+  selColEra=Math.min(selColEra,eras.length-1);
+  const cfg=eras[selColEra].cfg;
+  const wasSaved=!!localStorage.getItem('cream_col_eras');
   let v=raw;
   if(['eatInRatio','evRatio'].includes(field))v=Math.max(0,Math.min(1,parseFloat(raw)||0));
   else if(['milesPerYear','mpg','homePrice','purchaseYear'].includes(field))v=parseFloat(raw)||0;
   else if(field==='interestRate')v=parseFloat(raw)||0;
   cfg[field]=v;
-  saveColCfg(cfg);
+  saveColEras(eras);
   // Housing toggle changes which fields appear/disappear → full re-render
   if(field==='housing'){renderColPanel();drawChart();return;}
-  // Display mode toggle: re-render so the active button updates
-  if(field==='displayMode'){
-    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.mode===v));
-  }
   // Other fields: surgical inline updates so focused input keeps focus
   if(field==='chargingMode'){
     document.querySelectorAll('[data-charge]').forEach(b=>b.classList.toggle('primary',b.dataset.charge===v));
@@ -2653,37 +2703,105 @@ function updateColField(field,raw){
   updateColPreview(cfg);
   drawChart();
 }
+// ── ERA CRUD ─────────────────────────────────────────────────────────────────
+function selectColEra(i){selColEra=i;renderColPanel();}
+function addColEra(){
+  const eras=loadColEras()||[{startYear:1993,cfg:{...DEFAULT_COL_CFG}}];
+  const last=eras[eras.length-1];
+  // New era clones the previous life (you usually change one thing at a time);
+  // starts at the current year, or just after the last era if that's later
+  const start=Math.min(2026,Math.max(last.startYear+1,new Date().getFullYear()));
+  eras.push({startYear:start,cfg:{...last.cfg}});
+  saveColEras(eras);
+  selColEra=eras.indexOf(eras.find(e=>e.startYear===start&&e!==last));
+  if(selColEra<0)selColEra=eras.length-1;
+  renderColPanel();drawChart();
+}
+function deleteColEra(){
+  const eras=loadColEras();
+  if(!eras||eras.length<=1)return;
+  if(!confirm('Delete this era? Its years fall to the neighboring era.'))return;
+  eras.splice(selColEra,1);
+  saveColEras(eras);
+  selColEra=Math.max(0,Math.min(selColEra,eras.length-1));
+  renderColPanel();drawChart();
+}
+function setColEraStart(raw){
+  const eras=loadColEras();if(!eras)return;
+  const v=parseInt(raw);
+  if(!v||v<1993||v>2026)return; // ignore mid-typing / out-of-range values
+  const era=eras[selColEra];
+  era.startYear=v;
+  saveColEras(eras);            // re-sorts
+  selColEra=eras.indexOf(era);  // follow the era to its new slot
+  renderColPanel();drawChart();
+}
 function updateColPreview(cfg){
   const pv=document.getElementById('colPreview');if(!pv)return;
-  const yr=new Date().getFullYear()<=2026?new Date().getFullYear():2026;
+  // Preview a year INSIDE the selected era so the number reflects that chapter
+  const eras=loadColEras();
+  let yr=Math.min(new Date().getFullYear(),2026);
+  if(eras&&eras.length){
+    const i=Math.min(selColEra,eras.length-1);
+    const end=(i<eras.length-1)?eras[i+1].startYear-1:2026;
+    yr=Math.max(eras[i].startYear,Math.min(yr,end));
+  }
   const v=calcColForYear(cfg,yr);
   pv.innerHTML=`
     <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">Live preview · ${yr}</div>
     <div style="font-size:1.4rem;font-family:'Playfair Display',serif;font-style:italic;color:var(--col-color);line-height:1">${v?fmt(v)+'/yr':'—'}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:0.4rem;line-height:1.5">Toggle the <span style="color:var(--col-color)">COL</span> button above the chart to see this rendered as a line across all years 1993–2026.</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:0.4rem;line-height:1.5">Toggle the <span style="color:var(--col-color)">COL</span> button above the chart to see all eras rendered as one line across 1993–2026.</div>
   `;
 }
 function resetColCfg(){
-  saveColCfg({...DEFAULT_COL_CFG});
+  const eras=loadColEras()||[{startYear:1993,cfg:{...DEFAULT_COL_CFG}}];
+  eras[Math.min(selColEra,eras.length-1)].cfg={...DEFAULT_COL_CFG};
+  saveColEras(eras);
   renderColPanel();drawChart();
 }
 function clearColCfg(){
-  if(!confirm('Clear COL config? The line will use the built-in default profile.'))return;
-  try{localStorage.removeItem('cream_cfg');}catch(e){}
+  if(!confirm('Clear ALL COL eras? The line will use the built-in default profile.'))return;
+  try{
+    localStorage.removeItem('cream_col_eras');
+    localStorage.removeItem('cream_cfg');
+    localStorage.removeItem('cream_col_displayMode');
+  }catch(e){}
+  _colErasCache=undefined;selColEra=0;
   renderColPanel();drawChart();
 }
 function renderColPanel(){
   const el=document.getElementById('colForm');if(!el)return;
-  const stored=loadColData();
-  const cfg=stored||DEFAULT_COL_CFG;
+  const eras=loadColEras();
+  const stored=!!eras;
+  selColEra=Math.min(selColEra,(eras?eras.length:1)-1);
+  const cfg=eras?eras[selColEra].cfg:DEFAULT_COL_CFG;
   const isOwning=cfg.housing==='own';
+  const dispMode=getColDisplayMode();
   const sourceTag=stored?'<span style="color:var(--pos)">●</span> Saved profile':'<span style="color:var(--muted)">○</span> Default profile (not yet saved — edit any field to save)';
+  // Era strip: one chip per life-chapter; the form below edits the selected one
+  const eraList=eras||[{startYear:1993,cfg}];
+  const eraChips=eraList.map((e,i)=>{
+    const end=(i<eraList.length-1)?eraList[i+1].startYear-1:'now';
+    const sel=i===selColEra;
+    return `<button class="btn-sm ${sel?'primary':''}" style="flex:0 0 auto" onclick="selectColEra(${i})" data-hint="Era ${i+1}: ${e.startYear}–${end}. ${e.cfg.housing==='own'?'Owning':'Renting'}, ZIP ${e.cfg.zip||'—'}">${e.startYear}–${end}</button>`;
+  }).join('');
   el.innerHTML=`
     <div id="colStatus" style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;letter-spacing:0.06em;text-transform:uppercase">Status: ${sourceTag}</div>
 
+    <div style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">Life eras — COL per chapter</div>
+    <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.55rem;align-items:center">
+      ${eraChips}
+      <button class="btn-sm" style="flex:0 0 auto" onclick="addColEra()" data-hint="Add a new era starting this year — clones the current era, then change what changed (moved, bought, new commute)">＋ Era</button>
+    </div>
+    <div class="frow"><span class="flbl" style="width:80px">Era starts</span>
+      <input class="finput" type="number" min="1993" max="2026" value="${eraList[selColEra].startYear}" oninput="setColEraStart(this.value)" data-hint="First year this lifestyle applied. Years before your first era backcast with that era's profile.">
+      ${eraList.length>1?`<button class="btn-sm" style="flex:0 0 auto;color:var(--neg)" onclick="deleteColEra()">✕ Delete era</button>`:''}
+    </div>
+    <div style="border-top:1px solid var(--border);margin:0.55rem 0 0.7rem"></div>
+
     <div class="frow"><span class="flbl" style="width:80px">Show as</span>
-      <button data-mode="dollars"   class="btn-sm ${cfg.displayMode!=='pctSalary'?'primary':''}" style="flex:1" onclick="updateColField('displayMode','dollars')">$ /yr</button>
-      <button data-mode="pctSalary" class="btn-sm ${cfg.displayMode==='pctSalary'?'primary':''}" style="flex:1" onclick="updateColField('displayMode','pctSalary')">% of salary</button>
+      <button data-mode="dollars"   class="btn-sm ${dispMode!=='pctSalary'?'primary':''}" style="flex:1" onclick="updateColField('displayMode','dollars')">$ /yr</button>
+      <button data-mode="pctSalary" class="btn-sm ${dispMode==='pctSalary'?'primary':''}" style="flex:1" onclick="updateColField('displayMode','pctSalary')">% of salary</button>
     </div>
 
     <div class="frow"><span class="flbl" style="width:80px">ZIP</span>
@@ -3267,14 +3385,16 @@ function drawChart(){
     ctx.beginPath();pjYrs.forEach((yr,i)=>{const xi=allYrs.indexOf(yr);i===0?ctx.moveTo(xp(xi),ys(pjVals[i])):ctx.lineTo(xp(xi),ys(pjVals[i]));});ctx.stroke();ctx.setLineDash([]);
   }
   if(ov.col){
-    const userCfg=loadColData();
-    const colCfg=userCfg||DEFAULT_COL_CFG;
+    const colEras=loadColEras();
     const colYrs=allYrs.filter(y=>y>=1993&&y<=2026);
     if(colYrs.length){
-      // COL cascades with salary smoothing — same dollar axis, so must match
-      const colVals=smoothVals(colYrs.map(y=>calcColForYear(colCfg,y)));
-      const isPct=colCfg.displayMode==='pctSalary';
+      // COL cascades with salary smoothing — same dollar axis, so must match.
+      // Era-aware: each year computed under the era config that was your life.
+      const colVals=smoothVals(colYrs.map(y=>colForYear(y)));
+      const isPct=getColDisplayMode()==='pctSalary';
       const yPct=p=>pad.top+cH*(1-Math.max(0,Math.min(1.5,p))/1.5);
+      // Era boundary years (skip the first era — no transition into it)
+      const eraBoundaries=new Set((colEras||[]).slice(1).map(e=>e.startYear));
       // Collect points first so we can fill + stroke + dot
       const colPts=[];let lastDrawnVal=null;
       colYrs.forEach((yr,i)=>{
@@ -3287,7 +3407,7 @@ function drawChart(){
         }else{
           plotV=v;plotY=ys(v);
         }
-        colPts.push([xp(xi),plotY,plotV]);
+        colPts.push([xp(xi),plotY,plotV,yr]);
         lastDrawnVal=plotV;
       });
       // Right-axis ticks for % mode (drawn first so line sits on top)
@@ -3309,8 +3429,15 @@ function drawChart(){
       // Stroke (spline cascade respected via drawSeries)
       ctx.strokeStyle='rgba(240,168,0,0.95)';ctx.lineWidth=2.4;ctx.setLineDash([5,3]);
       drawSeries(colPts,ctx);ctx.stroke();ctx.setLineDash([]);
-      // Per-year dots
-      colPts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(240,168,0,0.95)';ctx.fill();});
+      // Per-year dots; era boundary years get a hollow ring — the step in the
+      // line there is your life changing, not a glitch
+      colPts.forEach(([x,y,,yr])=>{
+        ctx.beginPath();ctx.arc(x,y,2.4,0,Math.PI*2);ctx.fillStyle='rgba(240,168,0,0.95)';ctx.fill();
+        if(eraBoundaries.has(yr)){
+          ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);
+          ctx.strokeStyle='rgba(240,168,0,0.8)';ctx.lineWidth=1.2;ctx.stroke();
+        }
+      });
       // End-of-line label
       if(colPts.length){
         const [lx,ly]=colPts[colPts.length-1];
@@ -3318,9 +3445,9 @@ function drawChart(){
         _endQ.push({x:lx+5,y:ly+3,text:txt,color:'rgba(240,168,0,0.95)'});
       }
       // Hint when using default cfg
-      if(!userCfg){
+      if(!colEras){
         ctx.fillStyle='rgba(240,168,0,0.7)';ctx.font='italic 10px IBM Plex Mono,monospace';ctx.textAlign='left';
-        ctx.fillText('COL using default profile · edit in Settings → COL',pad.left+8,pad.top+14);
+        ctx.fillText('COL using default profile · edit in The Vault → COL',pad.left+8,pad.top+14);
       }
     }else{
       ctx.fillStyle='rgba(240,168,0,0.7)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='center';
@@ -3483,9 +3610,8 @@ canvas.addEventListener('mousemove',e=>{
   // COL row: this year's cost-of-living, mode-aware ($/yr or % of salary)
   const colLine=(()=>{
     if(yr<1993||yr>2026)return'';
-    const cfg=getEffectiveColCfg();
-    const v=calcColForYear(cfg,yr);if(v==null)return'';
-    const vp=yr>2000?calcColForYear(cfg,yr-1):null;
+    const v=colForYear(yr);if(v==null)return'';
+    const vp=yr>2000?colForYear(yr-1):null;
     const colYoy=(vp!=null&&vp>0)?(v-vp)/vp:null;
     const cpiThis=MACRO[yr]?.inf;
     let gapHint='';
@@ -3498,7 +3624,7 @@ canvas.addEventListener('mousemove',e=>{
     const yoyTxt=colYoy!=null?` <span style="color:${colYoy>=0?'var(--pos)':'var(--neg)'}">${colYoy>=0?'+':''}${(colYoy*100).toFixed(1)}%</span>`:'';
     // Always show the absolute COL value; if mode is %, also show ratio
     let primary=`COL ${fmt(v)}/yr`;
-    if(cfg.displayMode==='pctSalary'&&sal>0){
+    if(getColDisplayMode()==='pctSalary'&&sal>0){
       primary=`COL ${(v/sal*100).toFixed(0)}% of pay <span style="color:var(--muted);font-size:var(--fs-xs)">(${fmt(v)}/yr)</span>`;
     }
     return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">${primary}</span>${yoyTxt}${gapHint}</div>`;
@@ -3518,8 +3644,7 @@ canvas.addEventListener('mousemove',e=>{
     // Net vs COL — raise minus the dollar growth in your personal cost of living
     let netVsCol=null;
     if(yr>=1993&&yr<=2026&&prevYr>=1993&&prevYr<=2026){
-      const cfg=getEffectiveColCfg();
-      const colA=calcColForYear(cfg,prevYr),colB=calcColForYear(cfg,yr);
+      const colA=colForYear(prevYr),colB=colForYear(yr);
       if(colA!=null&&colB!=null)netVsCol=salDelta-(colB-colA);
     }
     if(netVsCol==null&&netVsCpi==null)return'';
@@ -4123,7 +4248,7 @@ function restoreDefaultRecessions(){
 
 // ── IMPORT / EXPORT ───────────────────────────────────────────────────────────
 function exportData(){
-  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO,events:EVENTS,eventNextId,recessions:RECESSIONS,recessionNextId},null,2);
+  const data=JSON.stringify({salaries,jobs,nextId,macro:MACRO,events:EVENTS,eventNextId,recessions:RECESSIONS,recessionNextId,colEras:loadColEras()||undefined,colDisplayMode:getColDisplayMode()},null,2);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
   a.download='insight_backup_'+new Date().toISOString().slice(0,10)+'.json';
@@ -4142,6 +4267,9 @@ function importData(input){
       else{EVENTS=[];eventNextId=1;migrateEventsFromMacro();}
       if(Array.isArray(d.recessions)){RECESSIONS=d.recessions;recessionNextId=d.recessionNextId||(RECESSIONS.reduce((m,r)=>Math.max(m,r.id+1),1));}
       else{RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));recessionNextId=RECESSIONS.length+1;}
+      // COL eras travel with the backup (older backups lack them — keep device state)
+      if(Array.isArray(d.colEras)&&d.colEras.length){saveColEras(d.colEras);selColEra=0;}
+      if(d.colDisplayMode)setColDisplayMode(d.colDisplayMode);
       saveState();refresh();
       if(drawerOpen)renderJobCards();
     }catch(err){alert('Import failed: '+err.message);}
