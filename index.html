@@ -2590,7 +2590,14 @@ function calcColForYear(cfg,y){
   const inf=_COL_INF_GEN[y]??1;
   let housing;
   if(cfg.housing==='rent'){
-    housing=15600*zone.housing*(_COL_INF_RENT[y]??1);
+    if(cfg.actualRentMo>0){
+      // Actual rent — exact at the rentAsOf anchor year, drifting with the
+      // national rent index around it (base-year-independent ratio)
+      const anchorIdx=_COL_INF_RENT[cfg.rentAsOf]??1;
+      housing=cfg.actualRentMo*12*((_COL_INF_RENT[y]??1)/anchorIdx);
+    }else{
+      housing=15600*zone.housing*(_COL_INF_RENT[y]??1);
+    }
   } else {
     const loan=cfg.homePrice*0.80,r=(cfg.interestRate/100)/12;
     const annPI=(r===0?loan/360:loan*(r*Math.pow(1+r,360))/(Math.pow(1+r,360)-1))*12;
@@ -2687,9 +2694,20 @@ function updateColField(field,raw){
   const wasSaved=!!localStorage.getItem('cream_col_eras');
   let v=raw;
   if(['eatInRatio','evRatio'].includes(field))v=Math.max(0,Math.min(1,parseFloat(raw)||0));
-  else if(['milesPerYear','mpg','homePrice','purchaseYear'].includes(field))v=parseFloat(raw)||0;
+  else if(['milesPerYear','mpg','homePrice','purchaseYear','actualRentMo'].includes(field))v=parseFloat(raw)||0;
   else if(field==='interestRate')v=parseFloat(raw)||0;
+  else if(field==='rentAsOf'){
+    const n=parseInt(raw);
+    if(!n||n<1993||n>2026)return; // ignore mid-typing / out-of-range values
+    v=n;
+  }
   cfg[field]=v;
+  // First rent entry anchors "as of" to the era start so the ratio math is
+  // grounded even if the user never touches the year field
+  if(field==='actualRentMo'&&v>0&&!cfg.rentAsOf){
+    cfg.rentAsOf=eras[selColEra].startYear;
+    const asOf=document.getElementById('colRentAsOf');if(asOf)asOf.value=cfg.rentAsOf;
+  }
   saveColEras(eras);
   // Housing toggle changes which fields appear/disappear → full re-render
   if(field==='housing'){renderColPanel();drawChart();return;}
@@ -2824,7 +2842,13 @@ function renderColPanel(){
       <div class="frow"><span class="flbl" style="width:80px">Purchased</span>
         <input class="finput" type="number" value="${cfg.purchaseYear||2020}" oninput="updateColField('purchaseYear',this.value)">
       </div>
-    `:''}
+    `:`
+      <div class="frow"><span class="flbl" style="width:80px">Rent $/mo</span>
+        <input class="finput" type="number" min="0" value="${cfg.actualRentMo||''}" placeholder="blank = modeled" oninput="updateColField('actualRentMo',this.value)" data-hint="Your actual monthly rent — exact at the 'as of' year, drifting with the national rent index within this era. Leave blank to use the modeled ZIP-zone baseline.">
+        <span style="font-size:0.55rem;color:var(--muted);flex-shrink:0">as of</span>
+        <input class="finput" id="colRentAsOf" type="number" min="1993" max="2026" value="${cfg.rentAsOf||eraList[selColEra].startYear}" oninput="updateColField('rentAsOf',this.value)" style="max-width:70px" data-hint="The year that rent figure was true. Defaults to the era's start.">
+      </div>
+    `}
 
     <div class="frow"><span class="flbl" style="width:80px">Eat in %</span>
       <input class="finput" type="range" min="0" max="1" step="0.05" value="${cfg.eatInRatio||0}" oninput="updateColField('eatInRatio',this.value)" style="flex:1">
