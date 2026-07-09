@@ -2611,7 +2611,10 @@ function calcColForYear(cfg,y){
   const gas=(cfg.milesPerYear/cfg.mpg)*gp+cfg.milesPerYear*0.082*inf;
   const ev=(cfg.milesPerYear/3.5)*ep+cfg.milesPerYear*0.038*inf;
   const transport=cfg.evRatio*ev+(1-cfg.evRatio)*gas;
-  return Math.round(housing+food+transport+3480*inf+5400*inf+4200*inf);
+  // The Ledger — era extras the model has no concept of (tuition, childcare,
+  // elder care...). Flat nominal within the era: you know what you pay.
+  const extras=(cfg.ledger||[]).reduce((s,it)=>s+(parseFloat(it.monthly)||0),0)*12;
+  return Math.round(housing+food+transport+3480*inf+5400*inf+4200*inf+extras);
 }
 // Default COL config used when companion app hasn't written cream_cfg yet —
 // roughly a national-median renter so the line draws immediately on toggle.
@@ -2754,6 +2757,37 @@ function setColEraStart(raw){
   selColEra=eras.indexOf(era);  // follow the era to its new slot
   renderColPanel();drawChart();
 }
+// ── THE LEDGER — era extras CRUD ─────────────────────────────────────────────
+// Expenses the model has no concept of (tuition, childcare, elder care,
+// medical, support payments). NOT overrides of modeled categories.
+function _selEraCfg(){
+  const eras=loadColEras()||[{startYear:1993,cfg:{...DEFAULT_COL_CFG}}];
+  selColEra=Math.min(selColEra,eras.length-1);
+  return{eras,cfg:eras[selColEra].cfg};
+}
+function addLedgerItem(){
+  const{eras,cfg}=_selEraCfg();
+  cfg.ledger=cfg.ledger||[];
+  cfg.ledger.push({label:'',monthly:0});
+  saveColEras(eras);
+  renderColPanel();drawChart();
+}
+function updateLedgerItem(i,field,raw){
+  const{eras,cfg}=_selEraCfg();
+  if(!cfg.ledger||!cfg.ledger[i])return;
+  cfg.ledger[i][field]=field==='monthly'?(parseFloat(raw)||0):raw;
+  saveColEras(eras);
+  // Surgical: no re-render while typing so the input keeps focus
+  updateColPreview(cfg);
+  drawChart();
+}
+function removeLedgerItem(i){
+  const{eras,cfg}=_selEraCfg();
+  if(!cfg.ledger)return;
+  cfg.ledger.splice(i,1);
+  saveColEras(eras);
+  renderColPanel();drawChart();
+}
 function updateColPreview(cfg){
   const pv=document.getElementById('colPreview');if(!pv)return;
   // Preview a year INSIDE the selected era so the number reflects that chapter
@@ -2873,6 +2907,22 @@ function renderColPanel(){
       <button data-charge="offpeak" class="btn-sm ${cfg.chargingMode==='offpeak'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','offpeak')">Off-peak</button>
       <button data-charge="free" class="btn-sm ${cfg.chargingMode==='free'?'primary':''}" style="flex:1" onclick="updateColField('chargingMode','free')">Free</button>
     </div>
+
+    <div style="border-top:1px solid var(--border);margin:0.6rem 0 0.5rem"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
+      <span style="font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">The Ledger — era extras</span>
+      <button class="btn-sm" onclick="addLedgerItem()" data-hint="Big expenses the model has no concept of — tuition, childcare, elder care, medical, support payments. NOT for food, housing, or transport (those are modeled). Flat $/mo across this era; edit or end the era when it changes.">＋ Expense</button>
+    </div>
+    ${(cfg.ledger&&cfg.ledger.length)?cfg.ledger.map((it,i)=>{
+      const esc=(it.label||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      return `<div class="frow">
+        <input class="finput" type="text" value="${esc}" placeholder="e.g. Kids' tuition" oninput="updateLedgerItem(${i},'label',this.value)" style="flex:2">
+        <input class="finput" type="number" min="0" value="${it.monthly||''}" placeholder="$/mo" oninput="updateLedgerItem(${i},'monthly',this.value)" style="flex:1;max-width:90px">
+        <span style="font-size:0.55rem;color:var(--muted);flex-shrink:0">/mo</span>
+        <button class="btn-sm" style="color:var(--neg);flex-shrink:0" onclick="removeLedgerItem(${i})">✕</button>
+      </div>`;
+    }).join(''):
+    `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:0.4rem;font-style:italic">None — this era's COL is fully modeled${cfg.actualRentMo>0?' + actual rent':''}.</div>`}
   `;
   updateColPreview(cfg);
 }
@@ -3651,7 +3701,10 @@ canvas.addEventListener('mousemove',e=>{
     if(getColDisplayMode()==='pctSalary'&&sal>0){
       primary=`COL ${(v/sal*100).toFixed(0)}% of pay <span style="color:var(--muted);font-size:var(--fs-xs)">(${fmt(v)}/yr)</span>`;
     }
-    return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">${primary}</span>${yoyTxt}${gapHint}</div>`;
+    // Ledger note so the COL number never looks mysteriously inflated
+    const extrasYr=(colCfgForYear(yr).ledger||[]).reduce((s,it)=>s+(parseFloat(it.monthly)||0),0)*12;
+    const extrasTxt=extrasYr>0?` <span style="color:var(--muted);font-size:var(--fs-xs)">incl. ${fmtK(extrasYr)} extras</span>`:'';
+    return `<div style="margin-top:0.32rem;padding-top:0.32rem;border-top:1px solid var(--border);font-size:var(--fs-sm)"><span style="color:var(--col-color)">${primary}</span>${extrasTxt}${yoyTxt}${gapHint}</div>`;
   })();
   // Net raise vs COL and CPI — the $-figure punchline
   const netLine=(()=>{
