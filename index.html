@@ -38,18 +38,22 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
   border-bottom:1px solid var(--border);background:var(--s1);
   position:relative;z-index:10;
 }
-#cream-brand{display:inline-flex;align-items:center;gap:0.9rem;white-space:nowrap;margin-right:0.7rem;line-height:1;}
+#cream-brand{display:inline-flex;align-items:center;gap:0.9rem;white-space:nowrap;margin-right:0.7rem;line-height:1;flex-shrink:0;}
 .cream-mark{flex-shrink:0;display:block;width:112px;height:112px;}
 .cream-words{display:flex;flex-direction:column;justify-content:center;line-height:1;}
 #cream-brand h1{font-family:'Bebas Neue',cursive;font-size:3.6rem;color:var(--accent);letter-spacing:0.12em;line-height:1;}
 #cream-brand .cream-sub{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:0.22em;text-transform:uppercase;margin-top:6px;}
 .tbsep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
-.tb-stats{display:flex;gap:0;flex:1;}
-.tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);}
+/* Stats are the flexible region: they scroll when squeezed so the action
+   buttons (The Vault etc.) can never be pushed off-screen. min-width:0 lifts
+   the flex min-content floor; the mask fades the right edge as a scroll hint. */
+.tb-stats{display:flex;gap:0;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);}
+.tb-stats::-webkit-scrollbar{display:none;}
+.tb-stat{padding:0 1.1rem;border-right:1px solid var(--border);flex-shrink:0;white-space:nowrap;}
 .tb-stat:first-child{padding-left:0;}
 .tb-stat label{display:block;font-size:var(--fs-xs);letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
 .tb-stat value{display:block;font-size:var(--fs-lg);font-weight:500;}
-.tb-right{display:flex;gap:var(--sp-2);margin-left:auto;align-items:center;}
+.tb-right{display:flex;gap:var(--sp-2);margin-left:auto;align-items:center;flex-shrink:0;}
 /* inline-flex centering so button and label variants (Drop It wraps a file
    input in a <label>) share identical glyph alignment */
 .tbtn{display:inline-flex;align-items:center;justify-content:center;line-height:1;background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:var(--fs-sm);letter-spacing:0.07em;text-transform:uppercase;padding:0.32rem 0.75rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
@@ -377,6 +381,14 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
 #drawer-close:hover{color:var(--accent);border-color:var(--accent);}
 
 /* ── RESPONSIVE ── */
+/* Laptop widths: trim lower-value stats so the row rarely needs to scroll.
+   Priority kept on Total Earned, Trend, CAGR, and the Pulse chip. */
+@media (max-width: 1450px){
+  .tb-s-avg,.tb-s-real,.tb-s-yj{display:none;}
+}
+@media (max-width: 1200px){
+  .tb-s-peak{display:none;}
+}
 @media (max-width: 900px){
   #hamburger{display:inline-block;}
   body.sidebar-open #scrim,body.drawer-open #scrim{display:block;}
@@ -449,16 +461,16 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
   <div class="tbsep"></div>
   <div class="tb-stats">
     <div class="tb-stat"><label>Total Earned</label><value id="sTotal">—</value></div>
-    <div class="tb-stat"><label>Peak</label><value id="sPeak">—</value></div>
-    <div class="tb-stat"><label>Avg / yr</label><value id="sAvg">—</value></div>
-    <div class="tb-stat"><label>Real Growth</label><value id="sReal">—</value></div>
+    <div class="tb-stat tb-s-peak"><label>Peak</label><value id="sPeak">—</value></div>
+    <div class="tb-stat tb-s-avg"><label>Avg / yr</label><value id="sAvg">—</value></div>
+    <div class="tb-stat tb-s-real"><label>Real Growth</label><value id="sReal">—</value></div>
     <div class="tb-stat" title="Career Trend — log-linear regression through every year. Less noise than endpoint CAGR; reflects underlying growth rate."><label>Trend</label><value id="sTrend">—</value></div>
     <div class="tb-stat" title="Endpoint CAGR — first salary to current salary, compounded annually. Vulnerable to anomalous first or last year. Compare to Trend: when they diverge (Δ shown), one endpoint is noisy."><label>CAGR</label><value id="sCagr">—</value></div>
     <div class="tb-stat tb-alarm">
       <label>Pulse</label>
       <span id="alarmChip" data-level="unknown"><span class="alarm-emoji" id="alarmEmoji">—</span><span id="alarmLabel">—</span></span>
     </div>
-    <div class="tb-stat"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
+    <div class="tb-stat tb-s-yj"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
   </div>
   <div class="tb-right">
     <div style="display:flex;gap:0;">
