@@ -3075,20 +3075,30 @@ function drawChart(){
       const sy=j.years.filter(y=>yrs.includes(y)).sort((a,b)=>a-b);
       if(!sy.length)return;
       const firstIdx=allYrs.indexOf(sy[0]);
-      if(firstIdx>0)jb.push({x:xp(firstIdx),name:j.name,color:j.color});
+      const lastIdx=allYrs.indexOf(sy[sy.length-1]);
+      jb.push({bx:firstIdx>0?xp(firstIdx):null,mid:(xp(firstIdx)+xp(lastIdx))/2,name:j.name,color:j.color});
     });
-    jb.sort((a,b)=>a.x-b.x);
+    jb.sort((a,b)=>a.mid-b.mid);
     ctx.font='9px IBM Plex Mono,monospace';
+    // Boundary lines at each job's first year (none at the chart's left edge)
+    jb.forEach(b=>{
+      if(b.bx==null)return;
+      ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(b.bx,pad.top);ctx.lineTo(b.bx,pad.top+cH);ctx.stroke();ctx.setLineDash([]);
+    });
+    // Names center over each job's SPAN (map-label style) rather than its
+    // first year — labels spread out instead of clustering at boundaries,
+    // and the first job finally gets labeled. Min-gap walk still skips any
+    // name that would collide (short tenures at narrow widths yield first).
     let jbRight=-1e9;
     jb.forEach(b=>{
-      ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
-      ctx.beginPath();ctx.moveTo(b.x,pad.top);ctx.lineTo(b.x,pad.top+cH);ctx.stroke();ctx.setLineDash([]);
       const w=ctx.measureText(b.name).width;
-      if(b.x-w/2>jbRight+8){
+      const cx=Math.max(pad.left+w/2,Math.min(pad.left+cW-w/2,b.mid));
+      if(cx-w/2>jbRight+8){
         ctx.fillStyle=b.color;ctx.globalAlpha=0.7;ctx.textAlign='center';
-        ctx.fillText(b.name,b.x,pad.top-6);
+        ctx.fillText(b.name,cx,pad.top-6);
         ctx.globalAlpha=1;
-        jbRight=b.x+w/2;
+        jbRight=cx+w/2;
       }
     });
   }
