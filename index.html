@@ -832,26 +832,52 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
 
 <script>
 // ── MACRO DATA ────────────────────────────────────────────────────────────────
+// inf = annual-average CPI-U % change — the SAME convention the COL model's
+// indices use, so the COL-vs-CPI comparison is apples-to-apples. NOT December-
+// to-December: a career of annual salaries is earned/deflated across the whole
+// year, so annual-average is the correct deflator. Corrected 2026-07 from a
+// mixed Dec-to-Dec series; migrateInfToAnnualAvg() repairs saved data once.
 const DEFAULT_MACRO={
-  1993:{inf:0.027,gdp:2.8,evt:"Balanced Budget Act"},
-  1994:{inf:0.027,gdp:4.0,evt:null},1995:{inf:0.025,gdp:2.7,evt:null},
-  1996:{inf:0.033,gdp:3.8,evt:"Welfare reform"},1997:{inf:0.017,gdp:4.4,evt:"Fed raised rates"},
-  1998:{inf:0.016,gdp:4.5,evt:"LTCM crisis"},1999:{inf:0.027,gdp:4.8,evt:"Glass-Steagall repealed"},
-  2000:{inf:0.034,gdp:4.1,evt:"Tech bubble burst"},2001:{inf:0.016,gdp:1.0,evt:"Bush tax cut / 9/11"},
-  2002:{inf:0.024,gdp:1.7,evt:"War on Terror"},2003:{inf:0.019,gdp:2.9,evt:"JGTRRA"},
-  2004:{inf:0.033,gdp:3.8,evt:null},2005:{inf:0.034,gdp:3.5,evt:"Katrina / Bankruptcy Act"},
-  2006:{inf:0.025,gdp:2.9,evt:null},2007:{inf:0.041,gdp:1.9,evt:"Bank crisis"},
-  2008:{inf:0.001,gdp:-0.1,evt:"Financial crisis"},2009:{inf:0.027,gdp:-2.5,evt:"ARRA"},
-  2010:{inf:0.015,gdp:2.6,evt:"ACA, Dodd-Frank"},2011:{inf:0.030,gdp:1.6,evt:"Debt ceiling crisis"},
-  2012:{inf:0.017,gdp:2.2,evt:null},2013:{inf:0.015,gdp:1.8,evt:"Gov't shutdown"},
-  2014:{inf:0.008,gdp:2.5,evt:"QE ends"},2015:{inf:0.007,gdp:3.1,evt:"Oil price deflation"},
-  2016:{inf:0.021,gdp:1.7,evt:null},2017:{inf:0.021,gdp:2.3,evt:null},
-  2018:{inf:0.019,gdp:3.0,evt:null},2019:{inf:0.023,gdp:2.2,evt:null},
-  2020:{inf:0.014,gdp:-3.4,evt:"COVID-19"},2021:{inf:0.070,gdp:5.9,evt:"COVID-19 recovery"},
-  2022:{inf:0.065,gdp:1.9,evt:null},2023:{inf:0.034,gdp:null,evt:null},
-  2024:{inf:0.027,gdp:null,evt:null},2025:{inf:0.030,gdp:null,evt:null},
+  1993:{inf:0.030,gdp:2.8,evt:"Balanced Budget Act"},
+  1994:{inf:0.026,gdp:4.0,evt:null},1995:{inf:0.028,gdp:2.7,evt:null},
+  1996:{inf:0.029,gdp:3.8,evt:"Welfare reform"},1997:{inf:0.023,gdp:4.4,evt:"Fed raised rates"},
+  1998:{inf:0.016,gdp:4.5,evt:"LTCM crisis"},1999:{inf:0.022,gdp:4.8,evt:"Glass-Steagall repealed"},
+  2000:{inf:0.034,gdp:4.1,evt:"Tech bubble burst"},2001:{inf:0.028,gdp:1.0,evt:"Bush tax cut / 9/11"},
+  2002:{inf:0.016,gdp:1.7,evt:"War on Terror"},2003:{inf:0.023,gdp:2.9,evt:"JGTRRA"},
+  2004:{inf:0.027,gdp:3.8,evt:null},2005:{inf:0.034,gdp:3.5,evt:"Katrina / Bankruptcy Act"},
+  2006:{inf:0.032,gdp:2.9,evt:null},2007:{inf:0.029,gdp:1.9,evt:"Bank crisis"},
+  2008:{inf:0.038,gdp:-0.1,evt:"Financial crisis"},2009:{inf:-0.004,gdp:-2.5,evt:"ARRA"},
+  2010:{inf:0.016,gdp:2.6,evt:"ACA, Dodd-Frank"},2011:{inf:0.032,gdp:1.6,evt:"Debt ceiling crisis"},
+  2012:{inf:0.021,gdp:2.2,evt:null},2013:{inf:0.015,gdp:1.8,evt:"Gov't shutdown"},
+  2014:{inf:0.016,gdp:2.5,evt:"QE ends"},2015:{inf:0.001,gdp:3.1,evt:"Oil price deflation"},
+  2016:{inf:0.013,gdp:1.7,evt:null},2017:{inf:0.021,gdp:2.3,evt:null},
+  2018:{inf:0.024,gdp:3.0,evt:null},2019:{inf:0.018,gdp:2.2,evt:null},
+  2020:{inf:0.012,gdp:-3.4,evt:"COVID-19"},2021:{inf:0.047,gdp:5.9,evt:"COVID-19 recovery"},
+  2022:{inf:0.080,gdp:1.9,evt:null},2023:{inf:0.041,gdp:null,evt:null},
+  2024:{inf:0.030,gdp:null,evt:null},2025:{inf:0.029,gdp:null,evt:null},
   2026:{inf:null,gdp:null,evt:null},
 };
+// Legacy Dec-to-Dec inf values (pre-2026-07). Used only by the one-time
+// migration to recognize unedited years and lift them to annual-average.
+const _INF_LEGACY_DEC2DEC={1993:0.027,1994:0.027,1995:0.025,1996:0.033,1997:0.017,1998:0.016,1999:0.027,2000:0.034,2001:0.016,2002:0.024,2003:0.019,2004:0.033,2005:0.034,2006:0.025,2007:0.041,2008:0.001,2009:0.027,2010:0.015,2011:0.030,2012:0.017,2013:0.015,2014:0.008,2015:0.007,2016:0.021,2017:0.021,2018:0.019,2019:0.023,2020:0.014,2021:0.070,2022:0.065,2023:0.034,2024:0.027,2025:0.030};
+// Lift saved MACRO.inf from Dec-to-Dec to annual-average, ONCE. Only years
+// still at their legacy default get corrected — a value that differs means
+// you set it deliberately in the Macro tab, so it's left untouched. gdp/evt
+// are never touched.
+function migrateInfToAnnualAvg(){
+  try{
+    if(localStorage.getItem('cream_inf_convention')==='annual-avg')return;
+    let changed=0;
+    Object.keys(_INF_LEGACY_DEC2DEC).forEach(y=>{
+      const rec=MACRO[y];if(!rec||!DEFAULT_MACRO[y])return;
+      if(rec.inf!=null&&Math.abs(rec.inf-_INF_LEGACY_DEC2DEC[y])<1e-9){
+        rec.inf=DEFAULT_MACRO[y].inf;changed++;
+      }
+    });
+    localStorage.setItem('cream_inf_convention','annual-avg');
+    if(changed)saveState();
+  }catch(e){}
+}
 let MACRO=DEFAULT_MACRO;
 
 // ── DEFAULT MACRO EVENTS (curated, multi-year ranges where applicable) ───────
@@ -1075,6 +1101,7 @@ let salaries=_s.salaries;
 let jobs=_s.jobs;
 let nextId=_s.nextId;
 MACRO=_s.macro;
+migrateInfToAnnualAvg();
 let EVENTS=_s.events||[];
 let eventNextId=_s.eventNextId||1;
 if(_s.events==null){migrateEventsFromMacro();}
