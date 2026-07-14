@@ -148,6 +148,12 @@ body.resizing-chart *{cursor:ns-resize!important;}
 .cbtn.on-cum{border-color:var(--cum)!important;color:var(--cum)!important;}
 .cbtn.on-proj{border-color:var(--proj)!important;color:var(--proj)!important;}
 .cbtn.on-surplus{border-color:var(--surplus-color)!important;color:var(--surplus-color)!important;}
+/* Surplus dollar-lens selector — revealed inline only when Surplus is on */
+#surplusView{display:none;align-items:center;gap:2px;margin-left:3px;}
+#surplusView.show{display:inline-flex;}
+#surplusView .sv-lbl{font-size:var(--fs-xs);color:var(--muted);margin:0 1px 0 2px;text-transform:lowercase;letter-spacing:0.04em;}
+.sv-btn{padding:0.14rem 0.4rem!important;font-size:0.56rem!important;opacity:0.7;}
+.sv-btn.active{opacity:1;border-color:var(--surplus-color)!important;color:var(--surplus-color)!important;background:rgba(126,231,135,0.08);}
 .cbtn.on-inf{border-color:var(--inf-color)!important;color:var(--inf-color)!important;}
 .cbtn.on-gdp{border-color:var(--gdp-color)!important;color:var(--gdp-color)!important;}
 .cbtn.on-evt{border-color:var(--evt-color)!important;color:var(--evt-color)!important;}
@@ -530,7 +536,7 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
           <button class="cbtn" id="ov-today" onclick="toggleOv('today')" title="Every year's salary inflated forward to today's dollars — what your old paychecks would be worth now">New Money</button>
           <button class="cbtn" id="ov-pct"  onclick="toggleOv('pct')"  title="Your percentile rank vs all US individual earners">Percentile</button>
           <button class="cbtn" id="ov-cum"  onclick="toggleOv('cum')"  title="Cumulative lifetime earnings">Cumulative</button>
-          <button class="cbtn" id="ov-surplus" onclick="toggleOv('surplus')" title="Surplus — salary minus your era-aware cost of living, in today's dollars so eras compare. Pre-tax money above your costs (not a savings rate). Dips toward zero mark the tight years.">Surplus</button>
+          <button class="cbtn" id="ov-surplus" onclick="toggleOv('surplus')" title="Surplus — salary minus your era-aware cost of living. Pre-tax money above your costs (not a savings rate). Dips toward zero mark the tight years. Pick the dollar lens with the selector that appears.">Surplus</button><span id="surplusView" style="display:none"><span class="sv-lbl">in</span><button class="cbtn sv-btn" data-sv="nominal" onclick="setSurplusView('nominal')" title="Raw dollars of each year — the visible gap between the salary bar and the COL line">Nom</button><button class="cbtn sv-btn" data-sv="old" onclick="setSurplusView('old')" title="Deflated to first-year (base) dollars — Old Money lens">Old $</button><button class="cbtn sv-btn" data-sv="new" onclick="setSurplusView('new')" title="Inflated to the latest year — today's dollars, New Money lens">New $</button></span>
           <button class="cbtn" id="ov-proj" onclick="toggleOv('proj')" title="5-year linear projection from recent trend">Projection</button>
         </div>
         <div class="ctrl-group ctrl-context">
@@ -1162,6 +1168,11 @@ function cumEarnings(){
 // same thing. Returns {nominal, real} per year; real is null outside 1993-2026
 // where COL isn't defined. NOTE: COL is cost of living, not taxes/savings —
 // this is pre-tax money above your costs, not a savings rate.
+// Returns each year's surplus in all three dollar lenses so the view selector
+// can switch without recompute: nominal (raw year dollars, = the visible
+// salary-bar minus COL-line gap), old (deflated to first-year/base dollars,
+// the Old Money convention), new (inflated to the latest year, the New Money
+// convention). old/new are the same lenses realSalaries()/todaysSalaries() use.
 function surplusSeries(){
   const yrs=sortedYrs();let idx=1.0;const cpi={};cpi[yrs[0]]=1.0;
   for(let i=1;i<yrs.length;i++){idx*=(1+(MACRO[yrs[i]]?.inf??0));cpi[yrs[i]]=idx;}
@@ -1169,11 +1180,22 @@ function surplusSeries(){
   const r={};
   yrs.forEach(yr=>{
     const col=(yr>=1993&&yr<=2026)?colForYear(yr):null;
-    if(col==null){r[yr]={nominal:null,real:null};return;}
+    if(col==null){r[yr]={nominal:null,old:null,new:null};return;}
     const nominal=salaries[yr]-col;
-    r[yr]={nominal,real:nominal*lastFactor/cpi[yr]};
+    r[yr]={nominal,old:nominal/cpi[yr],new:nominal*lastFactor/cpi[yr]};
   });
   return r;
+}
+// Which dollar lens the Surplus line renders in: 'nominal' | 'old' | 'new'
+let surplusView=(()=>{try{const v=localStorage.getItem('cream_surplus_view');return['nominal','old','new'].includes(v)?v:'new';}catch{return 'new';}})();
+const SURPLUS_VIEW_LABEL={nominal:'nominal',old:'old $',new:'today $'};
+function setSurplusView(v){
+  if(!['nominal','old','new'].includes(v))return;
+  surplusView=v;
+  try{localStorage.setItem('cream_surplus_view',v);}catch(e){}
+  document.querySelectorAll('#surplusView .sv-btn').forEach(b=>b.classList.toggle('active',b.dataset.sv===v));
+  const meta=OV_META&&OV_META.surplus;if(meta)meta.label='Surplus ('+SURPLUS_VIEW_LABEL[v]+')';
+  drawChart();renderOvLegend();
 }
 function projectSalaries(nBack=5,nFwd=5){
   const yrs=sortedYrs(),recent=yrs.slice(-nBack);
@@ -3482,12 +3504,12 @@ function drawChart(){
     ctx.fillText(fmtK(todayVals[0])+' new$',fx+5,fy-4);
   }
   if(ov.surplus){
-    // Real surplus (today's $) on the main dollar axis — the chart's x-axis
-    // (ys(0)) is the breakeven line. Cascades with salary smoothing since it's
-    // a salary-derivative dollar series. Underwater years (COL>salary) clamp
-    // to the baseline and flag red — you couldn't cover life on salary alone.
+    // Surplus on the main dollar axis in the selected lens (nominal/old/new) —
+    // the chart's x-axis (ys(0)) is the breakeven line. Cascades with salary
+    // smoothing since it's a salary-derivative dollar series. Underwater years
+    // (COL>salary) clamp to the baseline and flag red.
     const ss=surplusSeries();
-    const realArr=yrs.map(yr=>ss[yr]?ss[yr].real:null);
+    const realArr=yrs.map(yr=>ss[yr]?ss[yr][surplusView]:null);
     const sm=smoothVals(realArr.map(v=>v==null?0:v));
     const pts=[];
     yrs.forEach((yr,i)=>{
@@ -3509,7 +3531,7 @@ function drawChart(){
       });
       const lastReal=realArr[realArr.length-1];
       const[lx,ly]=pts[pts.length-1];
-      _endQ.push({x:lx+5,y:ly+3,text:(lastReal!=null?fmtK(lastReal):'—')+' surplus',color:'rgba(126,231,135,0.95)'});
+      _endQ.push({x:lx+5,y:ly+3,text:(lastReal!=null?fmtK(lastReal):'—')+' surplus ('+SURPLUS_VIEW_LABEL[surplusView]+')',color:'rgba(126,231,135,0.95)'});
     }
   }
   if(ov.cum){
@@ -3853,13 +3875,13 @@ canvas.addEventListener('mousemove',e=>{
   // Surplus readout — only when the overlay is on, to keep the default tooltip lean
   const surplusLine=(()=>{
     if(!ov.surplus||isProj||yr<1993||yr>2026)return'';
-    const col=colForYear(yr);if(col==null)return'';
-    const nominal=sal-col;
-    const ss=surplusSeries();const real=ss[yr]?ss[yr].real:null;
-    const c=nominal>=0?'var(--surplus-color)':'var(--neg)';
-    const realTxt=(real!=null&&Math.abs(real-nominal)>500)?` <span style="color:var(--muted);font-size:var(--fs-xs)">(${fmt(Math.round(real))} today)</span>`:'';
-    const under=nominal<0?' <span style="color:var(--neg);font-size:var(--fs-xs)">underwater</span>':'';
-    return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">Surplus</span><span style="color:${c}">${nominal>=0?'+':'−'}${fmt(Math.abs(Math.round(nominal)))}/yr</span>${realTxt}${under}</div>`;
+    const ss=surplusSeries();const e=ss[yr];if(!e||e[surplusView]==null)return'';
+    const val=e[surplusView];               // active-lens value (what the line shows)
+    const c=val>=0?'var(--surplus-color)':'var(--neg)';
+    // Show the raw year-dollars gap alongside when viewing a deflated lens
+    const nomTxt=(surplusView!=='nominal'&&e.nominal!=null&&Math.abs(e.nominal-val)>500)?` <span style="color:var(--muted);font-size:var(--fs-xs)">(${fmt(Math.round(e.nominal))} nominal)</span>`:'';
+    const under=val<0?' <span style="color:var(--neg);font-size:var(--fs-xs)">underwater</span>':'';
+    return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">Surplus ${SURPLUS_VIEW_LABEL[surplusView]}</span><span style="color:${c}">${val>=0?'+':'−'}${fmt(Math.abs(Math.round(val)))}/yr</span>${nomTxt}${under}</div>`;
   })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
@@ -3960,8 +3982,16 @@ function toggleOv(k){
     if(ov[k])btn.classList.add('on-'+k);else btn.classList.remove('on-'+k);
     btn.setAttribute('aria-pressed',String(ov[k]));
   }
+  if(k==='surplus')syncSurplusViewUI();
   saveOvState();syncCtxUI();
   drawChart();renderOvLegend();
+}
+// Reveal the dollar-lens selector only while Surplus is on; mark the active lens
+function syncSurplusViewUI(){
+  const el=document.getElementById('surplusView');if(!el)return;
+  el.classList.toggle('show',!!ov.surplus);
+  el.querySelectorAll('.sv-btn').forEach(b=>b.classList.toggle('active',b.dataset.sv===surplusView));
+  const meta=OV_META&&OV_META.surplus;if(meta)meta.label='Surplus ('+SURPLUS_VIEW_LABEL[surplusView]+')';
 }
 
 // ── CONTEXT PRESETS + CUSTOM PICKER ──────────────────────────────────────────
@@ -4553,6 +4583,7 @@ setSTab(_initialTab);
 document.body.classList.toggle('empty',sortedYrs().length===0);
 renderOvPicker();
 Object.keys(ov).forEach(k=>{const b=document.getElementById('ov-'+k);if(b){b.classList.toggle('on-'+k,ov[k]);b.setAttribute('aria-pressed',String(ov[k]));}});
+syncSurplusViewUI();
 ['none','ma3','ma5','spline'].forEach(k=>{const b=document.getElementById('sm-'+k);b.classList.toggle('active',k===smoothing);b.setAttribute('aria-pressed',String(k===smoothing));});
 syncCtxUI();
 updateStats();renderLegend();buildTable();renderOvLegend();tmInit();
