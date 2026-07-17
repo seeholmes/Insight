@@ -987,6 +987,12 @@ const PCTILE_THRESHOLDS={
   2021:[20000,41000,74000,117000,158000,330000],2022:[21000,44000,79000,126000,170000,360000],
   2023:[22000,46000,83000,132000,178000,380000],2025:[23000,48000,87000,138000,186000,400000],
 };
+// Last year PCTILE_THRESHOLDS reflects PUBLISHED Census CPS ASEC data. Census
+// releases year Y's income distribution in ~Sept Y+1, so the current/most-recent
+// years are always estimates. Rails draw SOLID through this year and DASHED
+// beyond (estimate/extrapolation). Bump this — and add the real anchor above —
+// as new data publishes, and the solid line automatically extends.
+const PCTILE_LAST_REAL_YEAR=2023;
 
 function getSocialClass(pct){
   if(pct>=99)return{label:'Top 1%',      color:'#f5e97e'};
@@ -3124,16 +3130,32 @@ function drawChart(){
   }
 
   // THE LADDER — percentile rails in actual dollars, drawn under the bars so
-  // they read as reference lines, not data series. Long-dash is the "rail"
-  // language; end labels ride the collision-safe queue.
+  // they read as reference lines, not data series. SOLID through the last year
+  // of published Census data; DASHED beyond, where the values are estimated /
+  // extrapolated (the flat 2026 tail is a clamp, not a wage plateau). End
+  // labels ride the collision-safe queue and flag "est" when the tip is dashed.
   Object.entries(LADDER_RUNGS).forEach(([k,r])=>{
     if(!ov[k])return;
-    const pts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),ys(ladderValueFor(r.idx,yr))]);
-    ctx.strokeStyle=r.color;ctx.globalAlpha=k==='lad99'?0.8:0.55;ctx.lineWidth=1.4;ctx.setLineDash([7,4]);
-    ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
-    ctx.setLineDash([]);ctx.globalAlpha=1;
+    const pts=yrs.map(yr=>[xp(allYrs.indexOf(yr)),ys(ladderValueFor(r.idx,yr)),yr]);
+    ctx.strokeStyle=r.color;ctx.globalAlpha=k==='lad99'?0.8:0.55;ctx.lineWidth=1.4;
+    // Solid = real data (year ≤ last real anchor); the boundary point is shared
+    // with the dashed run so the line stays continuous through the transition.
+    const solid=pts.filter(p=>p[2]<=PCTILE_LAST_REAL_YEAR);
+    const dashed=pts.filter(p=>p[2]>=PCTILE_LAST_REAL_YEAR);
+    if(solid.length>1){
+      ctx.setLineDash([]);
+      ctx.beginPath();solid.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+    }
+    if(dashed.length>1){
+      ctx.setLineDash([5,4]);
+      ctx.beginPath();dashed.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.globalAlpha=1;
+    const lastYr=yrs[yrs.length-1];
     const[lx,ly]=pts[pts.length-1];
-    _endQ.push({x:lx+5,y:ly+3,text:r.label+' '+fmtK(ladderValueFor(r.idx,yrs[yrs.length-1])),color:r.color});
+    const estTag=lastYr>PCTILE_LAST_REAL_YEAR?' est':'';
+    _endQ.push({x:lx+5,y:ly+3,text:r.label+' '+fmtK(ladderValueFor(r.idx,lastYr))+estTag,color:r.color});
   });
 
   // Job boundary lines + names. Boundaries collect first (jobs array isn't
@@ -3883,9 +3905,16 @@ canvas.addEventListener('mousemove',e=>{
     const under=val<0?' <span style="color:var(--neg);font-size:var(--fs-xs)">underwater</span>':'';
     return `<div style="margin-top:0.18rem;font-size:var(--fs-sm)"><span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:0.06em;text-transform:uppercase;margin-right:0.4rem">Surplus ${SURPLUS_VIEW_LABEL[surplusView]}</span><span style="color:${c}">${val>=0?'+':'−'}${fmt(Math.abs(Math.round(val)))}/yr</span>${nomTxt}${under}</div>`;
   })();
+  // Ladder est note — flags that percentile rails are estimated past the last
+  // published Census year (only when a rail is on and the year is in that range)
+  const ladderEstLine=(()=>{
+    const anyLadder=['lad25','lad50','lad75','lad90','lad99'].some(k=>ov[k]);
+    if(!anyLadder||yr<=PCTILE_LAST_REAL_YEAR)return'';
+    return `<div style="margin-top:0.18rem;font-size:var(--fs-xs);color:var(--muted);font-style:italic">Rails estimated — no Census data past ${PCTILE_LAST_REAL_YEAR}</div>`;
+  })();
   const jobLine=j?`<div style="margin-top:0.35rem;font-size:var(--fs-sm)"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:${j.color};margin-right:5px;vertical-align:middle"></span>${j.name}</div>`:'';
   const evLine=(()=>{const ev=eventsForYear(yr);if(!ev.length)return'';return '<div style="margin-top:0.35rem;border-top:1px solid var(--border);padding-top:0.32rem">'+ev.map(e=>{const rng=e.startYear===e.endYear?'':` <span style="color:var(--muted)">(${e.startYear}–${e.endYear})</span>`;return `<div style="color:var(--evt-color);font-size:var(--fs-sm)">${e.label}${rng}</div>`;}).join('')+'</div>';})();
-  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${pulseLine}${smoothLine}${secondaryLine}${colLine}${netLine}${mwgLine}${surplusLine}${jobLine}${evLine}`;
+  tip.innerHTML=`<strong>${yr}${isProj?' <span style="color:var(--proj);font-size:var(--fs-xs)">projected</span>':''}</strong>${heroSal}${heroPct}${pulseLine}${smoothLine}${secondaryLine}${colLine}${netLine}${mwgLine}${surplusLine}${ladderEstLine}${jobLine}${evLine}`;
   tip.style.opacity=1;
   tip.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
   tip.style.top=Math.min(e.clientY-10,window.innerHeight-200)+'px';
