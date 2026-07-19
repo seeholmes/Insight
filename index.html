@@ -3526,25 +3526,38 @@ function drawChart(){
     ctx.fillText(fmtK(todayVals[0])+' new$',fx+5,fy-4);
   }
   if(ov.surplus){
-    // Surplus on the main dollar axis in the selected lens (nominal/old/new) —
-    // the chart's x-axis (ys(0)) is the breakeven line. Cascades with salary
-    // smoothing since it's a salary-derivative dollar series. Underwater years
-    // (COL>salary) clamp to the baseline and flag red.
+    // Surplus in the selected lens (nominal/old/new). Uses the SAME dollars→
+    // pixels scale as the salary axis (so magnitude is comparable), but with its
+    // own zero line lifted just enough to reserve room for the deepest underwater
+    // (COL>salary) dip — so the line truly goes below zero instead of clamping.
     const ss=surplusSeries();
     const realArr=yrs.map(yr=>ss[yr]?ss[yr][surplusView]:null);
     const sm=smoothVals(realArr.map(v=>v==null?0:v));
+    const present=sm.filter((v,i)=>realArr[i]!=null);
+    const sMin=Math.min(0,...present);                 // ≤0; drives the reservation
+    const perDollar=cH/maxNom;                          // main-axis pixels per dollar
+    const zeroY=pad.top+cH+sMin*perDollar;              // lift zero up by |sMin|px
+    const clampY=y=>Math.max(pad.top,Math.min(pad.top+cH,y));
+    const sY=v=>clampY(zeroY-v*perDollar);
+    // Zero / breakeven baseline + right-margin marker
+    ctx.strokeStyle='rgba(126,231,135,0.28)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.moveTo(pad.left,zeroY);ctx.lineTo(pad.left+cW,zeroY);ctx.stroke();ctx.setLineDash([]);
+    _rmQ.push({y:zeroY+3,text:'$0',color:'rgba(126,231,135,0.6)'});
     const pts=[];
-    yrs.forEach((yr,i)=>{
-      if(realArr[i]==null)return;
-      const v=sm[i];
-      pts.push([xp(allYrs.indexOf(yr)),Math.min(pad.top+cH,ys(Math.max(0,v))),v]);
-    });
+    yrs.forEach((yr,i)=>{if(realArr[i]==null)return;pts.push([xp(allYrs.indexOf(yr)),sY(sm[i]),sm[i]]);});
     if(pts.length){
-      // Breathing-room area under the line
+      // Green cushion fill — only the positive area (clamp fill edge at zero)
       ctx.fillStyle='rgba(126,231,135,0.13)';ctx.beginPath();
-      ctx.moveTo(pts[0][0],pad.top+cH);
-      pts.forEach(([x,y])=>ctx.lineTo(x,y));
-      ctx.lineTo(pts[pts.length-1][0],pad.top+cH);ctx.closePath();ctx.fill();
+      ctx.moveTo(pts[0][0],zeroY);
+      pts.forEach(([x,y])=>ctx.lineTo(x,Math.min(y,zeroY)));
+      ctx.lineTo(pts[pts.length-1][0],zeroY);ctx.closePath();ctx.fill();
+      // Red deficit fill — only the underwater area (below zero)
+      if(sMin<0){
+        ctx.fillStyle='rgba(235,87,87,0.13)';ctx.beginPath();
+        ctx.moveTo(pts[0][0],zeroY);
+        pts.forEach(([x,y])=>ctx.lineTo(x,Math.max(y,zeroY)));
+        ctx.lineTo(pts[pts.length-1][0],zeroY);ctx.closePath();ctx.fill();
+      }
       ctx.strokeStyle='rgba(126,231,135,0.95)';ctx.lineWidth=2.4;
       drawSeries(pts.map(p=>[p[0],p[1]]),ctx);ctx.stroke();
       pts.forEach(([x,y,v])=>{
