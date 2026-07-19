@@ -3543,9 +3543,14 @@ function drawChart(){
     const realArr=yrs.map(yr=>ss[yr]?ss[yr][surplusView]:null);
     const sm=smoothVals(realArr.map(v=>v==null?0:v));
     const present=sm.filter((v,i)=>realArr[i]!=null);
-    const sMin=Math.min(0,...present);                 // ≤0; drives the reservation
-    const perDollar=cH/maxNom;                          // main-axis pixels per dollar
-    const zeroY=pad.top+cH+sMin*perDollar;              // lift zero up by |sMin|px
+    // Stable geometry: the zero line and scale depend ONLY on the salary axis
+    // (maxNom) and whether ANY year is underwater — never on the DEPTH of the
+    // deepest deficit. So editing one era can't vertically shift another era's
+    // points. When underwater exists, reserve a fixed 25% band below zero.
+    const anyNeg=present.some(v=>v<0);
+    const negFrac=anyNeg?0.25:0;
+    const zeroY=pad.top+cH*(1-negFrac);                 // fixed; = chart bottom when all-positive
+    const perDollar=cH*(1-negFrac)/maxNom;              // positive-region scale, salary-based
     const clampY=y=>Math.max(pad.top,Math.min(pad.top+cH,y));
     const sY=v=>clampY(zeroY-v*perDollar);
     // Zero / breakeven baseline + right-margin marker
@@ -3561,7 +3566,7 @@ function drawChart(){
       pts.forEach(([x,y])=>ctx.lineTo(x,Math.min(y,zeroY)));
       ctx.lineTo(pts[pts.length-1][0],zeroY);ctx.closePath();ctx.fill();
       // Red deficit fill — only the underwater area (below zero)
-      if(sMin<0){
+      if(anyNeg){
         ctx.fillStyle='rgba(235,87,87,0.13)';ctx.beginPath();
         ctx.moveTo(pts[0][0],zeroY);
         pts.forEach(([x,y])=>ctx.lineTo(x,Math.max(y,zeroY)));
