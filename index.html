@@ -16,7 +16,7 @@
   --pos:#6fcf97;--neg:#eb5757;
   --real:#7eb8f5;--pct:#c47ef5;--cum:#ff9b4d;--proj:#f5e97e;
   /* Chart overlay colors (consolidated; was hardcoded inline) */
-  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#8ea7c9;--u6-color:#62799b;--cph-color:#5fb8a0;--surplus-color:#7ee787;
+  --inf-color:#f0c060;--gdp-color:#6fcf97;--cuminf-color:#ff7f7f;--evt-color:#9b8df5;--col-color:#f0a800;--today-color:#4ecdc4;--mwg-color:#d678a1;--cmwg-color:#b04878;--u3-color:#8ea7c9;--u6-color:#62799b;--cph-color:#5fb8a0;--surplus-color:#7ee787;--era-color:#7d8ba1;
   /* Layout */
   --sidebar-w:300px;--drawer-w:400px;--topbar-h:128px;--tap:44px;--gap:12px;
   /* Type scale */
@@ -161,6 +161,7 @@ body.resizing-chart *{cursor:ns-resize!important;}
 .cbtn.on-today{border-color:var(--today-color)!important;color:var(--today-color)!important;}
 .cbtn.on-classBands{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--s2);}
 .cbtn.on-recession{border-color:var(--neg)!important;color:var(--neg)!important;}
+.cbtn.on-eraBands{border-color:var(--era-color)!important;color:var(--era-color)!important;}
 .cbtn.on-medianWage{border-color:var(--mwg-color)!important;color:var(--mwg-color)!important;}
 .cbtn.on-cumMedianWage{border-color:var(--cmwg-color)!important;color:var(--cmwg-color)!important;}
 .cbtn.on-u3{border-color:var(--u3-color)!important;color:var(--u3-color)!important;}
@@ -1126,7 +1127,7 @@ if(_s.recessions==null){
   RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
   recessionNextId=RECESSIONS.length+1;
 }
-let ov={col:false,real:false,today:false,pct:false,cum:false,surplus:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,lad25:false,lad50:false,lad75:false,lad90:false,lad99:false,evt:false,classBands:false,recession:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,surplus:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,lad25:false,lad50:false,lad75:false,lad90:false,lad99:false,evt:false,classBands:false,recession:false,eraBands:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -2826,7 +2827,7 @@ function addColEra(){
   // New era clones the previous life (you usually change one thing at a time);
   // starts at the current year, or just after the last era if that's later
   const start=Math.min(2026,Math.max(last.startYear+1,new Date().getFullYear()));
-  eras.push({startYear:start,cfg:{...last.cfg}});
+  eras.push({startYear:start,label:'',cfg:{...last.cfg}});
   saveColEras(eras);
   selColEra=eras.indexOf(eras.find(e=>e.startYear===start&&e!==last));
   if(selColEra<0)selColEra=eras.length-1;
@@ -2850,6 +2851,16 @@ function setColEraStart(raw){
   saveColEras(eras);            // re-sorts
   selColEra=eras.indexOf(era);  // follow the era to its new slot
   renderColPanel();drawChart();
+}
+// Custom era label — names the life-chapter; shown on the Era Bands overlay and
+// the era chips. Surgical update so the input keeps focus while typing.
+function setColEraLabel(raw){
+  const eras=loadColEras();if(!eras)return;
+  eras[selColEra].label=raw;
+  saveColEras(eras);
+  const chip=document.getElementById('eraChip'+selColEra);
+  if(chip){const e=eras[selColEra];const nx=eras[selColEra+1];const end=nx?nx.startYear-1:'now';chip.textContent=(raw.trim()||`${e.startYear}–${end}`);}
+  if(ov.eraBands)drawChart();
 }
 // ── THE LEDGER — era extras CRUD ─────────────────────────────────────────────
 // Expenses the model has no concept of (tuition, childcare, elder care,
@@ -2926,10 +2937,12 @@ function renderColPanel(){
   const sourceTag=stored?'<span style="color:var(--pos)">●</span> Saved profile':'<span style="color:var(--muted)">○</span> Default profile (not yet saved — edit any field to save)';
   // Era strip: one chip per life-chapter; the form below edits the selected one
   const eraList=eras||[{startYear:1993,cfg}];
+  const _esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const eraChips=eraList.map((e,i)=>{
     const end=(i<eraList.length-1)?eraList[i+1].startYear-1:'now';
     const sel=i===selColEra;
-    return `<button class="btn-sm ${sel?'primary':''}" style="flex:0 0 auto" onclick="selectColEra(${i})" data-hint="Era ${i+1}: ${e.startYear}–${end}. ${e.cfg.housing==='own'?'Owning':'Renting'}, ZIP ${e.cfg.zip||'—'}">${e.startYear}–${end}</button>`;
+    const lbl=(e.label||'').trim();
+    return `<button id="eraChip${i}" class="btn-sm ${sel?'primary':''}" style="flex:0 0 auto" onclick="selectColEra(${i})" data-hint="Era ${i+1}: ${e.startYear}–${end}${lbl?' · '+_esc(lbl):''}. ${e.cfg.housing==='own'?'Owning':'Renting'}, ZIP ${e.cfg.zip||'—'}">${_esc(lbl)||`${e.startYear}–${end}`}</button>`;
   }).join('');
   el.innerHTML=`
     <div id="colStatus" style="font-size:0.55rem;color:var(--muted);margin-bottom:0.55rem;letter-spacing:0.06em;text-transform:uppercase">Status: ${sourceTag}</div>
@@ -2942,6 +2955,9 @@ function renderColPanel(){
     <div class="frow"><span class="flbl" style="width:80px">Era starts</span>
       <input class="finput" type="number" min="1993" max="2026" value="${eraList[selColEra].startYear}" oninput="setColEraStart(this.value)" data-hint="First year this lifestyle applied. Years before your first era backcast with that era's profile.">
       ${eraList.length>1?`<button class="btn-sm" style="flex:0 0 auto;color:var(--neg)" onclick="deleteColEra()">✕ Delete era</button>`:''}
+    </div>
+    <div class="frow"><span class="flbl" style="width:80px">Era label</span>
+      <input class="finput" type="text" maxlength="40" value="${_esc(eraList[selColEra].label)}" placeholder="e.g. Chicago apartment" oninput="setColEraLabel(this.value)" data-hint="Name this chapter — shows on the chart when the Era Bands overlay is on, and on the era chip above.">
     </div>
     <div style="border-top:1px solid var(--border);margin:0.55rem 0 0.7rem"></div>
 
@@ -3136,6 +3152,44 @@ function drawChart(){
     // Caption
     ctx.fillStyle='rgba(221,219,228,0.5)';ctx.font='italic 9px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText('Bands: US income percentile classes',pad.left+6,pad.top+12);
+  }
+
+  // ERA BANDS — shade each COL life-era as a labeled vertical band. Era 0 covers
+  // from the chart's left edge (its config backcasts the pre-first-era years);
+  // each later era spans from its start boundary to the next. Alternating tint +
+  // a boundary line; the custom label (or year range) sits at the band's top.
+  if(ov.eraBands){
+    const _eras=loadColEras();
+    if(_eras&&_eras.length){
+      const minYr=allYrs[0],maxYr=allYrs[allYrs.length-1];
+      const xForYr=yr=>{
+        const c=Math.max(minYr,Math.min(maxYr,yr));
+        const idx=allYrs.indexOf(c);
+        if(idx>=0)return xp(idx);
+        let lo=0;for(let i=0;i<allYrs.length;i++){if(allYrs[i]<=c)lo=i;}
+        const hi=Math.min(lo+1,allYrs.length-1);
+        const t=(c-allYrs[lo])/((allYrs[hi]-allYrs[lo])||1);
+        return xp(lo)+(xp(hi)-xp(lo))*t;
+      };
+      _eras.forEach((e,i)=>{
+        const leftX=i===0?pad.left:xForYr(e.startYear);
+        const rightX=(i<_eras.length-1)?xForYr(_eras[i+1].startYear):pad.left+cW;
+        if(rightX<=leftX)return;
+        ctx.fillStyle=i%2===0?'rgba(125,139,161,0.05)':'rgba(125,139,161,0.11)';
+        ctx.fillRect(leftX,pad.top,rightX-leftX,cH);
+        if(i>0){
+          ctx.strokeStyle='rgba(125,139,161,0.35)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+          ctx.beginPath();ctx.moveTo(leftX,pad.top);ctx.lineTo(leftX,pad.top+cH);ctx.stroke();ctx.setLineDash([]);
+        }
+        const end=i<_eras.length-1?_eras[i+1].startYear-1:'now';
+        const lbl=(e.label||'').trim()||`${e.startYear}–${end}`;
+        ctx.save();
+        ctx.beginPath();ctx.rect(leftX,pad.top,rightX-leftX,cH);ctx.clip();
+        ctx.fillStyle='rgba(190,199,213,0.9)';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='left';
+        ctx.fillText(lbl,leftX+4,pad.top+cH-6);
+        ctx.restore();
+      });
+    }
   }
 
   // THE LADDER — percentile rails in actual dollars, drawn under the bars so
@@ -4054,7 +4108,7 @@ function syncSurplusViewUI(){
 // The 11 context overlays are driven by story-presets (each answers a career
 // question) plus a grouped Custom popover. Lines-group overlays are untouched
 // by presets — they're views of YOUR money, not context.
-const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','lad25','lad50','lad75','lad90','lad99','evt','classBands','recession'];
+const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','lad25','lad50','lad75','lad90','lad99','evt','classBands','recession','eraBands'];
 const OV_PRESETS={
   clean:[],                                              // just show me my money
   prices:['inf','cuminf','recession'],                   // did I outrun CPI?
@@ -4069,7 +4123,7 @@ const OV_PICKER_GROUPS=[
   {name:'Labor',keys:['u3','u6']},
   {name:'The Ladder',keys:['lad25','lad50','lad75','lad90','lad99']},
   {name:'Economy',keys:['gdp','recession']},
-  {name:'Story',keys:['evt','classBands']},
+  {name:'Story',keys:['evt','classBands','eraBands']},
 ];
 // Long-form descriptions (former button titles) surfaced in the picker rows
 const OV_INFO={
@@ -4088,6 +4142,7 @@ const OV_INFO={
   lad99:'p99 US earner wage — the 1% line. Heads up: turning this on roughly doubles the y-axis.',
   evt:'Macro events as colored bands across their date ranges',
   classBands:'US income class bands shaded behind the chart',
+  eraBands:'Shade each COL life-era as a labeled vertical band (set labels in The Vault → COL)',
   recession:'NBER recession years — 2001 (Dot-com), 2008–09 (GFC), 2020 (COVID)',
 };
 function applyPreset(name){
@@ -4228,6 +4283,7 @@ const OV_META={
   lad99:{label:'The 1% Line',color:LADDER_RUNGS.lad99.color},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
+  eraBands:{label:'Era Bands',color:_cssVar('--era-color')||'#7d8ba1'},
   recession:{label:'Recessions',color:_cssVar('--neg')||'#eb5757'},
 };
 function renderOvLegend(){
