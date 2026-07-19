@@ -2689,7 +2689,11 @@ function calcColForYear(cfg,y){
     }
   } else {
     const loan=cfg.homePrice*0.80,r=(cfg.interestRate/100)/12;
-    const annPI=(r===0?loan/360:loan*(r*Math.pow(1+r,360))/(Math.pow(1+r,360)-1))*12;
+    // Interest-only: just interest on the balance, no principal (lower outflow).
+    // Otherwise a fully-amortizing 30-year (360-month) principal+interest payment.
+    const annPI=cfg.interestOnly
+      ? loan*(cfg.interestRate/100)
+      : (r===0?loan/360:loan*(r*Math.pow(1+r,360))/(Math.pow(1+r,360)-1))*12;
     const purHVI=_COL_HVI[cfg.purchaseYear]??1;
     const curVal=cfg.homePrice*((_COL_HVI[y]??_COL_HVI[2026])/purHVI);
     housing=annPI+curVal*0.011+(cfg.homePrice*0.005)*(inf/(_COL_INF_GEN[cfg.purchaseYear]??1))+curVal*0.010;
@@ -2793,6 +2797,7 @@ function updateColField(field,raw){
     if(!n||n<1993||n>2026)return; // ignore mid-typing / out-of-range values
     v=n;
   }
+  else if(field==='interestOnly')v=!!raw; // '1' → true, '' → false
   cfg[field]=v;
   // First rent entry anchors "as of" to the era start so the ratio math is
   // grounded even if the user never touches the year field
@@ -2801,8 +2806,8 @@ function updateColField(field,raw){
     const asOf=document.getElementById('colRentAsOf');if(asOf)asOf.value=cfg.rentAsOf;
   }
   saveColEras(eras);
-  // Housing toggle changes which fields appear/disappear → full re-render
-  if(field==='housing'){renderColPanel();drawChart();return;}
+  // Housing / loan-type toggles re-render so the active button state updates
+  if(field==='housing'||field==='interestOnly'){renderColPanel();drawChart();return;}
   // Other fields: surgical inline updates so focused input keeps focus
   if(field==='chargingMode'){
     document.querySelectorAll('[data-charge]').forEach(b=>b.classList.toggle('primary',b.dataset.charge===v));
@@ -2964,6 +2969,10 @@ function renderColPanel(){
       </div>
       <div class="frow"><span class="flbl" style="width:80px">Purchased</span>
         <input class="finput" type="number" value="${cfg.purchaseYear||2020}" oninput="updateColField('purchaseYear',this.value)">
+      </div>
+      <div class="frow"><span class="flbl" style="width:80px">Loan type</span>
+        <button class="btn-sm ${!cfg.interestOnly?'primary':''}" style="flex:1" onclick="updateColField('interestOnly','')" data-hint="Standard 30-year mortgage: principal + interest. Payment pays down the loan.">Amortizing</button>
+        <button class="btn-sm ${cfg.interestOnly?'primary':''}" style="flex:1" onclick="updateColField('interestOnly','1')" data-hint="Interest-only: you pay just the interest on the balance, no principal — a lower payment. Set this on the era(s) covering your interest-only period.">Interest-only</button>
       </div>
     `:`
       <div class="frow"><span class="flbl" style="width:80px">Rent $/mo</span>
