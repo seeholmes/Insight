@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0c0f">
 <title>CREAM</title>
 <link rel="icon" type="image/png" sizes="64x64" href="cream-logo-64.png">
 <link rel="apple-touch-icon" href="cream-logo-256.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -452,6 +453,512 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
   .leg-item{padding:0.5rem;}
   #tip{pointer-events:auto;}
 }
+
+/* ── PREMIUM EDITORIAL POLISH ─────────────────────────────────────────────
+   Brand language stays playful; the product surface stays disciplined.
+   This layer intentionally overrides the original rules without touching
+   chart math, storage, or interaction behavior. */
+:root{
+  --bg:#0a0c0f;
+  --s1:#10141a;
+  --s2:#161b22;
+  --s3:#1d242d;
+  --border:#252d38;
+  --border2:#3b4654;
+  --text:#f1f0eb;
+  --muted:#8c95a3;
+  --accent:#d9aa4c;
+  --accent-hi:#f1c96f;
+  --accent-soft:rgba(217,170,76,0.12);
+  --pos:#69c792;
+  --neg:#e56b6f;
+  --real:#79aee8;
+  --pct:#b98ade;
+  --cum:#e99a5f;
+  --proj:#e4d47b;
+  --sidebar-w:312px;
+  --drawer-w:420px;
+  --topbar-h:96px;
+  --radius-sm:8px;
+  --radius:12px;
+  --radius-lg:16px;
+  --shadow-sm:0 8px 24px rgba(0,0,0,0.18);
+  --shadow:0 20px 55px rgba(0,0,0,0.28);
+}
+
+body{
+  font-family:'IBM Plex Sans',sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 14% -10%,rgba(217,170,76,0.08),transparent 29rem),
+    linear-gradient(180deg,#0b0e12 0%,var(--bg) 36%);
+  letter-spacing:0.005em;
+}
+button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;}
+
+/* Header: smaller brand, deliberate stats, clear utility actions */
+#topbar{
+  height:var(--topbar-h);
+  padding:0 1.25rem;
+  gap:0.85rem;
+  background:linear-gradient(180deg,rgba(18,22,28,0.98),rgba(14,17,22,0.98));
+  border-bottom:1px solid rgba(217,170,76,0.2);
+  box-shadow:0 10px 35px rgba(0,0,0,0.22);
+  backdrop-filter:blur(18px);
+}
+#cream-brand{gap:0.8rem;margin-right:0.35rem;}
+.cream-mark{
+  width:72px;
+  height:72px;
+  object-fit:cover;
+  border-radius:18px;
+  box-shadow:0 0 0 1px rgba(217,170,76,0.2),0 12px 32px rgba(0,0,0,0.35);
+}
+#cream-brand h1{
+  font-size:3.05rem;
+  letter-spacing:0.1em;
+  color:var(--accent-hi);
+  text-shadow:0 2px 16px rgba(217,170,76,0.12);
+}
+#cream-brand .cream-sub{
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.62rem;
+  font-weight:600;
+  color:#9aa2ae;
+  letter-spacing:0.19em;
+  margin-top:4px;
+}
+.tbsep{display:none;}
+.tb-stats{
+  gap:0.45rem;
+  padding:0 0.15rem;
+  mask-image:linear-gradient(90deg,#000 calc(100% - 14px),transparent);
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 14px),transparent);
+}
+.tb-stat,.tb-stat:first-child{
+  min-width:78px;
+  padding:0.58rem 0.68rem;
+  border:1px solid rgba(59,70,84,0.64);
+  border-radius:var(--radius-sm);
+  background:rgba(22,27,34,0.7);
+}
+.tb-stat label{
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.6rem;
+  font-weight:600;
+  letter-spacing:0.12em;
+  color:#7f8997;
+  margin-bottom:0.18rem;
+}
+.tb-stat value{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.9rem;
+  font-weight:500;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.tb-stat.tb-alarm{padding:0.58rem 0.68rem;}
+#alarmChip{
+  min-height:24px;
+  padding:0.2rem 0.42rem;
+  border-radius:6px;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.65rem;
+  font-weight:600;
+  text-transform:none;
+  letter-spacing:0.025em;
+}
+.alarm-emoji{font-size:1rem;}
+.tb-right{gap:0.45rem;}
+.tb-view-switch{
+  display:flex;
+  gap:2px;
+  padding:3px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:rgba(7,9,12,0.55);
+}
+.tbtn{
+  min-height:36px;
+  padding:0.48rem 0.68rem;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:rgba(22,27,34,0.7);
+  color:#a1a9b5;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.7rem;
+  font-weight:600;
+  letter-spacing:0.025em;
+  text-transform:none;
+}
+.tb-view-switch .tbtn{
+  min-height:30px;
+  padding:0.38rem 0.58rem;
+  border:0!important;
+  border-radius:7px;
+  background:transparent;
+}
+.tb-view-switch .tbtn.open,
+.tb-view-switch .tbtn:hover{
+  color:var(--text);
+  background:var(--s3);
+}
+.tbtn:hover{
+  color:var(--text);
+  border-color:var(--border2);
+  background:var(--s3);
+  transform:translateY(-1px);
+}
+.tbtn.open{
+  color:var(--accent-hi);
+  border-color:rgba(217,170,76,0.46);
+  background:var(--accent-soft);
+}
+.tbtn-utility{gap:0.35rem;}
+.tbtn-icon{font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:0.86rem;}
+.tbtn em{font-style:normal;color:var(--accent);margin-left:0.18rem;}
+#settingsToggle{border-color:rgba(217,170,76,0.3);}
+
+/* Shell and side panels */
+#app{background:transparent;}
+#sidebar{
+  background:linear-gradient(180deg,rgba(17,21,27,0.98),rgba(14,18,23,0.98));
+  border-right:1px solid rgba(59,70,84,0.65);
+  box-shadow:14px 0 34px rgba(0,0,0,0.12);
+}
+#sidebar-body{padding:1rem;}
+.sec-head{
+  margin-bottom:0.85rem;
+  padding:0;
+  border:0;
+  color:var(--accent);
+  font-family:'Bebas Neue',cursive;
+  font-size:1.18rem;
+  letter-spacing:0.18em;
+}
+.leg-item{
+  margin-bottom:0.32rem;
+  padding:0.52rem 0.6rem;
+  border-radius:var(--radius-sm);
+  font-family:'IBM Plex Sans',sans-serif;
+  color:#8d96a4;
+}
+.leg-item:hover{background:rgba(255,255,255,0.03);}
+.leg-item.active{
+  border-color:rgba(217,170,76,0.3);
+  background:var(--accent-soft);
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+.leg-dot{border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,0.04);}
+.leg-years{font-family:'IBM Plex Mono',monospace;color:#727c89;}
+.ins-card{
+  padding:1rem;
+  margin-bottom:0.75rem;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:linear-gradient(145deg,rgba(27,33,42,0.96),rgba(19,24,31,0.96));
+  box-shadow:var(--shadow-sm);
+}
+.ins-card h3{font-size:1.02rem;color:var(--accent-hi);line-height:1.25;}
+.ins-tag{color:#8d96a4;line-height:1.45;}
+.kpi-mini{
+  overflow:hidden;
+  border-color:var(--border2);
+  border-radius:var(--radius-sm);
+  background:rgba(8,10,13,0.35);
+}
+.kpi-m{padding:0.65rem;}
+.kpi-m label{font-family:'IBM Plex Sans',sans-serif;color:#7f8997;}
+.kpi-m value{font-family:'IBM Plex Mono',monospace;}
+
+/* Main analysis cards */
+#center{
+  background:
+    radial-gradient(circle at 78% 8%,rgba(217,170,76,0.035),transparent 24rem),
+    transparent;
+}
+#chart-section{
+  height:var(--chart-h,57%);
+  margin:14px 14px 0;
+  padding:1rem 1.1rem 0.8rem;
+  overflow:hidden;
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:linear-gradient(160deg,rgba(18,23,29,0.97),rgba(12,15,19,0.97));
+  box-shadow:var(--shadow-sm);
+}
+#chart-resize{margin:0 14px;}
+#chartControls{gap:0.5rem;row-gap:0.5rem;margin-bottom:0.7rem;}
+.ctrl-group{
+  gap:0.28rem;
+  padding:0.3rem;
+  border:1px solid rgba(59,70,84,0.58);
+  border-radius:10px;
+  background:rgba(5,7,10,0.42);
+}
+.ctrl-lbl{
+  margin:0 0.3rem 0 0.25rem;
+  color:#8f98a6;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.62rem;
+  font-weight:600;
+  letter-spacing:0.12em;
+}
+.cbtn{
+  min-height:29px;
+  padding:0.35rem 0.55rem;
+  border:1px solid transparent;
+  border-radius:7px;
+  background:transparent;
+  color:#858e9b;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.7rem;
+  font-weight:500;
+  letter-spacing:0.015em;
+  text-transform:none;
+}
+.cbtn:hover{
+  color:var(--text);
+  border-color:var(--border);
+  background:rgba(255,255,255,0.045);
+}
+.cbtn.active{
+  color:var(--accent-hi);
+  border-color:rgba(217,170,76,0.52);
+  background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px rgba(217,170,76,0.06);
+}
+.ovl-item{
+  padding:0.28rem 0.5rem;
+  border-radius:7px;
+  background:rgba(10,13,17,0.84);
+}
+#ovPicker,#hintTip,#tip,#alarmTip{
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+#bottom-section{
+  margin:0 14px 14px;
+  padding:0.35rem 0.72rem;
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,rgba(17,22,28,0.98),rgba(13,17,22,0.98));
+  box-shadow:var(--shadow-sm);
+}
+table{
+  font-family:'IBM Plex Mono',monospace;
+  font-variant-numeric:tabular-nums;
+}
+th{
+  padding:0.65rem 0.7rem;
+  border-bottom-color:var(--border2);
+  background:rgba(16,20,26,0.98);
+  color:#8993a0;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-weight:600;
+}
+td{
+  padding:0.56rem 0.7rem;
+  border-bottom-color:rgba(37,45,56,0.72);
+}
+tbody tr:nth-child(even) td{background:rgba(255,255,255,0.012);}
+tr:hover td{background:rgba(217,170,76,0.045);}
+
+/* Drawer and forms */
+#drawer{
+  border-left-color:var(--border2);
+  background:linear-gradient(180deg,#11161c,#0f1318);
+  box-shadow:-18px 0 45px rgba(0,0,0,0.2);
+}
+.dtabs{padding:0.35rem;border-bottom-color:var(--border);gap:2px;}
+.dtab{
+  padding:0.55rem 0.35rem;
+  border:0;
+  border-radius:7px;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-weight:600;
+  text-transform:none;
+  letter-spacing:0.02em;
+}
+.dtab.active{background:var(--accent-soft);color:var(--accent-hi);}
+.dbody{padding:1rem;}
+.jcard,.yc{
+  overflow:hidden;
+  border-radius:var(--radius-sm);
+  background:rgba(10,13,17,0.42);
+}
+.jcard-head{padding:0.7rem;background:var(--s2);}
+.jcard-head:hover{background:var(--s3);}
+.finput,.sinput,#newYear,#newSalary,.addyrrow2 input,.addyrrow select{
+  min-height:34px;
+  border-color:var(--border);
+  border-radius:7px;
+  background:#0c1015;
+}
+.btn-sm{
+  min-height:32px;
+  border-radius:7px;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-weight:600;
+  text-transform:none;
+}
+.btn-sm.primary{background:var(--accent-soft);}
+#addJobBtn{border-radius:var(--radius-sm);font-family:'IBM Plex Sans',sans-serif;text-transform:none;}
+
+/* Empty state becomes a full, intentional welcome surface */
+body.empty #chart-section{
+  height:calc(100% - 28px);
+  margin-bottom:14px;
+}
+body.empty #chart-resize,body.empty #bottom-section{display:none;}
+#emptyState{padding:1.5rem;}
+#emptyState .es-inner{
+  position:relative;
+  width:min(690px,100%);
+  max-width:690px;
+  padding:2rem 2.25rem 2.15rem;
+  overflow:hidden;
+  border:1px solid rgba(217,170,76,0.22);
+  border-radius:20px;
+  background:
+    radial-gradient(circle at 50% 0,rgba(217,170,76,0.11),transparent 47%),
+    linear-gradient(160deg,rgba(24,29,36,0.96),rgba(13,17,22,0.98));
+  box-shadow:var(--shadow);
+}
+#emptyState .es-inner::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:18%;
+  right:18%;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent-hi),transparent);
+  opacity:0.8;
+}
+#emptyState .es-mark{
+  display:block;
+  width:clamp(132px,15vw,184px)!important;
+  height:auto!important;
+  margin:0 auto 1rem!important;
+  border-radius:24px;
+  mix-blend-mode:screen;
+  filter:drop-shadow(0 14px 30px rgba(0,0,0,0.38));
+}
+#emptyState .es-kicker{
+  margin-bottom:0.45rem;
+  color:#929ba7;
+  font-size:0.64rem;
+  font-weight:600;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+}
+#emptyState h2{
+  margin-bottom:0.2rem;
+  color:var(--accent-hi);
+  font-size:clamp(1.8rem,3vw,2.45rem);
+  line-height:1.1;
+}
+#emptyState p{margin-bottom:0;}
+#emptyState .es-chant{
+  margin-bottom:0.8rem;
+  color:var(--accent);
+  font-family:'Playfair Display',serif;
+  font-size:0.9rem;
+  font-style:italic;
+}
+#emptyState .es-copy{
+  max-width:540px;
+  margin:0 auto 1.25rem;
+  color:#a0a8b3;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.88rem;
+  line-height:1.65;
+}
+#emptyState .es-btns{gap:0.55rem;}
+#emptyState button{
+  min-height:42px;
+  padding:0.7rem 1rem;
+  border-radius:9px;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.72rem;
+  font-weight:600;
+  letter-spacing:0.02em;
+  text-transform:none;
+}
+#emptyState button.primary{
+  border-color:var(--accent);
+  background:var(--accent);
+  color:#111319;
+  box-shadow:0 8px 24px rgba(217,170,76,0.16);
+}
+#emptyState button.primary:hover{
+  background:var(--accent-hi);
+  border-color:var(--accent-hi);
+  transform:translateY(-1px);
+}
+#emptyState button.secondary{
+  border-color:var(--border2);
+  background:rgba(10,13,17,0.48);
+  color:#a1aab6;
+}
+
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{border:2px solid transparent;background-clip:padding-box;}
+
+@media (max-width:1450px){
+  #topbar{padding:0 0.95rem;gap:0.65rem;}
+  .cream-mark{width:66px;height:66px;border-radius:16px;}
+  #cream-brand h1{font-size:2.72rem;}
+  .tb-s-peak{display:none;}
+  .tb-stat.tb-alarm{padding:0.58rem 0.48rem;}
+  #alarmChip{gap:0.25rem;padding:0.18rem 0.3rem;font-size:0.59rem;}
+  .tb-right{gap:0.35rem;}
+  .tbtn{padding:0.45rem 0.56rem;}
+}
+@media (max-width:1200px){
+  :root{--topbar-h:84px;}
+  .cream-mark{width:58px;height:58px;border-radius:14px;}
+  #cream-brand h1{font-size:2.35rem;}
+  #cream-brand .cream-sub{font-size:0.55rem;}
+  .tbtn em{display:none;}
+}
+@media (max-width:900px){
+  #topbar{padding:0 0.75rem;}
+  .tb-view-switch{display:none;}
+  #chart-section{margin:10px 10px 0;}
+  #bottom-section{margin:0 10px 10px;}
+  #chart-resize{margin:0 10px;}
+}
+@media (max-width:600px){
+  :root{--topbar-h:64px;}
+  .cream-mark{width:44px;height:44px;border-radius:11px;}
+  #chart-section{margin:8px 8px 0;padding:0.7rem;border-radius:12px;}
+  #bottom-section{margin:0 8px 8px;border-radius:12px;}
+  .yc-head{
+    display:grid;
+    grid-template-columns:3rem 1.55rem minmax(66px,1fr) auto auto 0.7rem;
+    grid-template-areas:
+      "year pulse job salary pct arrow"
+      "year pulse job yoy    pct arrow";
+    column-gap:0.38rem;
+    row-gap:0.08rem;
+    padding:0.65rem;
+  }
+  .yc-yr{grid-area:year;align-self:center;}
+  .yc-head>span:nth-child(2){grid-area:pulse;align-self:center;text-align:center;}
+  .yc-job{grid-area:job;align-self:center;line-height:1.18;white-space:normal;}
+  .yc-sal{grid-area:salary;align-self:end;white-space:nowrap;}
+  .yc-yoy{grid-area:yoy;align-self:start;justify-self:end;white-space:nowrap;}
+  .yc-pct-pill{grid-area:pct;align-self:center;justify-self:end;white-space:nowrap;}
+  .yc-arr{grid-area:arrow;align-self:center;justify-self:end;margin-left:0;}
+  body.empty #chart-section{height:calc(100% - 16px);min-height:0;margin-bottom:8px;}
+  #emptyState{padding:0.5rem;}
+  #emptyState .es-inner{padding:1.25rem 1rem;border-radius:14px;}
+  #emptyState .es-mark{width:118px!important;margin-bottom:0.65rem!important;}
+  #emptyState .es-copy{font-size:0.8rem;line-height:1.5;}
+  #emptyState .es-btns{flex-direction:column;}
+  #emptyState button{width:100%;min-height:40px;}
+}
 </style>
 </head>
 <body>
@@ -481,14 +988,14 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
     <div class="tb-stat tb-s-yj"><label>Yrs · Jobs</label><value id="sYJ">—</value></div>
   </div>
   <div class="tb-right">
-    <div style="display:flex;gap:0;">
+    <div class="tb-view-switch">
       <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs')">Hustles</button>
       <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">36</button>
       <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Status</button>
     </div>
-    <button class="tbtn" onclick="exportData()" title="Save your data as a JSON backup">⬇<span class="tbtn-txt"> Cop It</span></button>
-    <label class="tbtn" style="cursor:pointer" title="Restore from a JSON backup">⬆<span class="tbtn-txt"> Drop It</span><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
-    <button class="tbtn" id="settingsToggle" onclick="toggleDrawer()">⚙<span class="tbtn-txt"> The Vault</span></button>
+    <button class="tbtn tbtn-utility" onclick="exportData()" title="Save your data as a JSON backup"><span class="tbtn-icon" aria-hidden="true">&#8595;</span><span class="tbtn-txt">Export <em>Cop It</em></span></button>
+    <label class="tbtn tbtn-utility" style="cursor:pointer" title="Restore from a JSON backup"><span class="tbtn-icon" aria-hidden="true">&#8593;</span><span class="tbtn-txt">Import <em>Drop It</em></span><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
+    <button class="tbtn tbtn-utility" id="settingsToggle" onclick="toggleDrawer()"><span class="tbtn-icon" aria-hidden="true">&#9881;</span><span class="tbtn-txt">Settings <em>The Vault</em></span></button>
   </div>
 </div>
 
@@ -558,14 +1065,15 @@ button:focus-visible,label.tbtn:focus-visible,.ovl-item:focus-visible,.ovp-row:f
         <canvas id="c"></canvas>
         <div id="emptyState">
           <div class="es-inner">
-            <img src="cream-logo-512.png" alt="CREAM" width="360" height="360" style="display:block;margin:0 auto 1.5rem;max-width:80vw;height:auto">
-            <h2>Cash rules everything</h2>
-            <p style="font-style:italic;color:var(--accent);font-size:var(--fs-md);margin-bottom:0.6rem;letter-spacing:0.04em">Dollar dollar bill, y'all.</p>
-            <p>Add your first year of income and CREAM surfaces your earning story — percentile rank, social class, inflation drag, and forensic trend detection across the chambers of your career.</p>
+            <img class="es-mark" src="cream-logo-512.png" alt="CREAM" width="220" height="220">
+            <div class="es-kicker">Your career, by the numbers</div>
+            <h2>Cash rules everything.</h2>
+            <p class="es-chant">Dollar dollar bill, y'all.</p>
+            <p class="es-copy">Add your first year of income and CREAM surfaces the story behind the salary — percentile rank, social class, inflation drag, and forensic trends across every chamber of your career.</p>
             <div class="es-btns">
-              <button onclick="openAddYear()">+ Add to the Cipher</button>
-              <button class="secondary" onclick="document.getElementById('importFile').click()">⬆ Drop It — Import Backup</button>
-              <button class="secondary" onclick="loadSampleData()">🎲 Drop the Sample</button>
+              <button class="primary" onclick="openAddYear()">Add income · Enter the Cipher</button>
+              <button class="secondary" onclick="document.getElementById('importFile').click()">Import · Drop It</button>
+              <button class="secondary" onclick="loadSampleData()">&#127922; Explore · Drop the Sample</button>
             </div>
           </div>
         </div>
