@@ -1055,7 +1055,7 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
           <button class="cbtn" id="ps-wages"  onclick="applyPreset('wages')"  title="Did I outrun the median American? — Med Wage, Cum. Med Wage, Cash Per Head">vs Wages</button>
           <button class="cbtn" id="ps-labor"  onclick="applyPreset('labor')"  title="Was I bold or riding a tight market? — Unemp U-3, U-6, Recessions">vs Labor</button>
           <button class="cbtn" id="ps-works"  onclick="applyPreset('works')"  title="One overlay per family, stays legible — Inflation, GDP, Med Wage, U-3, Events, Recessions">The Works</button>
-          <button class="cbtn" id="ps-ladder" onclick="applyPreset('ladder')" title="Your arc vs the US earner ladder — p50, p75, and p90 rails in actual dollars. Same CPS individual-earner basis as the Percentile line.">vs Ladder</button>
+          <button class="cbtn" id="ps-ladder" onclick="applyPreset('ladder')" title="Your arc vs the US earner ladder — p50, p75, and p90 by default. Add p25, p95, or p99 in Custom. Same CPS individual-earner basis as the Percentile line.">vs Ladder</button>
           <button class="cbtn" id="ps-custom" onclick="toggleOvPicker(event)" title="Pick individual overlays, grouped by family">Custom ⚙</button>
         </div>
       </div>
@@ -1546,6 +1546,7 @@ const LADDER_RUNGS={
   lad50:{idx:1,label:'p50',color:'#a8a8b8'},
   lad75:{idx:2,label:'p75',color:'#c9c9da'},
   lad90:{idx:3,label:'p90',color:'#e6e6f2'},
+  lad95:{idx:4,label:'p95',color:'#f0d6a0'},
   lad99:{idx:5,label:'p99',color:'#f5e97e'},
 };
 // Threshold for a rung in any year — linear interpolation between the table's
@@ -1635,7 +1636,7 @@ if(_s.recessions==null){
   RECESSIONS=NBER_RECESSIONS.map((r,i)=>({id:i+1,startYear:r.startYear,endYear:r.endYear,label:r.label}));
   recessionNextId=RECESSIONS.length+1;
 }
-let ov={col:false,real:false,today:false,pct:false,cum:false,surplus:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,lad25:false,lad50:false,lad75:false,lad90:false,lad99:false,evt:false,classBands:false,recession:false,eraBands:false,crosshair:true};
+let ov={col:false,real:false,today:false,pct:false,cum:false,surplus:false,proj:false,inf:false,cuminf:false,gdp:false,medianWage:false,cumMedianWage:false,u3:false,u6:false,cashPerHead:false,lad25:false,lad50:false,lad75:false,lad90:false,lad95:false,lad99:false,evt:false,classBands:false,recession:false,eraBands:false,crosshair:true};
 let activeJob=null;
 let drawerOpen=false;
 let curSTab=_s.uiTab||'jobs';
@@ -4498,7 +4499,7 @@ canvas.addEventListener('mousemove',e=>{
   // Ladder est note — flags that percentile rails are estimated past the last
   // published Census year (only when a rail is on and the year is in that range)
   const ladderEstLine=(()=>{
-    const anyLadder=['lad25','lad50','lad75','lad90','lad99'].some(k=>ov[k]);
+    const anyLadder=['lad25','lad50','lad75','lad90','lad95','lad99'].some(k=>ov[k]);
     if(!anyLadder||yr<=PCTILE_LAST_REAL_YEAR)return'';
     return `<div style="margin-top:0.18rem;font-size:var(--fs-xs);color:var(--muted);font-style:italic">Rails estimated — no Census data past ${PCTILE_LAST_REAL_YEAR}</div>`;
   })();
@@ -4617,7 +4618,7 @@ function syncSurplusViewUI(){
 // The 11 context overlays are driven by story-presets (each answers a career
 // question) plus a grouped Custom popover. Lines-group overlays are untouched
 // by presets — they're views of YOUR money, not context.
-const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','lad25','lad50','lad75','lad90','lad99','evt','classBands','recession','eraBands'];
+const CTX_KEYS=['inf','cuminf','gdp','medianWage','cumMedianWage','u3','u6','cashPerHead','lad25','lad50','lad75','lad90','lad95','lad99','evt','classBands','recession','eraBands'];
 const OV_PRESETS={
   clean:[],                                              // just show me my money
   prices:['inf','cuminf','recession'],                   // did I outrun CPI?
@@ -4630,7 +4631,7 @@ const OV_PICKER_GROUPS=[
   {name:'Prices',keys:['inf','cuminf']},
   {name:'Wages',keys:['medianWage','cumMedianWage','cashPerHead']},
   {name:'Labor',keys:['u3','u6']},
-  {name:'The Ladder',keys:['lad25','lad50','lad75','lad90','lad99']},
+  {name:'The Ladder',keys:['lad25','lad50','lad75','lad90','lad95','lad99']},
   {name:'Economy',keys:['gdp','recession']},
   {name:'Story',keys:['evt','classBands','eraBands']},
 ];
@@ -4648,6 +4649,7 @@ const OV_INFO={
   lad50:'Median US individual earner (p50) in actual dollars — THE benchmark rail',
   lad75:'p75 US earner wage in actual dollars — the upper-middle rail',
   lad90:'p90 US earner wage in actual dollars — the top-10% door',
+  lad95:'p95 US earner wage in actual dollars — the top-5% threshold between the p90 rail and the 1% line',
   lad99:'p99 US earner wage — the 1% line. Heads up: turning this on roughly doubles the y-axis.',
   evt:'Macro events as colored bands across their date ranges',
   classBands:'US income class bands shaded behind the chart',
@@ -4789,6 +4791,7 @@ const OV_META={
   lad50:{label:'Median Rail (p50)',color:LADDER_RUNGS.lad50.color},
   lad75:{label:'p75 Rail',color:LADDER_RUNGS.lad75.color},
   lad90:{label:'p90 Rail',color:LADDER_RUNGS.lad90.color},
+  lad95:{label:'p95 Rail',color:LADDER_RUNGS.lad95.color},
   lad99:{label:'The 1% Line',color:LADDER_RUNGS.lad99.color},
   evt:{label:'Events',color:_cssVar('--evt-color')||'#9b8df5'},
   classBands:{label:'Class Bands',color:_cssVar('--accent')||'#d4a96a'},
