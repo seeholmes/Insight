@@ -618,6 +618,51 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;}
 .tbtn-icon{font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:0.86rem;}
 .tbtn em{font-style:normal;color:var(--accent);margin-left:0.18rem;}
 #settingsToggle{border-color:rgba(217,170,76,0.3);}
+#layoutToggle{border-color:rgba(59,70,84,0.72);}
+
+/* Workspace layout menu */
+#layoutMenu{
+  position:fixed;z-index:96;display:none;width:248px;padding:0.5rem;
+  border:1px solid var(--border2);border-radius:12px;
+  background:linear-gradient(160deg,rgba(25,31,39,0.99),rgba(14,18,23,0.99));
+  box-shadow:var(--shadow);backdrop-filter:blur(18px);
+}
+#layoutMenu.open{display:block;}
+.layout-menu-head{padding:0.35rem 0.5rem 0.55rem;color:var(--accent);font-family:'Bebas Neue',cursive;font-size:1rem;letter-spacing:0.16em;}
+.layout-option{width:100%;display:flex;align-items:center;gap:0.65rem;padding:0.62rem 0.65rem;border:0;border-radius:8px;background:transparent;color:var(--text);cursor:pointer;text-align:left;transition:background .15s,color .15s;}
+.layout-option:hover,.layout-option.active{background:var(--accent-soft);}
+.layout-option-icon{width:1.35rem;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:0.9rem;text-align:center;flex-shrink:0;}
+.layout-option-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:0.08rem;}
+.layout-option-label{font-size:0.74rem;font-weight:600;}
+.layout-option-sub{font-size:0.62rem;color:var(--muted);line-height:1.35;}
+.layout-state{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);}
+.layout-option[aria-checked="true"] .layout-state{color:var(--pos);}
+.layout-menu-sep{height:1px;margin:0.35rem 0;background:var(--border);}
+
+/* Pane splitters double as collapse/restore rails */
+#sidebar,#sidebar-body{transition:width .2s ease,opacity .16s ease;}
+#sidebar-resize{width:14px;overflow:visible;transition:width .2s ease;}
+#chart-resize{height:14px;overflow:visible;}
+#sidebar-resize:hover,body.resizing-sidebar #sidebar-resize,
+#chart-resize:hover,body.resizing-chart #chart-resize{background:transparent;opacity:1;}
+#sidebar-resize::after{content:'';position:absolute;z-index:0;top:0;bottom:0;left:50%;width:1px;background:var(--border);transition:background .15s;}
+#chart-resize::after{content:'';position:absolute;z-index:0;left:0;right:0;top:50%;height:1px;background:var(--border);transition:background .15s;}
+#sidebar-resize:hover::after,#chart-resize:hover::after{background:rgba(217,170,76,0.48);}
+.pane-toggle{position:absolute;z-index:2;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);background:var(--s2);color:var(--muted);cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.25);transition:color .15s,border-color .15s,background .15s,transform .15s;}
+.pane-toggle:hover{color:var(--accent-hi);border-color:var(--accent);background:var(--s3);}
+#sidebarCollapse{top:50%;left:50%;width:24px;height:42px;border-radius:9px;transform:translate(-50%,-50%);font-size:1rem;}
+#sidebarCollapse::before{content:'';position:absolute;inset:-2px -10px;}
+#sidebarCollapse:hover{transform:translate(-50%,-50%) scale(1.04);}
+#ledgerCollapse{top:50%;left:50%;width:46px;height:24px;border-radius:9px;transform:translate(-50%,-50%);font-size:0.9rem;}
+#ledgerCollapse::before{content:'';position:absolute;inset:-10px -2px;}
+#ledgerCollapse:hover{transform:translate(-50%,-50%) scale(1.04);}
+body.resizing-sidebar #sidebar{transition:none;}
+body.sidebar-collapsed #sidebar{width:0;border-right:0;box-shadow:none;}
+body.sidebar-collapsed #sidebar-body{visibility:hidden;opacity:0;}
+body.sidebar-collapsed #sidebar-resize{width:28px;cursor:default;}
+body.ledger-collapsed #chart-section{height:auto;flex:1;margin-bottom:0;}
+body.ledger-collapsed #chart-resize{height:28px;margin-bottom:14px;cursor:default;}
+body.ledger-collapsed #bottom-section{display:none;}
 
 /* Shell and side panels */
 #app{background:transparent;}
@@ -914,6 +959,7 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
   #alarmChip{gap:0.25rem;padding:0.18rem 0.3rem;font-size:0.59rem;}
   .tb-right{gap:0.35rem;}
   .tbtn{padding:0.45rem 0.56rem;}
+  #layoutToggle .tbtn-txt{display:none;}
 }
 @media (max-width:1200px){
   :root{--topbar-h:84px;}
@@ -925,9 +971,17 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
 @media (max-width:900px){
   #topbar{padding:0 0.75rem;}
   .tb-view-switch{display:none;}
+  #sidebar{transition:transform .2s ease;}
   #chart-section{margin:10px 10px 0;}
   #bottom-section{margin:0 10px 10px;}
-  #chart-resize{margin:0 10px;}
+  #sidebar-resize{display:none!important;}
+  #chart-resize{display:block!important;height:28px;margin:0 10px;cursor:default;}
+  body.empty #chart-resize{display:none!important;}
+  #layoutSidebarOption{display:none;}
+  body.sidebar-collapsed #sidebar{width:min(85vw,320px);border-right:1px solid var(--border);box-shadow:14px 0 34px rgba(0,0,0,0.12);}
+  body.sidebar-collapsed #sidebar-body{visibility:visible;opacity:1;}
+  body.ledger-collapsed #chart-section{height:auto;min-height:0;flex:1;}
+  body.ledger-collapsed #chart-resize{margin-bottom:10px;}
 }
 @media (max-width:600px){
   :root{--topbar-h:64px;}
@@ -989,14 +1043,39 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
   </div>
   <div class="tb-right">
     <div class="tb-view-switch">
-      <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs')">Hustles</button>
-      <button class="tbtn" id="stab-insights" onclick="setSTab('insights')" style="border-left:none">36</button>
-      <button class="tbtn" id="stab-pct"      onclick="setSTab('pct')"      style="border-left:none">Status</button>
+      <button class="tbtn" id="stab-jobs"     onclick="setSTab('jobs');showSidebarPane()">Hustles</button>
+      <button class="tbtn" id="stab-insights" onclick="setSTab('insights');showSidebarPane()" style="border-left:none">36</button>
+      <button class="tbtn" id="stab-pct"      onclick="setSTab('pct');showSidebarPane()"      style="border-left:none">Status</button>
     </div>
     <button class="tbtn tbtn-utility" onclick="exportData()" title="Save your data as a JSON backup"><span class="tbtn-icon" aria-hidden="true">&#8595;</span><span class="tbtn-txt">Export <em>Cop It</em></span></button>
     <label class="tbtn tbtn-utility" style="cursor:pointer" title="Restore from a JSON backup"><span class="tbtn-icon" aria-hidden="true">&#8593;</span><span class="tbtn-txt">Import <em>Drop It</em></span><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)"></label>
+    <button class="tbtn tbtn-utility" id="layoutToggle" onclick="toggleLayoutMenu(event)" aria-haspopup="true" aria-expanded="false" aria-label="Layout options" title="Show or hide workspace panels"><span class="tbtn-icon" aria-hidden="true">&#9638;</span><span class="tbtn-txt">View</span></button>
     <button class="tbtn tbtn-utility" id="settingsToggle" onclick="toggleDrawer()"><span class="tbtn-icon" aria-hidden="true">&#9881;</span><span class="tbtn-txt">Settings <em>The Vault</em></span></button>
   </div>
+</div>
+
+<div id="layoutMenu" role="menu" aria-label="Workspace layout">
+  <div class="layout-menu-head">Workspace</div>
+  <button class="layout-option" id="layoutSidebarOption" type="button" role="menuitemcheckbox" aria-checked="true" onclick="toggleSidebarPane();event.stopPropagation()">
+    <span class="layout-option-icon" aria-hidden="true">&#9646;</span>
+    <span class="layout-option-copy"><span class="layout-option-label">Side panel</span><span class="layout-option-sub">Hustles, 36 Chambers, and Status</span></span>
+    <span class="layout-state" id="layoutSidebarState">Shown</span>
+  </button>
+  <button class="layout-option" id="layoutLedgerOption" type="button" role="menuitemcheckbox" aria-checked="true" onclick="toggleLedgerPane();event.stopPropagation()">
+    <span class="layout-option-icon" aria-hidden="true">&#9644;</span>
+    <span class="layout-option-copy"><span class="layout-option-label">Yearly ledger</span><span class="layout-option-sub">Detailed income table and cards</span></span>
+    <span class="layout-state" id="layoutLedgerState">Shown</span>
+  </button>
+  <div class="layout-menu-sep"></div>
+  <button class="layout-option" id="layoutFocusOption" type="button" role="menuitem" onclick="toggleFocusMode();event.stopPropagation()">
+    <span class="layout-option-icon" aria-hidden="true">&#8857;</span>
+    <span class="layout-option-copy"><span class="layout-option-label">Focus mode</span><span class="layout-option-sub">Give the chart the whole workspace</span></span>
+    <span class="layout-state" id="layoutFocusState">Enter</span>
+  </button>
+  <button class="layout-option" type="button" role="menuitem" onclick="resetPaneLayout();event.stopPropagation()">
+    <span class="layout-option-icon" aria-hidden="true">&#8634;</span>
+    <span class="layout-option-copy"><span class="layout-option-label">Reset pane layout</span><span class="layout-option-sub">Show both panes at their default sizes</span></span>
+  </button>
 </div>
 
 <!-- APP -->
@@ -1020,7 +1099,9 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
       </div>
     </div>
   </div>
-  <div id="sidebar-resize" title="Drag to resize sidebar (double-click to reset)"></div>
+  <div id="sidebar-resize" title="Drag to resize side panel (double-click to reset)">
+    <button class="pane-toggle" id="sidebarCollapse" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Hide side panel" title="Hide side panel" onclick="toggleSidebarPane()"><span aria-hidden="true">&#8249;</span></button>
+  </div>
 
   <!-- CENTER -->
   <div id="center">
@@ -1079,7 +1160,9 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
         </div>
       </div>
     </div>
-    <div id="chart-resize" title="Drag to resize chart vs table (double-click to reset)"></div>
+    <div id="chart-resize" title="Drag to resize chart and ledger (double-click to reset)">
+      <button class="pane-toggle" id="ledgerCollapse" type="button" aria-controls="bottom-section" aria-expanded="true" aria-label="Hide yearly ledger" title="Hide yearly ledger" onclick="toggleLedgerPane()"><span aria-hidden="true">&#8964;</span></button>
+    </div>
     <!-- DATA TABLE -->
     <div id="bottom-section">
       <div id="dataTableScroll"><table id="dataTable"></table></div>
@@ -2990,6 +3073,110 @@ window.addEventListener('resize',()=>{clearTimeout(_resizeT);_resizeT=setTimeout
 // resize — observe the wrap itself so the canvas always matches.
 if(window.ResizeObserver)new ResizeObserver(()=>{clearTimeout(_resizeT);_resizeT=setTimeout(resizeCanvas,60);}).observe(wrap);
 
+// WORKSPACE PANE VISIBILITY
+// Collapsing never destroys pane state: selected content, scroll position, and
+// custom dimensions remain in place for the next reveal.
+let _layoutBeforeFocus=null;
+const _paneIsCollapsed=key=>document.body.classList.contains(key+'-collapsed');
+function _setPaneHint(el,text){
+  if(!el)return;
+  el.setAttribute('aria-label',text);el.setAttribute('title',text);el.dataset.hint=text;
+}
+function syncPaneLayoutUI(){
+  const sideHidden=_paneIsCollapsed('sidebar'),ledgerHidden=_paneIsCollapsed('ledger');
+  const sideBtn=document.getElementById('sidebarCollapse');
+  const ledgerBtn=document.getElementById('ledgerCollapse');
+  if(sideBtn){
+    sideBtn.setAttribute('aria-expanded',String(!sideHidden));
+    sideBtn.querySelector('span').innerHTML=sideHidden?'&#8250;':'&#8249;';
+    _setPaneHint(sideBtn,sideHidden?'Show side panel':'Hide side panel');
+  }
+  if(ledgerBtn){
+    ledgerBtn.setAttribute('aria-expanded',String(!ledgerHidden));
+    ledgerBtn.querySelector('span').innerHTML=ledgerHidden?'&#8963;':'&#8964;';
+    _setPaneHint(ledgerBtn,ledgerHidden?'Show yearly ledger':'Hide yearly ledger');
+  }
+  const sideOpt=document.getElementById('layoutSidebarOption');
+  const ledgerOpt=document.getElementById('layoutLedgerOption');
+  if(sideOpt)sideOpt.setAttribute('aria-checked',String(!sideHidden));
+  if(ledgerOpt)ledgerOpt.setAttribute('aria-checked',String(!ledgerHidden));
+  const sideState=document.getElementById('layoutSidebarState');if(sideState)sideState.textContent=sideHidden?'Hidden':'Shown';
+  const ledgerState=document.getElementById('layoutLedgerState');if(ledgerState)ledgerState.textContent=ledgerHidden?'Hidden':'Shown';
+  const focused=sideHidden&&ledgerHidden;
+  document.getElementById('layoutFocusOption')?.classList.toggle('active',focused);
+  const focusState=document.getElementById('layoutFocusState');if(focusState)focusState.textContent=focused?'Exit':'Enter';
+}
+function applyPaneLayout(sideHidden,ledgerHidden,persist=true){
+  document.body.classList.toggle('sidebar-collapsed',sideHidden);
+  document.body.classList.toggle('ledger-collapsed',ledgerHidden);
+  if(persist){
+    try{
+      sideHidden?localStorage.setItem('insight_sidebarCollapsed','1'):localStorage.removeItem('insight_sidebarCollapsed');
+      ledgerHidden?localStorage.setItem('insight_ledgerCollapsed','1'):localStorage.removeItem('insight_ledgerCollapsed');
+    }catch(e){}
+  }
+  syncPaneLayoutUI();
+  requestAnimationFrame(()=>resizeCanvas());
+  setTimeout(resizeCanvas,220);
+}
+function toggleSidebarPane(){
+  _layoutBeforeFocus=null;
+  applyPaneLayout(!_paneIsCollapsed('sidebar'),_paneIsCollapsed('ledger'));
+}
+function showSidebarPane(){
+  if(_paneIsCollapsed('sidebar'))applyPaneLayout(false,_paneIsCollapsed('ledger'));
+}
+function toggleLedgerPane(){
+  _layoutBeforeFocus=null;
+  applyPaneLayout(_paneIsCollapsed('sidebar'),!_paneIsCollapsed('ledger'));
+}
+function toggleFocusMode(){
+  const sideHidden=_paneIsCollapsed('sidebar'),ledgerHidden=_paneIsCollapsed('ledger');
+  if(sideHidden&&ledgerHidden){
+    const prev=_layoutBeforeFocus||{sideHidden:false,ledgerHidden:false};
+    _layoutBeforeFocus=null;applyPaneLayout(prev.sideHidden,prev.ledgerHidden);
+  }else{
+    _layoutBeforeFocus={sideHidden,ledgerHidden};applyPaneLayout(true,true);
+  }
+}
+function resetPaneLayout(){
+  _layoutBeforeFocus=null;
+  document.documentElement.style.removeProperty('--sidebar-w');
+  document.documentElement.style.removeProperty('--chart-h');
+  try{localStorage.removeItem('insight_sidebarW');localStorage.removeItem('insight_chartH');}catch(e){}
+  applyPaneLayout(false,false);
+}
+function toggleLayoutMenu(e){
+  e?.stopPropagation();
+  const menu=document.getElementById('layoutMenu'),toggle=document.getElementById('layoutToggle');
+  const open=!menu.classList.contains('open');
+  menu.classList.toggle('open',open);toggle.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));
+  if(open){
+    if(typeof closeOvPicker==='function')closeOvPicker();
+    syncPaneLayoutUI();
+    const r=toggle.getBoundingClientRect();
+    menu.style.top=(r.bottom+7)+'px';
+    menu.style.left=Math.max(8,Math.min(r.right-menu.offsetWidth,window.innerWidth-menu.offsetWidth-8))+'px';
+  }
+}
+function closeLayoutMenu(){
+  const menu=document.getElementById('layoutMenu'),toggle=document.getElementById('layoutToggle');
+  if(menu)menu.classList.remove('open');
+  if(toggle){toggle.classList.remove('open');toggle.setAttribute('aria-expanded','false');}
+}
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('layoutMenu'),toggle=document.getElementById('layoutToggle');
+  if(menu?.classList.contains('open')&&!menu.contains(e.target)&&!toggle?.contains(e.target))closeLayoutMenu();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLayoutMenu();});
+try{
+  applyPaneLayout(localStorage.getItem('insight_sidebarCollapsed')==='1',localStorage.getItem('insight_ledgerCollapsed')==='1',false);
+}catch(e){applyPaneLayout(false,false,false);}
+['sidebarCollapse','ledgerCollapse'].forEach(id=>{
+  const btn=document.getElementById(id);if(!btn)return;
+  ['mousedown','touchstart','dblclick'].forEach(type=>btn.addEventListener(type,e=>e.stopPropagation()));
+});
+
 // ── SIDEBAR RESIZE HANDLE ─────────────────────────────────────────────────────
 // Restore saved sidebar width (before initCanvas runs so the chart sizes right
 // on first paint).
@@ -3013,6 +3200,7 @@ try{const _savedSidebarW=localStorage.getItem('insight_sidebarW');if(_savedSideb
     resizeCanvas();
   }
   function down(e){
+    if(_paneIsCollapsed('sidebar')||e.target.closest('.pane-toggle'))return;
     startX=e.touches?e.touches[0].clientX:e.clientX;
     startW=getCurrentW();
     document.body.classList.add('resizing-sidebar');
@@ -3022,9 +3210,9 @@ try{const _savedSidebarW=localStorage.getItem('insight_sidebarW');if(_savedSideb
   }
   handle.addEventListener('mousedown',down);
   handle.addEventListener('touchstart',down,{passive:false});
-  // Double-click → reset to default 300px
+  // Double-click → reset to the design-system default
   handle.addEventListener('dblclick',()=>{
-    document.documentElement.style.setProperty('--sidebar-w','300px');
+    document.documentElement.style.removeProperty('--sidebar-w');
     try{localStorage.removeItem('insight_sidebarW');}catch(e){}
     resizeCanvas();
   });
@@ -3051,6 +3239,7 @@ try{const _ch=localStorage.getItem('insight_chartH');if(_ch)document.documentEle
     resizeCanvas();
   }
   function down(e){
+    if(_paneIsCollapsed('ledger')||e.target.closest('.pane-toggle'))return;
     startY=e.touches?e.touches[0].clientY:e.clientY;
     startH=cs.getBoundingClientRect().height;
     document.body.classList.add('resizing-chart');
@@ -3061,7 +3250,7 @@ try{const _ch=localStorage.getItem('insight_chartH');if(_ch)document.documentEle
   handle.addEventListener('mousedown',down);
   handle.addEventListener('touchstart',down,{passive:false});
   handle.addEventListener('dblclick',()=>{
-    document.documentElement.style.setProperty('--chart-h','55%');
+    document.documentElement.style.removeProperty('--chart-h');
     try{localStorage.removeItem('insight_chartH');}catch(e){}
     resizeCanvas();
   });
