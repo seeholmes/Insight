@@ -1295,7 +1295,10 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
       </div>
       <div class="dsec" id="ds-macro">
         <p class="sec-head">Inflation · GDP</p>
-        <div style="display:grid;grid-template-columns:2.8rem 1fr 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
+        <div style="font-size:0.55rem;color:var(--muted);line-height:1.5;margin:-0.15rem 0 0.65rem">
+          BLS CPI-U annual-average change · BEA real GDP annual growth. <span style="color:var(--accent)">2026 YTD</span> is provisional: CPI through August and real GDP through H1, each compared with the same 2025 period.
+        </div>
+        <div style="display:grid;grid-template-columns:3.2rem 1fr 1fr 1rem;gap:0.25rem;margin-bottom:0.4rem;padding:0 0.1rem;">
           <span class="mlbl">Year</span><span class="mlbl">Inf%</span><span class="mlbl">GDP%</span><span></span>
         </div>
         <div id="macroList"></div>
@@ -1435,27 +1438,43 @@ body.empty #chart-resize,body.empty #bottom-section{display:none;}
 // inf = annual-average CPI-U % change — the SAME convention the COL model's
 // indices use, so the COL-vs-CPI comparison is apples-to-apples. NOT December-
 // to-December: a career of annual salaries is earned/deflated across the whole
-// year, so annual-average is the correct deflator. Corrected 2026-07 from a
-// mixed Dec-to-Dec series; migrateInfToAnnualAvg() repairs saved data once.
+// year, so annual-average is the correct deflator. GDP is BEA real GDP annual
+// percent change from the preceding year. Historical values reflect the BEA
+// 2026 annual update. The 2026 record is explicitly provisional: CPI-U annual-
+// average change through Aug (vs Jan-Aug 2025) and real GDP H1 average (vs H1
+// 2025), calculated from the latest official BLS/BEA levels available 2026-09.
 const DEFAULT_MACRO={
-  1993:{inf:0.030,gdp:2.8,evt:"Balanced Budget Act"},
+  1993:{inf:0.030,gdp:2.7,evt:"Balanced Budget Act"},
   1994:{inf:0.026,gdp:4.0,evt:null},1995:{inf:0.028,gdp:2.7,evt:null},
-  1996:{inf:0.029,gdp:3.8,evt:"Welfare reform"},1997:{inf:0.023,gdp:4.4,evt:"Fed raised rates"},
+  1996:{inf:0.030,gdp:3.8,evt:"Welfare reform"},1997:{inf:0.023,gdp:4.4,evt:"Fed raised rates"},
   1998:{inf:0.016,gdp:4.5,evt:"LTCM crisis"},1999:{inf:0.022,gdp:4.8,evt:"Glass-Steagall repealed"},
   2000:{inf:0.034,gdp:4.1,evt:"Tech bubble burst"},2001:{inf:0.028,gdp:1.0,evt:"Bush tax cut / 9/11"},
-  2002:{inf:0.016,gdp:1.7,evt:"War on Terror"},2003:{inf:0.023,gdp:2.9,evt:"JGTRRA"},
+  2002:{inf:0.016,gdp:1.7,evt:"War on Terror"},2003:{inf:0.023,gdp:2.8,evt:"JGTRRA"},
   2004:{inf:0.027,gdp:3.8,evt:null},2005:{inf:0.034,gdp:3.5,evt:"Katrina / Bankruptcy Act"},
-  2006:{inf:0.032,gdp:2.9,evt:null},2007:{inf:0.029,gdp:1.9,evt:"Bank crisis"},
-  2008:{inf:0.038,gdp:-0.1,evt:"Financial crisis"},2009:{inf:-0.004,gdp:-2.5,evt:"ARRA"},
-  2010:{inf:0.016,gdp:2.6,evt:"ACA, Dodd-Frank"},2011:{inf:0.032,gdp:1.6,evt:"Debt ceiling crisis"},
-  2012:{inf:0.021,gdp:2.2,evt:null},2013:{inf:0.015,gdp:1.8,evt:"Gov't shutdown"},
-  2014:{inf:0.016,gdp:2.5,evt:"QE ends"},2015:{inf:0.001,gdp:3.1,evt:"Oil price deflation"},
-  2016:{inf:0.013,gdp:1.7,evt:null},2017:{inf:0.021,gdp:2.3,evt:null},
-  2018:{inf:0.024,gdp:3.0,evt:null},2019:{inf:0.018,gdp:2.2,evt:null},
-  2020:{inf:0.012,gdp:-3.4,evt:"COVID-19"},2021:{inf:0.047,gdp:5.9,evt:"COVID-19 recovery"},
-  2022:{inf:0.080,gdp:1.9,evt:null},2023:{inf:0.041,gdp:null,evt:null},
-  2024:{inf:0.030,gdp:null,evt:null},2025:{inf:0.029,gdp:null,evt:null},
-  2026:{inf:null,gdp:null,evt:null},
+  2006:{inf:0.032,gdp:2.8,evt:null},2007:{inf:0.029,gdp:2.0,evt:"Bank crisis"},
+  2008:{inf:0.038,gdp:0.1,evt:"Financial crisis"},2009:{inf:-0.004,gdp:-2.6,evt:"ARRA"},
+  2010:{inf:0.016,gdp:2.7,evt:"ACA, Dodd-Frank"},2011:{inf:0.032,gdp:1.6,evt:"Debt ceiling crisis"},
+  2012:{inf:0.021,gdp:2.3,evt:null},2013:{inf:0.015,gdp:2.1,evt:"Gov't shutdown"},
+  2014:{inf:0.016,gdp:2.5,evt:"QE ends"},2015:{inf:0.001,gdp:2.9,evt:"Oil price deflation"},
+  2016:{inf:0.013,gdp:1.8,evt:null},2017:{inf:0.021,gdp:2.5,evt:null},
+  2018:{inf:0.024,gdp:3.0,evt:null},2019:{inf:0.018,gdp:2.6,evt:null},
+  2020:{inf:0.012,gdp:-2.1,evt:"COVID-19"},2021:{inf:0.047,gdp:6.3,evt:"COVID-19 recovery"},
+  2022:{inf:0.080,gdp:2.4,evt:null},2023:{inf:0.041,gdp:2.9,evt:null},
+  2024:{inf:0.029,gdp:3.0,evt:null},2025:{inf:0.026,gdp:2.3,evt:null},
+  2026:{inf:0.033,gdp:2.4,evt:null,infStatus:"YTD through Aug",gdpStatus:"YTD through H1"},
+};
+// Previous shipped defaults. The one-time audit migration below updates only
+// fields that still match these values, preserving anything edited by the user.
+const _MACRO_PRE_OFFICIAL_AUDIT={
+  1993:{inf:0.030,gdp:2.8},1994:{inf:0.026,gdp:4.0},1995:{inf:0.028,gdp:2.7},1996:{inf:0.029,gdp:3.8},
+  1997:{inf:0.023,gdp:4.4},1998:{inf:0.016,gdp:4.5},1999:{inf:0.022,gdp:4.8},2000:{inf:0.034,gdp:4.1},
+  2001:{inf:0.028,gdp:1.0},2002:{inf:0.016,gdp:1.7},2003:{inf:0.023,gdp:2.9},2004:{inf:0.027,gdp:3.8},
+  2005:{inf:0.034,gdp:3.5},2006:{inf:0.032,gdp:2.9},2007:{inf:0.029,gdp:1.9},2008:{inf:0.038,gdp:-0.1},
+  2009:{inf:-0.004,gdp:-2.5},2010:{inf:0.016,gdp:2.6},2011:{inf:0.032,gdp:1.6},2012:{inf:0.021,gdp:2.2},
+  2013:{inf:0.015,gdp:1.8},2014:{inf:0.016,gdp:2.5},2015:{inf:0.001,gdp:3.1},2016:{inf:0.013,gdp:1.7},
+  2017:{inf:0.021,gdp:2.3},2018:{inf:0.024,gdp:3.0},2019:{inf:0.018,gdp:2.2},2020:{inf:0.012,gdp:-3.4},
+  2021:{inf:0.047,gdp:5.9},2022:{inf:0.080,gdp:1.9},2023:{inf:0.041,gdp:null},2024:{inf:0.030,gdp:null},
+  2025:{inf:0.029,gdp:null},2026:{inf:null,gdp:null},
 };
 // Legacy Dec-to-Dec inf values (pre-2026-07). Used only by the one-time
 // migration to recognize unedited years and lift them to annual-average.
@@ -1475,7 +1494,28 @@ function migrateInfToAnnualAvg(){
       }
     });
     localStorage.setItem('cream_inf_convention','annual-avg');
-    if(changed)saveState();
+    if(changed)localStorage.setItem('insight_macro',JSON.stringify(MACRO));
+  }catch(e){}
+}
+function migrateMacroOfficialAudit(){
+  try{
+    if(localStorage.getItem('cream_macro_official_audit')==='2026-09')return;
+    let changed=0;
+    Object.keys(_MACRO_PRE_OFFICIAL_AUDIT).forEach(y=>{
+      const rec=MACRO[y],old=_MACRO_PRE_OFFICIAL_AUDIT[y],next=DEFAULT_MACRO[y];
+      if(!rec||!next)return;
+      ['inf','gdp'].forEach(field=>{
+        const oldVal=old[field],curVal=rec[field];
+        const untouched=oldVal==null?curVal==null:(curVal!=null&&Math.abs(curVal-oldVal)<1e-9);
+        if(untouched&&curVal!==next[field]){rec[field]=next[field];changed++;}
+      });
+      if(+y===2026&&rec.inf===next.inf&&rec.gdp===next.gdp){
+        if(rec.infStatus!==next.infStatus){rec.infStatus=next.infStatus;changed++;}
+        if(rec.gdpStatus!==next.gdpStatus){rec.gdpStatus=next.gdpStatus;changed++;}
+      }
+    });
+    localStorage.setItem('cream_macro_official_audit','2026-09');
+    if(changed)localStorage.setItem('insight_macro',JSON.stringify(MACRO));
   }catch(e){}
 }
 let MACRO=DEFAULT_MACRO;
@@ -1709,6 +1749,7 @@ let jobs=_s.jobs;
 let nextId=_s.nextId;
 MACRO=_s.macro;
 migrateInfToAnnualAvg();
+migrateMacroOfficialAudit();
 let EVENTS=_s.events||[];
 let eventNextId=_s.eventNextId||1;
 if(_s.events==null){migrateEventsFromMacro();}
@@ -4721,11 +4762,23 @@ canvas.addEventListener('click',e=>{
 });
 
 // ── TABLE (always visible below chart) ───────────────────────────────────────
+function macroStatusBadge(yr,field){
+  if(!MACRO[yr]?.[field+'Status'])return'';
+  const title=field==='inf'
+    ?'Provisional 2026 CPI-U: Jan–Aug annual average versus Jan–Aug 2025 (BLS).'
+    :'Provisional 2026 real GDP: H1 average versus H1 2025 (BEA).';
+  return `<sup title="${title}" style="margin-left:0.18rem;color:var(--accent);font-size:0.48rem;letter-spacing:0.04em">YTD</sup>`;
+}
+function macroDisplay(yr,field,empty=''){
+  const val=MACRO[yr]?.[field];if(val==null)return empty;
+  const shown=field==='inf'?(val*100).toFixed(1):Number(val).toFixed(1);
+  return shown+'%'+macroStatusBadge(yr,field);
+}
 function buildTable(){
   const yrs=sortedYrs(),real=realSalaries();
   const today=(yrs.length>1)?todaysSalaries():{};
   const cum=cumEarnings();
-  let h=`<thead><tr><th>Year</th><th>Pulse</th><th>Job</th><th>Salary<span class="pip" title="Gross pre-tax pay. Marginal federal+state+FICA can take 35–45% of additional dollars at higher brackets — so a $20K raise often nets ~$12K. Net Raise in the hover tooltip is also pre-tax.">i</span></th><th>Old Money</th><th>New Money</th><th>YoY<span class="pip" title="Percentages aren't symmetric. A 50% loss needs a 100% gain to recover. A 20% raise after a 20% pay cut leaves you 4% behind. Always check the $ trajectory alongside the %.">i</span></th><th>Percentile<span class="pip" title="Compared against US individual W-2 earners only — excludes ~40% of working-age adults with no W-2 income (students, retirees, stay-home parents, off-the-books). Among all working-age adults your percentile is meaningfully lower; among households, different again.">i</span></th><th>Social Class</th><th>Cum. Earned</th><th>Inflation<span class="pip" title="CPI uses hedonic adjustments — a TV that's 10% better at the same sticker is counted as a 10% price drop. Same logic for healthcare, tech, housing quality. Effect: official CPI under-measures real cash outflow by ~1–2 pts/yr, which compounds to a 40%+ gap over a career.">i</span></th><th>GDP</th><th>Med Wage<span class="pip" title="BLS median weekly earnings is contaminated 2020–22 by composition effects: COVID layoffs hit low-wage jobs first, mechanically pushing the median up (+3.5% in 2020) without anyone getting raises. The 2021–22 negatives are partly that artifact reversing, partly real inflation pain. Treat this stretch as unreliable.">i</span></th><th>Event</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Year</th><th>Pulse</th><th>Job</th><th>Salary<span class="pip" title="Gross pre-tax pay. Marginal federal+state+FICA can take 35–45% of additional dollars at higher brackets — so a $20K raise often nets ~$12K. Net Raise in the hover tooltip is also pre-tax.">i</span></th><th>Old Money</th><th>New Money</th><th>YoY<span class="pip" title="Percentages aren't symmetric. A 50% loss needs a 100% gain to recover. A 20% raise after a 20% pay cut leaves you 4% behind. Always check the $ trajectory alongside the %.">i</span></th><th>Percentile<span class="pip" title="Compared against US individual W-2 earners only — excludes ~40% of working-age adults with no W-2 income (students, retirees, stay-home parents, off-the-books). Among all working-age adults your percentile is meaningfully lower; among households, different again.">i</span></th><th>Social Class</th><th>Cum. Earned</th><th>Inflation<span class="pip" title="BLS CPI-U annual-average change from the prior calendar-year average. 2026 is provisional through August and compares Jan–Aug 2026 with Jan–Aug 2025.">i</span></th><th>GDP<span class="pip" title="BEA real GDP annual percent change from the preceding year, using the latest annual-update vintage. 2026 is provisional and compares the H1 average with H1 2025.">i</span></th><th>Med Wage<span class="pip" title="BLS median weekly earnings is contaminated 2020–22 by composition effects: COVID layoffs hit low-wage jobs first, mechanically pushing the median up (+3.5% in 2020) without anyone getting raises. The 2021–22 negatives are partly that artifact reversing, partly real inflation pain. Treat this stretch as unreliable.">i</span></th><th>Event</th></tr></thead><tbody>`;
   let cards='';
   yrs.forEach(yr=>{
     const j=getJob(yr),chg=yoy(yr);
@@ -4750,8 +4803,8 @@ function buildTable(){
       <td style="color:var(--pct)">${pct.toFixed(0)}th</td>
       <td style="color:${sc.color}">${sc.label}</td>
       <td style="color:var(--cum)">${fmtK(cum[yr])}</td>
-      <td class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':''}</td>
-      <td class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':''}</td>
+      <td class="tddim">${macroDisplay(yr,'inf')}</td>
+      <td class="tddim">${macroDisplay(yr,'gdp')}</td>
       <td style="color:var(--mwg-color)">${MEDIAN_WAGE_GROWTH[yr]!=null?((MEDIAN_WAGE_GROWTH[yr]>=0?'+':'')+(MEDIAN_WAGE_GROWTH[yr]*100).toFixed(1)+'%'):''}</td>
       <td class="tddim">${evTxt}</td>
     </tr>`;
@@ -4771,8 +4824,8 @@ function buildTable(){
         <div class="yc-row"><span class="l">New Money</span><span style="color:var(--today-color)">${today[yr]!=null?fmt(today[yr]):'—'}</span></div>
         <div class="yc-row"><span class="l">Cum. earned</span><span style="color:var(--cum)">${fmtK(cum[yr])}</span></div>
         <div class="yc-row"><span class="l">Class</span><span style="color:${sc.color}">${sc.label}</span></div>
-        <div class="yc-row"><span class="l">Inflation</span><span class="tddim">${MACRO[yr]?.inf!=null?(MACRO[yr].inf*100).toFixed(1)+'%':'—'}</span></div>
-        <div class="yc-row"><span class="l">GDP</span><span class="tddim">${MACRO[yr]?.gdp!=null?MACRO[yr].gdp+'%':'—'}</span></div>
+        <div class="yc-row"><span class="l">Inflation</span><span class="tddim">${macroDisplay(yr,'inf','—')}</span></div>
+        <div class="yc-row"><span class="l">GDP</span><span class="tddim">${macroDisplay(yr,'gdp','—')}</span></div>
         <div class="yc-row"><span class="l">Med Wage</span><span style="color:var(--mwg-color)">${MEDIAN_WAGE_GROWTH[yr]!=null?((MEDIAN_WAGE_GROWTH[yr]>=0?'+':'')+(MEDIAN_WAGE_GROWTH[yr]*100).toFixed(1)+'%'):'—'}</span></div>
         ${evs.length?`<div class="yc-row"><span class="l">Events</span><span style="color:var(--evt-color);text-align:right;flex:1;margin-left:0.6rem">${evTxt}</span></div>`:''}
       </div>
@@ -5141,11 +5194,14 @@ function renderMacroList(){
   yrs.forEach(yr=>{
     const m=MACRO[yr];
     const row=document.createElement('div');row.className='mrow';
-    row.style.gridTemplateColumns='2.8rem 1fr 1fr 1rem';
+    row.style.gridTemplateColumns='3.2rem 1fr 1fr 1rem';
+    const provisional=m.infStatus||m.gdpStatus;
+    const infTitle=m.infStatus?'Provisional CPI-U through August; compared with the same 2025 period.':'';
+    const gdpTitle=m.gdpStatus?'Provisional real GDP through H1; compared with the same 2025 period.':'';
     row.innerHTML=`
-      <span class="syr">${yr}</span>
-      <input class="sinput" type="number" step="0.1" value="${m.inf!=null?(m.inf*100).toFixed(1):''}" placeholder="—" onchange="updateMacro(${yr},'inf',this.value)">
-      <input class="sinput" type="number" step="0.1" value="${m.gdp!=null?m.gdp:''}" placeholder="—" onchange="updateMacro(${yr},'gdp',this.value)">
+      <span class="syr"${provisional?' title="2026 values are provisional year-to-date actuals"':''}>${yr}${provisional?'<small style="display:block;color:var(--accent);font-size:0.43rem;letter-spacing:0.08em;line-height:1">YTD</small>':''}</span>
+      <input class="sinput" type="number" step="0.1" value="${m.inf!=null?(m.inf*100).toFixed(1):''}" placeholder="—" title="${infTitle}" onchange="updateMacro(${yr},'inf',this.value)">
+      <input class="sinput" type="number" step="0.1" value="${m.gdp!=null?Number(m.gdp).toFixed(1):''}" placeholder="—" title="${gdpTitle}" onchange="updateMacro(${yr},'gdp',this.value)">
       <button class="sdel" onclick="deleteMacroYear(${yr})" title="Remove">×</button>`;
     el.appendChild(row);
   });
@@ -5155,7 +5211,8 @@ function updateMacro(yr,field,val){
   if(field==='inf')MACRO[yr].inf=val===''?null:parseFloat(val)/100;
   else if(field==='gdp')MACRO[yr].gdp=val===''?null:parseFloat(val);
   else MACRO[yr].evt=val.trim()||null;
-  saveState();refresh();
+  if(field==='inf'||field==='gdp')delete MACRO[yr][field+'Status'];
+  saveState();refresh();renderMacroList();
 }
 function deleteMacroYear(yr){
   if(!confirm('Remove macro data for '+yr+'?'))return;
