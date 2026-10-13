@@ -1476,6 +1476,13 @@ const _MACRO_PRE_OFFICIAL_AUDIT={
   2021:{inf:0.047,gdp:5.9},2022:{inf:0.080,gdp:1.9},2023:{inf:0.041,gdp:null},2024:{inf:0.030,gdp:null},
   2025:{inf:0.029,gdp:null},2026:{inf:null,gdp:null},
 };
+// Recognizable published/official vintages that users may already have saved.
+// Treat these like old defaults during the audit instead of as custom edits.
+const _MACRO_KNOWN_STALE={
+  2021:{gdp:[6.2]},2022:{gdp:[2.5]},2024:{gdp:[2.8]},2025:{gdp:[2.1]},
+  2026:{inf:[0.035],gdp:[2.3]},
+};
+const _MACRO_OFFICIAL_AUDIT_VERSION='2026-10-13';
 // Legacy Dec-to-Dec inf values (pre-2026-07). Used only by the one-time
 // migration to recognize unedited years and lift them to annual-average.
 const _INF_LEGACY_DEC2DEC={1993:0.027,1994:0.027,1995:0.025,1996:0.033,1997:0.017,1998:0.016,1999:0.027,2000:0.034,2001:0.016,2002:0.024,2003:0.019,2004:0.033,2005:0.034,2006:0.025,2007:0.041,2008:0.001,2009:0.027,2010:0.015,2011:0.030,2012:0.017,2013:0.015,2014:0.008,2015:0.007,2016:0.021,2017:0.021,2018:0.019,2019:0.023,2020:0.014,2021:0.070,2022:0.065,2023:0.034,2024:0.027,2025:0.030};
@@ -1499,7 +1506,7 @@ function migrateInfToAnnualAvg(){
 }
 function migrateMacroOfficialAudit(){
   try{
-    if(localStorage.getItem('cream_macro_official_audit')==='2026-09')return;
+    if(localStorage.getItem('cream_macro_official_audit')===_MACRO_OFFICIAL_AUDIT_VERSION)return;
     let changed=0;
     Object.keys(_MACRO_PRE_OFFICIAL_AUDIT).forEach(y=>{
       const rec=MACRO[y],old=_MACRO_PRE_OFFICIAL_AUDIT[y],next=DEFAULT_MACRO[y];
@@ -1507,14 +1514,15 @@ function migrateMacroOfficialAudit(){
       ['inf','gdp'].forEach(field=>{
         const oldVal=old[field],curVal=rec[field];
         const untouched=oldVal==null?curVal==null:(curVal!=null&&Math.abs(curVal-oldVal)<1e-9);
-        if(untouched&&curVal!==next[field]){rec[field]=next[field];changed++;}
+        const stale=(_MACRO_KNOWN_STALE[y]?.[field]||[]).some(v=>curVal!=null&&Math.abs(curVal-v)<1e-9);
+        if((untouched||stale)&&curVal!==next[field]){rec[field]=next[field];changed++;}
       });
       if(+y===2026&&rec.inf===next.inf&&rec.gdp===next.gdp){
         if(rec.infStatus!==next.infStatus){rec.infStatus=next.infStatus;changed++;}
         if(rec.gdpStatus!==next.gdpStatus){rec.gdpStatus=next.gdpStatus;changed++;}
       }
     });
-    localStorage.setItem('cream_macro_official_audit','2026-09');
+    localStorage.setItem('cream_macro_official_audit',_MACRO_OFFICIAL_AUDIT_VERSION);
     if(changed)localStorage.setItem('insight_macro',JSON.stringify(MACRO));
   }catch(e){}
 }
